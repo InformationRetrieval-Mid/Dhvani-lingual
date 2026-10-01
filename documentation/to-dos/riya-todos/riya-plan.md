@@ -1,5 +1,4 @@
 # Crawler & Corpus Pipeline 
-
 **Component:** P1 - Regional News Crawler, Corpus & Shared Tooling  
 **Deliverable:** `data/news.jsonl` (following `documentation/formats.md`)  
 **Shared Tool:** `dhvani/eval/pool.py` (TREC run pooling)
@@ -28,7 +27,6 @@
 ---
 
 ## 2. Directory Structure
-
 ```text
 dhvani/
 ├── crawl/
@@ -68,7 +66,6 @@ Python's built-in `urllib.robotparser` gives incorrect answers on Indian news po
 ### 2. Mercator Frontier Architecture (`frontier.py`)
 #### How It Works
 Separates priority from politeness using a two-tier queue structure:
-
 ```text
                [ Incoming URLs: Sitemaps, Bursts, In-Page Links ]
                                     │
@@ -189,8 +186,6 @@ $$\text{Throughput} = \frac{5 \text{ sites}}{8.0 \text{ s/request}} = 0.625 \tex
 * **To crawl 12,000 articles:** $\approx 5.3 \text{ hours}$.
 * 5 sites run round-robin, so no site blocks others while waiting for its 8-second delay.
 
----
-
 ### 9. Shared Tooling: TREC Run Pooling (`dhvani/eval/pool.py`)
 * Read standard TREC run files: `qid Q0 doc_id rank score run_name`.
 * Extract top-$k$ ($k=10$ or $20$) documents per information need across all runs.
@@ -198,10 +193,41 @@ $$\text{Throughput} = \frac{5 \text{ sites}}{8.0 \text{ s/request}} = 0.625 \tex
 
 ---
 
+### 10. Optional Enhancement: Neural / Semantic Utility Prioritization (`dhvani/crawl/utility.py`)
+#### Why It's Feasible & Grounded in IR
+Standard focused crawlers target a specific query, which is unsuited for a general search engine where queries are unknown in advance. Instead, we use a **retrieval-agnostic Corpus Utility model** $\mathcal{U}(u) \in [0, 1]$.
+It estimates how much valuable, novel, and substantive information an unvisited URL will add to the overall corpus, using strictly crawl-time features without touching search queries or test relevance labels.
+
+#### Crawl-Time Features Available (Retrieval-Agnostic)
+1. **Anchor / Headline Text:** Discovered from referring page `<a href="...">anchor</a>` or `<news:title>` in sitemaps.
+2. **Entity Density:** Salient entities (Hindi city names, state names, numbers/dates) present in the anchor/title text.
+3. **URL Depth & Section Weight:** High-information sections (`national`, `state`, `weather`) prioritized over shallow filler.
+4. **Corpus Novelty (Semantic Distance):** Using a lightweight embedding model (e.g. `paraphrase-multilingual-MiniLM-L12-v2` or fastText):
+   - Compute embedding $\vec{e}_u$ of the candidate title/anchor text.
+   - Compare against the running centroid $\vec{c}_{\text{sec}}$ of articles already crawled in that category.
+   - Novelty score: $\text{Nov}(u) = 1 - \cos(\vec{e}_u, \vec{c}_{\text{sec}})$.
+5. **Structural In-Degree:** Number of internal pages linking to this candidate URL.
+
+#### Utility Score Formulation
+$$\mathcal{U}(u) = w_1 \cdot \text{InformationDensity}(u) + w_2 \cdot \text{Novelty}(u) + w_3 \cdot \text{Freshness}(u) + w_4 \cdot \text{SectionWeight}(u)$$
+
+#### Integration into Mercator Front Queues
+The utility score determines Front Queue routing:
+* $Q_0$ (Highest Priority): $\mathcal{U}(u) \ge 0.75$
+* $Q_1$ (High Priority): $0.50 \le \mathcal{U}(u) < 0.75$
+* $Q_2$ (Standard Priority): $0.25 \le \mathcal{U}(u) < 0.50$
+* $Q_3$ (Low / Archive): $\mathcal{U}(u) < 0.25$
+
+#### Politeness Preserved
+The utility score only controls which front queue receives the URL. Per-host back queues and the min-heap strictly enforce the 8.0s per-host delay.
+
+#### Downstream Pre-work
+Crawl-time utility scores $\mathcal{U}(u)$ can be exported alongside articles as a pre-computed static document quality feature $g(d)$ for downstream ranking.
+
+---
+
 ## 4. Contract Compliance: `documentation/formats.md`
-
 All crawled articles must be written to `data/news.jsonl` (one JSON line per article):
-
 ```json
 {
   "doc_id": "jagran_23456789",
@@ -230,7 +256,6 @@ All crawled articles must be written to `data/news.jsonl` (one JSON line per art
 ---
 
 ## 5. Test Suite (`partwise-tests/riya/`)
-
 * **`test_robots.py`:** Unit test comparing custom `RobotsParser` vs `urllib.robotparser` on cached `robots.txt` files from Jagran, Jansatta, Live Hindustan, and Amar Ujala.
 * **`test_frontier.py`:** Verify that the min-heap strictly enforces $\ge 8.0$ seconds delay per host and front queues respect priority weights.
 * **`test_normalizer.py`:** Verify URL cleaning, AMP-to-canonical conversion, and query parameter stripping.
@@ -239,3 +264,24 @@ All crawled articles must be written to `data/news.jsonl` (one JSON line per art
 * **`test_format_compliance.py`:** JSON schema validation ensuring every record in `data/news.jsonl` adheres to `formats.md`.
 
 ---
+
+## 6. Milestones & Checklist
+* [ ] **Phase 1 (H1–H3):**
+  - Implement `robots.py` and unit tests.
+  - Build `frontier.py` skeleton and basic sitemap parser.
+  - **Handoff (H3):** Generate and provide `data/news_sample_300.jsonl` (300 clean articles).
+* [ ] **Phase 2 (H3–H8):**
+  - Implement `extractor.py`, `normalizer.py`, and `filters.py`.
+  - Start continuous 5-site crawling.
+* [ ] **Phase 3 (H8–H12):**
+  - Implement `dedup.py` (shingles, Jaccard, `dup_of`, `links`).
+  - Monitor crawl logs and site balance.
+* [ ] **Phase 4 (H12–H22):**
+  - Add MinHash + LSH, adaptive recrawl (`recrawl.py`), and burst prioritization.
+  - **Corpus Freeze (H18):** Lock master news corpus at 5k–12k articles.
+* [ ] **Phase 5 (H22–H28):**
+  - Implement `dhvani/eval/pool.py`.
+  - Generate evaluation tables (dedup threshold precision/recall, MinHash vs exact speed).
+* [ ] **Phase 6 (H28–H36):**
+  - Write report section (crawling, robots.txt findings, deduplication).
+  - Record video segment (crawler live log, robots test demo, duplicate story clusters).
