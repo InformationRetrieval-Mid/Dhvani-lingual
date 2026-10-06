@@ -167,15 +167,29 @@ Discovers candidate article URLs across all target news portals using standard X
 
 ### Task 5: Pipeline Execution & Sample Crawl (`crawler.py`)
 #### Asynchronous Pipeline Integration
-Combines sitemap feed ingestion, Mercator frontier queuing, robots.txt gating, downloader, and extraction into a unified crawl pipeline.
+Combines sitemap feed ingestion, Mercator frontier queuing, robots.txt gating, downloader, extraction, and streaming JSONL storage into a unified crawl pipeline.
 * **Pipeline Flow:**
-  1. Initialize `RobotsParser`, `MercatorFrontier`, and `Config`.
-  2. Parse primary sitemaps via `sitemap.py` and enqueue discovered URLs into frontier priority queues.
-  3. Continuous async event loop pops eligible host from politeness min-heap (enforcing 8.0s per-host delay).
-  4. Fetch article page with retry backoff on HTTP 403, 429, or network errors.
-  5. Extract structured article via `extractor.py` and validate schema.
-  6. Stream validated records line-by-line to `data/news.jsonl`.
-* **Deliverable (H3 Handoff):** Crawl and export `data/news_sample_300.jsonl` (300 clean, diverse articles) for downstream search engine teams.
+  1. Initialize `RobotsParser`, `MercatorFrontier`, and persistent `httpx.AsyncClient`.
+  2. Parse seed sitemaps via `sitemap.py` and enqueue discovered candidate URLs into Frontier `Q1` (Fresh live sitemaps).
+  3. Single-threaded async event loop continuously pops eligible host and URL from `MercatorFrontier` (strictly enforcing $\ge 8.0\text{s}$ per-host politeness delay).
+  4. Evaluate robots.txt compliance (`robots.can_fetch(url)`); skip disallowed paths immediately.
+  5. Fetch article HTML with resilient error handling:
+     - **HTTP 429 (Rate Limit):** Apply per-host exponential backoff ($8\text{s} \to 16\text{s} \to 32\text{s} \to 64\text{s}$) and reschedule host.
+     - **HTTP 403 / CAPTCHA Detection:** Disable the affected host for the remainder of the session to avoid IP bans.
+     - **HTTP 5xx / Network Drops:** Retry up to 2 times with exponential backoff before discarding URL.
+  6. In a strict `finally` block, always call `frontier.complete_request(host, delay=eff_delay)` to guarantee politeness and avoid orphaned in-flight locks.
+  7. Extract structured article via `extractor.py` and validate schema against `documentation/formats.md`.
+  8. Stream validated records line-by-line to output file with immediate `flush()`.
+  9. Harvest in-body candidate hyperlinks, normalize and filter them, and push novel URLs into Frontier `Q2` (In-article hyperlinks).
+
+#### Sampling Strategy & Execution Modes
+* **Normal Mode (`--max-articles <N>`):**
+  - Streams validated articles to `data/news.jsonl`.
+  - Retains the first 300 records in memory and auto-snapshots them to `data/news_sample_300.jsonl` upon reaching article #300.
+  - Continues crawling until `--max-articles` (default 5,000) or frontier exhaustion.
+* **Sample Mode (`--sample`):**
+  - Targets exactly 300 valid articles across sources.
+  - Writes directly to `data/news_sample_300.jsonl` and terminates immediately (~8 minutes total runtime), unblocking the H3 team handoff without running the full ~2.2-hour corpus crawl.
 
 ---
 

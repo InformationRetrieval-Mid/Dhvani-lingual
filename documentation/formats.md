@@ -18,6 +18,10 @@ Riya writes it, Dhrithi reads it. Lives at `data/news.jsonl`, one article per li
 - `links` are other crawled articles this one links to (for PageRank).
 - No author names.
 
+### Generation Commands
+- **H3 Sample (300 articles):** `python -m dhvani.crawl.crawler --sample` (writes `data/news_sample_300.jsonl`)
+- **Full Corpus (5,000 articles):** `python -m dhvani.crawl.crawler --max-articles 5000` (writes `data/news.jsonl`)
+
 ## 2. Analyzer
 Dhrithi writes it. Everyone uses it, so text gets processed the same way everywhere.
 

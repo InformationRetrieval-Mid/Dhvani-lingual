@@ -58,10 +58,10 @@
 
 ## Task 5: Pipeline Execution & Sample Crawl
 ### 7. Crawler Pipeline Execution (`crawler.py`)
-- [ ] Integrate sitemap fetcher, frontier, downloader, extractor, and dedup pipeline
-- [ ] Add polite backoff on HTTP 403, 429, or network errors
-- [ ] Implement streaming JSONL writer to `data/news.jsonl`
-- [ ] Crawl and generate 300-article sample for team handoff (`data/news_sample_300.jsonl` - H3)
+- [x] Integrate sitemap fetcher, frontier, downloader, extractor, and dedup pipeline
+- [x] Add polite backoff on HTTP 403, 429, or network errors
+- [x] Implement streaming JSONL writer to `data/news.jsonl`
+- [x] Crawl and generate 300-article sample for team handoff (`data/news_sample_300.jsonl` - H3)
 - [ ] Complete full crawl to reach 5,000-12,000 articles (Corpus Freeze - H18)
 
 ## Task 6: Deduplication & Story Clustering
@@ -95,6 +95,7 @@
 - [x] `test_sitemap.py`: Validate standard, Google News, index, and archive sitemaps
 - [x] `test_normalizer.py`: Validate query stripping and AMP conversion
 - [x] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
+- [x] `test_crawler.py`: Validate crawl loops, 429 backoff, 403/CAPTCHA disabling, and link harvesting
 - [ ] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
 - [ ] `test_format_compliance.py`: Validate schema compliance with `formats.md`
 

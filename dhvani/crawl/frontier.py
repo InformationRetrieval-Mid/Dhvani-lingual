@@ -136,31 +136,55 @@ class MercatorFrontier:
         Keeps each host back queue populated up to max_back_queue_size without
         causing starvation or head-of-line blocking.
         """
-        max_attempts = sum(len(q) for q in self.front_queues.values())
-        attempts = 0
+        # Fast exit: if all existing back queues are full and all primary sources are discovered,
+        # there are zero available slots across the frontier.
+        hungry_hosts = {h for h, bq in self.back_queues.items() if len(bq) < self.max_back_queue_size}
+        if self.back_queues and not hungry_hosts and len(self.back_queues) >= 5:
+            return
 
-        while attempts < max_attempts:
-            chosen_tier = self._select_front_queue()
-            if not chosen_tier:
-                break
+        for tier in ("Q0", "Q1", "Q2", "Q3"):
+            q = self.front_queues[tier]
+            if not q:
+                continue
 
-            # Peek head of chosen front queue
-            candidate_url = self.front_queues[chosen_tier][0]
-            host = self.extract_host(candidate_url)
+            max_checks = len(q)
+            checks = 0
+            consecutive_skips = 0
 
-            if host not in self.back_queues:
-                self.back_queues[host] = deque()
+            while q and checks < max_checks:
+                # If all known back queues are satisfied and all sources discovered, terminate early
+                if not hungry_hosts and len(self.back_queues) >= 5:
+                    break
 
-            if len(self.back_queues[host]) < self.max_back_queue_size:
-                url = self.front_queues[chosen_tier].popleft()
-                self.back_queues[host].append(url)
-                self._schedule_host(host)
-            else:
-                # Back queue for this host is currently full.
-                # Stop transferring for this pass to preserve FIFO order.
-                break
+                # If we have rotated past all currently known full hosts consecutively without placing a URL, break
+                if consecutive_skips >= max(len(self.back_queues), 10):
+                    break
 
-            attempts += 1
+                candidate_url = q[0]
+                host = self.extract_host(candidate_url)
+                if not host:
+                    q.popleft()
+                    checks += 1
+                    continue
+
+                if host not in self.back_queues:
+                    self.back_queues[host] = deque()
+                    hungry_hosts.add(host)
+
+                if len(self.back_queues[host]) < self.max_back_queue_size:
+                    url = q.popleft()
+                    self.back_queues[host].append(url)
+                    self._schedule_host(host)
+                    consecutive_skips = 0
+                    if len(self.back_queues[host]) >= self.max_back_queue_size:
+                        hungry_hosts.discard(host)
+                else:
+                    # Host back queue is currently full: rotate URL to back of queue
+                    # so other hosts are not starved behind it.
+                    q.rotate(-1)
+                    consecutive_skips += 1
+
+                checks += 1
 
     async def get_next_url(self) -> Optional[Tuple[str, str]]:
         """Retrieve the next ready URL adhering to per-host delay constraints.
@@ -200,21 +224,25 @@ class MercatorFrontier:
 
         return None
 
-    def complete_request(self, host: str, completion_time: Optional[float] = None) -> None:
+    def complete_request(
+        self, host: str, completion_time: Optional[float] = None, delay: Optional[float] = None
+    ) -> None:
         """Mark in-flight request as finished and reschedule host for next eligible window."""
         t = completion_time if completion_time is not None else self.time_func()
         self.last_request_time[host] = t
         self.in_flight_hosts.discard(host)
 
-        # Refill back queue if space freed
-        self._refill_back_queues()
+        eff_delay = delay if delay is not None else self.per_host_delay
 
-        # Reschedule host if more URLs remain
-        if self.back_queues.get(host):
-            ready_time = t + self.per_host_delay
+        # Reschedule host on heap first if more URLs remain and not already on heap
+        if self.back_queues.get(host) and host not in self.hosts_in_heap:
+            ready_time = t + eff_delay
             self._entry_count += 1
             heapq.heappush(self.heap, (ready_time, self._entry_count, host))
             self.hosts_in_heap.add(host)
+
+        # Refill back queues for all eligible hosts
+        self._refill_back_queues()
 
     def is_empty(self) -> bool:
         """Check if all queues and in-flight operations are completely drained."""

@@ -217,6 +217,10 @@ class RobotsParser:
             self.fetch_and_parse(host)
         return self.cache.get(host, HostRules()).sitemaps
 
+    def extract_sitemaps(self, content: str) -> List[str]:
+        """Extract sitemaps directly from robots.txt content string."""
+        return self.parse_content(content).sitemaps
+
     def set_cached_rules(self, host: str, content: str) -> None:
         """Inject raw content for testing or offline usage without network request."""
         host = self._get_host(host)
