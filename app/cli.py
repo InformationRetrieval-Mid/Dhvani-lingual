@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
+from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.sample_index import SampleIndex  # noqa: E402
 from dhvani.rank.scoring import DEFAULT_WEIGHTS, rank  # noqa: E402
@@ -123,11 +124,24 @@ def explain_candidates(out, query, index, ranker, k):
     out.append(f"The heap keeps the best {k} instead of sorting all {len(scores)}.")
 
 
+def explain_parser(out, query, index, k):
+    heading(out, "4b. Query parser (strictest stage first, stop once there are k)")
+    found = set()
+    for stage, docs in stage_matches(index, query):
+        new = docs - found
+        found |= docs
+        out.append(f"{STAGE_LABELS[stage]:<26} {len(docs):>3} articles, {len(new):>3} new, {len(found):>3} so far")
+        if len(found) >= k:
+            out.append(f"Stopped here: {len(found)} >= k = {k}.")
+            break
+
+
 def explain_result(out, i, doc_id, score, explain, index, ranker):
     article = getattr(index, "articles", {}).get(doc_id, {})
     meta = index.meta[doc_id]
     out.append("")
-    out.append(f"#{i}  {doc_id}  score {score:.4f}")
+    stage = explain.get("stage")
+    out.append(f"#{i}  {doc_id}  score {score:.4f}" + (f"  [{STAGE_LABELS[stage]}]" if stage else ""))
     if article:
         out.append(f"    {article['headline']}")
     out.append(f"    {meta.get('source')} · {meta.get('section')} · {(meta.get('date') or '')[:10]}")
@@ -154,6 +168,8 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
+    parser.add_argument("--no-parser", action="store_true",
+                        help="skip the query parser and rank every article that shares a word")
     args = parser.parse_args(argv)
 
     index = load_index(args.stem)
@@ -165,8 +181,12 @@ def run(argv=None):
         explain_query_vector(out, query, index, args.ranker)
         explain_postings(out, query, index)
         explain_candidates(out, query, index, args.ranker, args.k)
+        if not args.no_parser:
+            explain_parser(out, query, index, args.k)
 
-    if args.ranker == "net":
+    if not args.no_parser:
+        results = parse_and_rank(query, index, k=args.k, ranker=args.ranker)
+    elif args.ranker == "net":
         results = rank(query, index, k=args.k)
     elif args.ranker == "lnc":
         results = search(query, index, k=args.k)
@@ -181,7 +201,9 @@ def run(argv=None):
             explain_result(out, i, doc_id, score, explain, index, args.ranker)
         else:
             headline = getattr(index, "articles", {}).get(doc_id, {}).get("headline", "")
-            out.append(f"{i}. {score:.4f}  {doc_id}  {headline}")
+            stage = explain.get("stage")
+            tag = f"  [{STAGE_LABELS[stage]}]" if stage else ""
+            out.append(f"{i}. {score:.4f}  {doc_id}  {headline}{tag}")
 
     text = "\n".join(out)
     print(text)

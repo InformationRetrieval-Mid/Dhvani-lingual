@@ -27,11 +27,12 @@ Last updated: 7 Oct
 - [x] Streamlit redesign in an Apple style: top bar, centred search, segmented control, filters popover, grouped result lists
 - [x] `app/cli.py --explain`: query vector, postings, candidates, heap and per-word scores
 - [x] Query parser: exact phrase, part of the phrase, all words, all words with variants, then any word
+- [x] Parser stage shown on each result in the app, a switch to turn it off, and a parser step in `--explain`
 
 ## In progress
 
 ### Rishit
-- [ ] Show the parser in the app and the CLI
+- Nothing uncommitted right now. Next up is the speed-ups.
 
 ## Next
 

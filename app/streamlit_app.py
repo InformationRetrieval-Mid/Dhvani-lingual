@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
+from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.sample_index import SampleIndex, tokenize  # noqa: E402
 from dhvani.rank.scoring import rank  # noqa: E402
@@ -225,6 +226,10 @@ div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(2
 .dv-chip.exact { background: var(--dv-exact); }
 .dv-chip.phonetic { background: var(--dv-phonetic); }
 .dv-chip.xling { background: var(--dv-xling); }
+.dv-stage {
+  font-size: 0.66rem; font-weight: 500; color: var(--dv-secondary); background: var(--dv-fill);
+  border-radius: 999px; padding: 0.05rem 0.45rem;
+}
 .dv-only {
   font-size: 0.66rem; font-weight: 600; color: #fff; background: var(--dv-accent);
   border-radius: 999px; padding: 0.05rem 0.45rem;
@@ -268,7 +273,9 @@ def load_index(mode):
     return SampleIndex.load(mode)
 
 
-def run_ranker(ranker, query, index, k, doc_filter):
+def run_ranker(ranker, query, index, k, doc_filter, use_parser=True):
+    if use_parser:
+        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter)
     if ranker == "net":
         return rank(query, index, k=k, doc_filter=doc_filter)
     if ranker == "lnc":
@@ -327,6 +334,8 @@ def result_row(doc_id, score, explain, index, sources, only_here):
     date = (meta.get("date") or "")[:10]
     details = " · ".join(html.escape(x) for x in (meta.get("section"), place, date) if x)
     only = '<span class="dv-only">Only here</span>' if only_here else ""
+    stage = explain.get("stage")
+    stage_tag = f'<span class="dv-stage">{STAGE_LABELS[stage]}</span>' if stage else ""
     chips = "".join(
         f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS[sources.get(t, "exact")]}</span>'
         for t in terms
@@ -334,7 +343,7 @@ def result_row(doc_id, score, explain, index, sources, only_here):
     return f"""
     <div class="dv-row">
       <div class="dv-row-top">
-        <span class="dv-source">{html.escape(meta.get("source") or "")}</span><span>{details}</span>{only}
+        <span class="dv-source">{html.escape(meta.get("source") or "")}</span><span>{details}</span>{stage_tag}{only}
         <span class="dv-score">{score:.3f}</span>
       </div>
       <div class="dv-headline">{highlight(article["headline"], sources)}</div>
@@ -384,6 +393,8 @@ def main():
             sections = st.multiselect("Section", field_values(base_index, "section"), placeholder="All sections")
             states = st.multiselect("State", field_values(base_index, "state"), placeholder="All states")
             k = st.slider("Results per column", 3, 20, 10)
+            use_parser = st.toggle("Smart query parsing", value=True,
+                                   help="Try the exact phrase first, then all the words, then any word.")
             use_dates = st.toggle("Limit to a date range")
             date_from = date_to = None
             if use_dates:
@@ -408,7 +419,7 @@ def main():
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
-        results[mode] = run_ranker(ranker, query, index, k, doc_filter)
+        results[mode] = run_ranker(ranker, query, index, k, doc_filter, use_parser)
 
     ids = {mode: {doc_id for doc_id, _, _ in res} for mode, res in results.items()}
     columns = st.columns(len(MODES), gap="medium")
