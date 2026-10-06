@@ -2,10 +2,10 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after adding the translation switch
+Last updated: 7 Oct, after adding the metrics
 
 ## My part
-Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
+Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
 
 ## Committed so far
 
@@ -25,7 +25,8 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `bdd6b29` query parser that tries the exact phrase first | `dhvani/rank/parser.py` |
 | `6063301` parser stages shown in the app and the cli | `app/streamlit_app.py`, `app/cli.py` |
 | `8cc6b07` cross-lingual layer for english queries | `dhvani/rank/xling.py` and the English to Hindi news dictionary |
-| translation switch in the app and cli | `app/streamlit_app.py`, `app/cli.py` |
+| `69faf76` translation switch in the app and cli | `app/streamlit_app.py`, `app/cli.py` |
+| metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
 
 ## How to use it
 
@@ -102,8 +103,15 @@ from dhvani.rank.xling import translate
 q = translate(exact_query("delhi rain"))   # adds ("दिल्ली", w, "xling"), ("बारिश", w, "xling") ...
 ```
 
+**Metrics** (`dhvani/eval/metrics.py`)
+P@k, R@k, F1, AP, MAP, DCG, nDCG and the 11-point interpolated PR curve, checked against the lecture's own examples (MAP comes out as 0.53). Also reads and writes TREC run files and judgment files.
+```python
+from dhvani.eval.metrics import evaluate, read_qrels, read_run
+per_query, means = evaluate(rankings, qrels_by_query, k=10)   # means: P@10, R@10, MAP, nDCG@10
+```
+
 ## Tests
-64 tests in `partwise-tests/rishit/`, all passing.
+76 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -114,4 +122,4 @@ q = translate(exact_query("delhi rain"))   # adds ("दिल्ली", w, "xli
 - **Riya:** `links` and `dup_of` in the article file, for PageRank and duplicate collapsing.
 
 ## Next
-The metrics, the experiment runner, then speed-ups, PageRank and authority.
+The experiment runner, the stop words and idf analysis, then speed-ups, PageRank and authority.

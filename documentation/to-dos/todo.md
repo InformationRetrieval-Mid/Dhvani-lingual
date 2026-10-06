@@ -31,14 +31,17 @@ Last updated: 7 Oct
 
 - [x] Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)
 - [x] Translation switch in the app's Filters popover and `--no-xling` in the CLI
+- [x] Metrics: P@k, R@k, MAP, nDCG and 11-point PR, checked against the lecture examples
 ## In progress
 
 ### Rishit
-- Next up: the metrics code.
+- Next up: the experiment runner.
 
 ## Next
 
 ### Rishit: required
+- [ ] Stop words and idf on the Hindi corpus: top-idf table, Zipf plot, stop words kept vs removed vs idf only
+- [ ] Experiment runner: every stemming mode x every ranker x every query, run files, tables and PR curves, including the stemming comparison
 - [ ] Speed-ups: index elimination, champion lists, recent-news tier
 - [ ] Date-aware "kal"
 - [ ] Collapsing duplicate wire stories ("also in: ...")
@@ -61,7 +64,6 @@ Last updated: 7 Oct
 |---|---|---|---|
 | Dhrithi | Real indexes for none, light and auto with the `formats.md` methods, ideally plus `doc_len` and article text | H8 | Sample index |
 | Dhrithi | `analyze(text, mode)` so queries are processed like articles | H8 | Sample tokenizer |
-| Dhrithi | Metrics code (P@k, MAP, nDCG) | H22 | Nothing needed yet |
 | Viraja | Query object with Hinglish expansions | H12 | Exact-match stub |
 | Viraja | Agree the handoff: her language ID tags English words, my layer adds translated expansions | Now | Nothing |
 | Riya | `news.jsonl` with `links`, `dup_of`, `date`, `source`, `section`, `state` | H8 sample, H18 frozen | Sample articles |
@@ -74,10 +76,9 @@ Last updated: 7 Oct
 - [ ] Pooling script
 
 ### Dhrithi
-- [ ] Normalizer, tokenizer, stop words and idf study
+- [ ] Normalizer and tokenizer
 - [ ] Light, aggressive and YASS stemmers, selective stemming (auto)
 - [ ] Positional indexes, Boolean search, extended-biword phrase index, compression
-- [ ] Metrics code
 
 ### Viraja
 - [ ] Language ID, Roman spellings, Soundex, Dhvani-code, learned edit distance

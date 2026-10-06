@@ -79,3 +79,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Our own news dictionary, MUSE optional.** A small dictionary of common news words lives in the repo so translation works without any download. The bigger MUSE dictionary is merged in automatically if someone downloads it, and our entries win where both have a word.
 
 **Only top-level data/ is ignored.** The old `.gitignore` rule ignored every folder called data, which would have kept the dictionary out of git. It now only ignores the top-level `data/` folder where crawled articles and downloads live.
+
+**Metrics checked against the lecture.** The tests use the lecture's own worked examples: AP of 0.62 and 0.44 giving MAP 0.53, P@5 of 0.6 and R@5 of 0.5. If those numbers match, we can trust the tables built on top of them.
