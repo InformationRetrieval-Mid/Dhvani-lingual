@@ -1,6 +1,6 @@
 # Dhvani: our Hindi + Hinglish news search engine
 
-Track 5 · repo `Dhvani-lingual` · Riya, Dhrithi, Viraha, Rishit · 36 hours
+Track 5 · repo `Dhvani-lingual` · Riya, Dhrithi, Viraja, Rishit · 36 hours
 
 ## 1. What we're building
 We're building a search engine over Hindi newspaper articles that we crawl ourselves. You can search in Hindi, Hinglish, English, or a mix of all three, and these should all bring up the same articles: `कल का मौसम`, `kal ka mausam`, `kal ka mosam`, `weather tomorrow`.
@@ -21,7 +21,7 @@ Every search shows three columns side by side: no stemming, stemming, and auto (
 ## 3. Who's doing what
 How to read this: **Lecture** means stuff from the syllabus (marks for using IR principles). **NEW** means things beyond the syllabus (extra marks). **OURS** means ideas we came up with ourselves (novelty marks).
 
-| | Riya: Crawler | Dhrithi: Text & indexes | Viraha: Hinglish layer | Rishit: Ranking & app |
+| | Riya: Crawler | Dhrithi: Text & indexes | Viraja: Hinglish layer | Rishit: Ranking & app |
 |---|---|---|---|---|
 | Lectures | L20 crawling | L1, L2, L6 | L2, L3 | L6, L7, L8 |
 | Track 5 part they own | The regional news corpus | Hindi tokenizing and normalizing, stemming vs no stemming, stop words and idf | Soundex-style phonetic matching, name spelling variants | Cross-lingual ranking with the vector space model |
@@ -44,21 +44,21 @@ How to read this: **Lecture** means stuff from the syllabus (marks for using IR 
 - **We're done when** the formats are written in the README and everyone can run `python -c "import dhvani"`.
 
 ### Phase 1 · H1 to H3 · Foundations (nobody waits on anybody)
-| Riya | Dhrithi | Viraha | Rishit |
+| Riya | Dhrithi | Viraja | Rishit |
 |---|---|---|---|
 | robots.txt checker and its tests; frontier skeleton | Normalizer and tokenizer; light stemmer | Language ID; standard Roman spellings; Soundex and Dhvani-code | A fake 20-document index with lnc.ltc running on it; helps Dhrithi with the metrics code |
 
-- **We're done when (H3)** Riya has shared a 300-article sample, Viraha has shared a simple exact-match query stub, and the crawler is running.
+- **We're done when (H3)** Riya has shared a 300-article sample, Viraja has shared a simple exact-match query stub, and the crawler is running.
 
 ### Phase 2 · H3 to H8 · Building the core
-| Riya | Dhrithi | Viraha | Rishit |
+| Riya | Dhrithi | Viraja | Rishit |
 |---|---|---|---|
 | Pulling articles out of JSON-LD; URL normalization; filters | 3 positional indexes with zones and fields; Boolean search, skip pointers, phrases | k-gram index; learned edit distance (aligning and counting) | Heap top-K, zones, proximity, recency; BM25; Streamlit app with the stemming columns |
 
 - **We're done when (H8)** a Hindi query shows no-stem and stem results in the app. The auto column comes later, in Phase 4.
 
 ### Phase 3 · H8 to H12 · Plugging it together
-| Riya | Dhrithi | Viraha | Rishit |
+| Riya | Dhrithi | Viraja | Rishit |
 |---|---|---|---|
 | Near-duplicates (shingles + Jaccard); keeping an eye on the crawl | Aggressive stemmer; stop words, idf and Zipf; stem-diff tool | Weighted expansion; context correction; hooking into Rishit's ranker | Cross-lingual layer; query parser; snippets; filters; `--explain` |
 
@@ -66,9 +66,9 @@ How to read this: **Lecture** means stuff from the syllabus (marks for using IR 
 - **We're done when (H12)** the Hindi, Hinglish and English versions of the same need all work end to end.
 
 ### Phase 4 · H12 to H22 · The extra stuff, plus sleep
-- **Sleep in shifts:** Riya and Dhrithi sleep H12 to H17, Viraha and Rishit sleep H17 to H22. Someone is always watching the crawler.
+- **Sleep in shifts:** Riya and Dhrithi sleep H12 to H17, Viraja and Rishit sleep H17 to H22. Someone is always watching the crawler.
 
-| Riya | Dhrithi | Viraha | Rishit |
+| Riya | Dhrithi | Viraja | Rishit |
 |---|---|---|---|
 | MinHash + LSH; adaptive recrawl; **freezes the news snapshot at H18** | Selective stemming and the auto column; YASS stemmer; extended-biword index; compression; full index build after H18 | Rocchio query expansion; edit-cost heatmap; names test set | PageRank and authority g(d); date-aware "kal"; collapsing duplicates; champion lists and the recent tier; learning-to-rank features |
 
@@ -79,7 +79,7 @@ How to read this: **Lecture** means stuff from the syllabus (marks for using IR 
 - **H25 to H28, everyone runs their own results table:**
   - **Riya:** how well near-duplicate detection works at each Jaccard threshold, and exact vs MinHash speed.
   - **Dhrithi:** no stemming vs light vs aggressive vs YASS vs auto; stop words; idf and Zipf plots; phrase-query speed; index size with compression.
-  - **Viraha:** the phonetic methods compared (word by word and on full queries); with vs without query expansion.
+  - **Viraja:** the phonetic methods compared (word by word and on full queries); with vs without query expansion.
   - **Rishit:** cross-lingual results; lnc.ltc vs BM25 vs learning-to-rank; authority g(d); "kal"; duplicate collapsing; champion-list speed.
 - **We're done when (H28)** every table and graph exists.
 
@@ -126,7 +126,7 @@ How to read this: **Lecture** means stuff from the syllabus (marks for using IR 
 **Shared tooling:** the metrics code (P@k, R@k, MAP, nDCG, 11-point PR), checked against the lecture's own examples (MAP has to come out as 0.53).
 **Report:** tokenizing, stemming, stop words, selective stemming. **Video:** the normalization trace, postings, the stem diff, the auto column.
 
-### Viraha · Hinglish layer · 27 h
+### Viraja · Hinglish layer · 27 h
 **From the lectures (15 h)**
 - Language ID for each word. Words that could go either way ("main", "to", "hi") keep both readings, with weights (2 h).
 - A standard Roman spelling for every Hindi word, with the rule that drops the final "a" (कमल → kamal) (2 h).
@@ -167,8 +167,8 @@ How to read this: **Lecture** means stuff from the syllabus (marks for using IR 
 |---|---|---|---|
 | Riya | Nothing | – | – |
 | Dhrithi | An article sample from Riya | H3 | MIRACL-Hindi passages |
-| Viraha | The index vocabulary from Dhrithi | H6 | Just Aksharantar |
-| Rishit | Dhrithi's index and Viraha's query object | H8 and H12 | A fake 20-document index and the exact-match stub |
+| Viraja | The index vocabulary from Dhrithi | H6 | Just Aksharantar |
+| Rishit | Dhrithi's index and Viraja's query object | H8 and H12 | A fake 20-document index and the exact-match stub |
 
 ## 7. How we evaluate
 - 30 information needs, each written 4 ways (Hindi, natural Hinglish, messy Hinglish from Aksharantar's test data, and English). That's 120 queries.
@@ -182,10 +182,10 @@ Drop things in this order: dense re-ranker, lemmatizer, learning-to-rank, gamma 
 ## 9. The video (7 minutes)
 | Time | What's on screen | Who |
 |---|---|---|
-| 0:00 to 0:50 | The problem | Viraha |
+| 0:00 to 0:50 | The problem | Viraja |
 | 0:50 to 2:30 | Live demo: 4 ways of asking, all 3 stemming columns, snippets, filters, "kal" | Rishit |
 | 2:30 to 3:15 | The crawler, robots.txt tests, duplicates | Riya |
 | 3:15 to 4:00 | Normalization, postings, stem diff, selective stemming (the auto column) | Dhrithi |
-| 4:00 to 4:45 | Codes, candidates, heatmap, query expansion | Viraha |
+| 4:00 to 4:45 | Codes, candidates, heatmap, query expansion | Viraja |
 | 4:45 to 5:30 | `--explain` scores, cross-lingual, authority ranking | Rishit |
 | 5:30 to 7:00 | Results tables | everyone shows their own |
