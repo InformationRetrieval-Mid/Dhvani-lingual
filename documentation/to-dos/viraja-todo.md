@@ -270,10 +270,10 @@ today; phonetic / xling matches are added as extra `expansions` entries later �
   - `kgram.py` candidate index (built against the Aksharantar word list; swap to Dhrithi's `idx.vocab` at H6).
   - `match.py` four-matcher comparison + top-5 re-ranking (`weighted_variants`).
   - `aksharantar.py` loader + `evaluate.py`: word-level acc@1 / MRR — dhvani 0.931, soundex 0.912, learned 0.906, levenshtein 0.895.
-* [ ] **Phase 3 (H8–H12):**
-  - Implement `expand.py` weighted expansion wired into `build_query` (`source: "phonetic"`).
-  - Implement `context.py` context correction (candidate lattice + Viterbi).
-  - **Handoff (H12):** full query object with phonetic expansions; Hindi / Hinglish / English versions of the same need all work end-to-end.
+* [x] **Phase 3 (H8–H12):**
+  - `expand.py` — weighted phonetic expansion wired into `build_query` (`source: "phonetic"`).
+  - `context.py` — context correction (candidate lattice + Viterbi over co-occurrence).
+  - **Integration:** `test_integration.py` scores `build_query` output through Rishit's `vsm.search` (skips until `dhvani/rank/` is present); Hindi `मौसम` and Hinglish `mosam`→मौसम both hit the weather docs.
 * [ ] **Phase 4 (H12–H22):** *(sleep shift H17–H22)*
   - Add Rocchio query expansion (top-10 PRF).
   - Produce the edit-cost heatmap and build the 50-name test set.

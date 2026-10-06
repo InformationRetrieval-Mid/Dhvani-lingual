@@ -3,7 +3,7 @@
 Living notes on what my part gives the team, what I need back, and the calls I
 made at forks in the road. If you rename something I expose, tell me first.
 
-## What I expose right now (Phase 0–2)
+## What I expose right now (Phase 0–3)
 
 All importable as `from dhvani.query.X import ...`:
 
@@ -19,9 +19,11 @@ All importable as `from dhvani.query.X import ...`:
 | `editdist` | `load_costs(path)` | loads `dhvani/query/edit_costs.json` (shipped, trained on 50k Aksharantar pairs) |
 | `kgram` | `KGramIndex(vocab).candidates(word)` | k-gram candidate terms ranked by Jaccard |
 | `match` | `weighted_variants(word, index, costs)` | top-5 `(term, weight, "phonetic")` variants — the production path |
-| `build` | `build_query(raw)` | the **query object** (format 4) — exact-match only for now (phonetic expansions wire in during Phase 3) |
+| `expand` | `expand_query(query, index, costs)` | appends each token's phonetic variants to its `expansions` list |
+| `context` | `correct(query, cooccur)` / `best_path(...)` | context correction: pick the variant combo that co-occurs most (Viterbi over a lattice) |
+| `build` | `build_query(raw, index=None, costs=None)` | the **query object** (format 4). No index → exact-only (H3 stub). Pass a `KGramIndex` + costs → tokens also carry `"phonetic"` expansions |
 
-Tests: `partwise-tests/viraja/` (**35 passing**). Run `python -m pytest partwise-tests/viraja/`.
+Tests: `partwise-tests/viraja/` (**43 passing, 1 skipped** — the skip is the end-to-end ranker test, which runs once `dhvani/rank/` is present). Run `python -m pytest partwise-tests/viraja/`.
 
 ### Phase 2 word-level results (Aksharantar test split, 1500 queries / 1156-word vocab)
 | matcher | accuracy@1 | MRR |
@@ -40,11 +42,16 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
   `from dhvani.rank.query_stub import exact_query` for
   `from dhvani.query.build import build_query` whenever you're ready. Same shape,
   so nothing downstream changes.
-- For now every token has a single `("<word>", 1.0, "exact")` expansion. The
-  phonetic variants already exist (`match.weighted_variants` returns
-  `(term, weight, "phonetic")`); in **Phase 3** I append them to each token's
-  `expansions` list inside `build_query`. The object shape will not change, so
-  your scoring code keeps working as I grow it.
+- **Phonetic expansion is live (Phase 3).** Call
+  `build_query(raw, index=kgram_index, costs=load_costs(...))` and each token
+  carries its `"phonetic"` variants alongside the `"exact"` one; call it with no
+  args for the old exact-only stub. Object shape is unchanged, so your scoring
+  code keeps working either way.
+- **Verified end-to-end against your ranker.** `partwise-tests/viraja/test_integration.py`
+  builds a query with `build_query` and scores it with `dhvani.rank.vsm.search`
+  over your `SampleIndex`: `मौसम` and the Hinglish `mosam` (via phonetic
+  expansion to मौसम) both land the weather docs. It `importorskip`s your rank, so
+  it skips on my branch and runs once our parts are together.
 
 ## What I need from the team
 
