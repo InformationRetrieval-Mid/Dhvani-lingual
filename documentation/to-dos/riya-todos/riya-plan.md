@@ -51,21 +51,26 @@ dhvani/
 
 ## 3. Core Components & Implementation Design
 
-### 1. Custom Robots.txt Checker (`robots.py`)
-#### The Problem
-Python's built-in `urllib.robotparser` gives incorrect answers on Indian news portals (Jagran, Jansatta, Live Hindustan, Amar Ujala) because it fails on wildcard (`*`) matching, end-of-URL (`$`) matching, query parameters, and longest-match precedence rules.
+### 1. Robots.txt Compliance (`robots.py`)
+#### Specification & Scope
+Enforces RFC 9309 compliance for target news domains prior to dispatching fetch requests. Handles wildcard and end-of-path patterns used across Indian news sites, maintains per-host rule caching, and automates sitemap discovery.
 
-#### Implementation Design
-* Implement a custom RFC 9309-compliant parser.
-* Support wildcards (`*`) and longest-match rule (`Allow` vs `Disallow`).
-* Parse `Sitemap:` directives directly from `robots.txt`.
-* Unit tests in `partwise-tests/riya/test_robots.py` will demonstrate exact test cases where `urllib.robotparser` fails and our parser succeeds (a great talking point for the report).
+#### Rules & Matching Logic
+* **Wildcard & Path Matching:** Converts wildcard (`*`) and path-end (`$`) rules into compiled regular expressions adhering to RFC 9309 §2.2.2.
+* **Precedence:** Enforces longest-match precedence between conflicting `Allow` and `Disallow` rules; equal-length matches resolve in favor of `Allow`.
+* **User-Agent Resolution:** Matches site-specific rules for `CollegeProject_NewsBot` first; falls back to default wildcard (`*`) group if no explicit record exists. Does not alter user-agent to bypass disallow directives.
+* **In-Memory Caching:** Caches parsed rules per host (`scheme://host`) in memory to eliminate redundant HTTP requests across crawl sessions.
+* **Sitemap Extraction:** Extracts `Sitemap:` directives from `robots.txt` and forwards discovered feeds directly into the sitemap discovery queue.
 
 ---
 
 ### 2. Mercator Frontier Architecture (`frontier.py`)
-#### How It Works
-Separates priority from politeness using a two-tier queue structure:
+#### How It Works & Concurrency Model
+Separates priority from politeness using a two-tier queue structure driven by a **single-threaded asynchronous event loop (`asyncio` + `heapq`)**:
+* While one request is waiting on network I/O, the event loop can dispatch requests for another eligible host.
+* Eliminates thread locks, race conditions, and concurrent file-write problems while overlapping I/O.
+* Theoretical scheduling interval across 5 target hosts: $8 / 5 = 1.6\text{ seconds/request}$.
+
 ```text
                [ Incoming URLs: Sitemaps, Bursts, In-Page Links ]
                                     │
@@ -90,11 +95,11 @@ Separates priority from politeness using a two-tier queue structure:
                └────────────────────────────────────────┘
 ```
 
-#### Queue Loop
+#### Asynchronous Queue Loop
 1. Min-Heap inspects top entry `(ready_time, host)`.
-2. If `ready_time > now()`, worker sleeps for `ready_time - now()`.
+2. If `ready_time > now()`, asynchronously sleeps until `ready_time`.
 3. Pop next URL from `host`'s FIFO back queue.
-4. Fetch URL, extract content, write to `data/news.jsonl`.
+4. Asynchronously fetch URL, extract content, and append to `data/news.jsonl`.
 5. Reschedule `host` on the heap with `ready_time = now() + 8.0s`.
 
 ---
@@ -263,9 +268,9 @@ All crawled articles must be written to `data/news.jsonl` (one JSON line per art
 
 ## 6. Milestones & Checklist
 * [ ] **Phase 1 (H1–H3):**
-  - Implement `robots.py` and unit tests.
-  - Build `frontier.py` skeleton and basic sitemap parser.
-  - **Handoff (H3):** Generate and provide `data/news_sample_300.jsonl` (300 clean articles).
+  - [x] Implement `robots.py` and unit tests.
+  - [ ] Build `frontier.py` (asyncio + heapq) and sitemap parser.
+  - **Handoff (H3):** Generate and provide `data/news_sample_300.jsonl` (300 clean articles, deferred until initial extractor and normalizer are complete).
 * [ ] **Phase 2 (H3–H8):**
   - Implement `extractor.py`, `normalizer.py`, and `filters.py`.
   - Start continuous 5-site crawling.

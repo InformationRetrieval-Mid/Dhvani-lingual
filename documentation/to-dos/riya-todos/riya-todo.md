@@ -20,11 +20,13 @@
 - [x] Implement non-article route filtering
 
 ## 3. Robots.txt Compliance (`robots.py`)
-- [ ] Implement RFC 9309 rules parser
-- [ ] Implement path pattern matching with `*` and `$` wildcards
-- [ ] Implement longest-match precedence rule for `Allow` vs `Disallow`
-- [ ] Implement sitemap directive extraction from `robots.txt`
-- [ ] Write unit tests comparing custom parser vs `urllib.robotparser` failures on target sites
+- [x] Implement RFC 9309 rules parser
+- [x] Implement path pattern matching with `*` and `$` wildcards
+- [x] Implement longest-match precedence rule for `Allow` vs `Disallow`
+- [x] Implement user-agent group matching (`CollegeProject_NewsBot` with fallback to `*`)
+- [x] Implement in-memory per-host caching for parsed rules
+- [x] Implement sitemap directive extraction from `robots.txt`
+- [x] Write unit tests verifying wildcard support, caching, precedence, and user-agent selection
 
 ## 4. Mercator Frontier (`frontier.py`)
 - [ ] Implement 4 priority front queues (Q0: Bursts, Q1: Fresh, Q2: Links, Q3: Archive)
@@ -79,7 +81,7 @@
 - [ ] Document data ingestion and pre-work in `documentation/handoffs/riya.md`
 
 ## 11. Test Suite (`partwise-tests/riya/`)
-- [ ] `test_robots.py`: Benchmark custom parser vs `urllib.robotparser` bugs
+- [x] `test_robots.py`: Benchmark custom parser vs `urllib.robotparser` bugs
 - [ ] `test_frontier.py`: Validate 8.0s per-host delay and front queue weighting
 - [ ] `test_normalizer.py`: Validate query stripping and AMP conversion
 - [ ] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
