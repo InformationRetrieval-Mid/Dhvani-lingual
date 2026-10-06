@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after adding the explain CLI
+Last updated: 7 Oct, after adding the query parser
 
 ## My part
 Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -21,7 +21,8 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `896eab0` highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
 | `6d88458` match chips, filters and score breakdown in the app | rest of `app/streamlit_app.py` |
 | `4c95b31` redesigned the app in an apple style | new look for `app/streamlit_app.py` |
-| search from the terminal with --explain | `app/cli.py` |
+| `202fac6` search from the terminal with --explain | `app/cli.py` |
+| query parser that tries the exact phrase first | `dhvani/rank/parser.py` |
 
 ## How to use it
 
@@ -76,6 +77,13 @@ Styled after Apple's design guidelines. A translucent bar sits at the top, and a
 .venv/bin/streamlit run app/streamlit_app.py
 ```
 
+**Query parser** (`dhvani/rank/parser.py`)
+Turns one query into stricter-to-looser searches: exact phrase, part of the phrase (two neighbouring words), all words, all words with variants, then any word. It stops once it has k results. Articles found at a stricter stage rank above looser ones, and within a stage the chosen ranker decides. Each result's explain dict gets `stage` and `stages_run`, and its word scores are always under `terms`.
+```python
+from dhvani.rank.parser import parse_and_rank
+parse_and_rank(q, idx, k=10, ranker="net", doc_filter=None)   # ranker: net, lnc or bm25
+```
+
 **Terminal search and --explain** (`app/cli.py`)
 Searches from the terminal. With `--explain` it prints every step: the query object, the query vector (tf, df, idf and weights, or the BM25 idf), the postings each term touched with positions, how many articles became candidates and how the heap picks the top K, and a full score breakdown for each result.
 ```bash
@@ -84,7 +92,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 ```
 
 ## Tests
-40 tests in `partwise-tests/rishit/`, all passing.
+50 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

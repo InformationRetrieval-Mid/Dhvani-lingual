@@ -63,3 +63,9 @@ A running list of the choices we made and why. Newest at the bottom.
 **Styling lives inside the app file.** We kept all the styling in `app/streamlit_app.py` instead of adding a Streamlit theme file, so the look is in one place. The catch is that Streamlit's own controls default to red, so a few of them get a small colour shift to blue in CSS.
 
 **An explain mode in the terminal.** The brief wants the video to show postings, weights and scores, not only the final results. `--explain` prints each stage in order so we can walk through one query live. It's in the terminal rather than the app because a plain text dump is easier to read on a screen recording.
+
+**Query parser with a cascade.** Lecture 7 shows one free-text query being run as a phrase first, then as shorter phrases, then as a plain vector space query. We do the same with five stages and stop once we have enough results. An exact phrase match is a much stronger signal than scattered words, so it always ranks above them, and the ranker only decides the order within a stage.
+
+**Phrases stay inside one zone.** A phrase only counts if the words are next to each other within the headline or within the body. Otherwise the last word of a headline and the first word of the body would wrongly count as a phrase.
+
+**AND starts from the rarest word.** Intersecting the shortest postings list first keeps the result small from the start, which is the query optimisation from Lecture 1.
