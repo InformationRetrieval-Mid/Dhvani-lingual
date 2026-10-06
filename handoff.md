@@ -592,3 +592,138 @@ The positions are required for:
 - future extended-biword functionality
 
 and the headline/body separation is required for zone-aware ranking later.
+
+
+## P2 Status Update — Phase 2 Complete
+
+### Completed
+
+P2's Phase 1 and Phase 2 text-processing and indexing work has been implemented and tested.
+
+#### Text processing
+
+- Hindi Unicode normalization using NFC.
+- Removal of zero-width joiners/non-joiners.
+- Hindi `हिंदी` / `हिन्दी` normalization.
+- Whitespace normalization.
+- Unicode-aware Hindi/Hinglish tokenization using:
+  `[\p{L}\p{M}\p{Nd}]+`
+- Light Hindi stemming based on the Ramanathan & Rao suffix inventory.
+- Aggressive Hindi stemming implemented as a separate analysis mode.
+
+#### Positional indexes
+
+Implemented separate positional indexes for:
+
+- `none`
+- `light`
+- `aggr`
+
+Each index stores:
+
+- document ID
+- term frequency
+- positional information
+- headline/body zones
+- document metadata
+- vocabulary
+- document frequency
+
+The index follows the shared `Index.load(mode)` / `idx.postings(term, zone)` API.
+
+#### Boolean and positional search
+
+Implemented:
+
+- Boolean AND search
+- smallest-postings-list-first processing
+- skip pointers
+- exact phrase search using positional intersections
+- proximity search using positional information
+
+Search has been tested on both synthetic test documents and a real Hindi news corpus.
+
+### Real-corpus validation
+
+A 1,000-article Hindi corpus from ILSUM-2.0 was converted to the shared Dhvani JSONL article format and used to build all three indexes.
+
+Index statistics:
+
+| Index | Documents | Vocabulary |
+|---|---:|---:|
+| none | 1,000 | 27,263 |
+| light | 1,000 | 21,104 |
+| aggr | 1,000 | 22,086 |
+
+Real-corpus query testing showed that stemming changes retrieval for some queries while leaving others unchanged.
+
+Examples:
+
+- `उत्तर प्रदेश`: none = 7 results, light/aggr = 9 results
+- `तेज बारिश`: none = 5 results, light/aggr = 7 results
+- `बारिश`: all modes = 110 results
+- `मौसम`: none = 92 results, light/aggr = 93 results
+
+Phrase and positional search were also tested on the 1,000-document corpus.
+
+Example exact phrase results:
+
+- `भारी बारिश` → 46 documents
+- `उत्तर प्रदेश` → 41 documents
+- `जम्मू कश्मीर` → 27 documents
+- `तेज बारिश` → 20 documents
+
+Example proximity searches:
+
+- `बारिश + मौसम`, distance ≤ 3 → 25 documents
+- `बारिश + संभावना`, distance ≤ 5 → 15 documents
+- `उत्तर + प्रदेश`, distance ≤ 5 → 41 documents
+
+The positional postings were manually inspected on real documents to verify that adjacent terms have consecutive positions.
+
+### Phase 2 status
+
+**P2 backend/core Phase 2 is complete.**
+
+Implemented components:
+
+- positional inverted indexes
+- headline/body zones
+- metadata storage
+- Boolean search
+- smallest-postings-list-first optimization
+- skip pointers
+- phrase search
+- proximity search
+- query integration
+- real-corpus validation
+
+The Streamlit/application integration is not part of P2's implementation and will be handled by the application owner (P4).
+
+### Current limitations / known gaps
+
+The following shared-contract items are still to be completed or extended in later phases:
+
+- `doc_norm` is currently initialized but not populated with TF-IDF document norms.
+- Full field indexing beyond headline/body is not yet implemented.
+- The full shared query-object format is not yet implemented.
+- `yass` and `auto` analysis modes are planned for later phases.
+- Stop-word/IDF processing is not yet implemented.
+- Selective stemming is not yet implemented.
+- The current search layer is Boolean/positional and does not yet provide final ranked TF-IDF/BM25 results.
+
+### Files added for real-corpus validation
+
+- `scripts/make_dev_corpus.py`
+- `scripts/test_real_queries.py`
+- `scripts/test_real_phrase_search.py`
+
+The development corpus and generated `.pkl` indexes are local test artifacts and should not be committed to Git.
+
+### Git checkpoint
+
+Real-corpus helper scripts were committed and pushed on branch `Dhrithi`:
+
+`7cacc00 — add real corpus testing scripts`
+
+Next P2 work: **Phase 3 — aggressive stemming evaluation, stop words, IDF/Zipf analysis, and stem-diff tooling.**
