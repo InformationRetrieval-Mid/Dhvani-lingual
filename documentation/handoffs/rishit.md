@@ -17,9 +17,9 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `0009026` added bm25 | `dhvani/rank/bm25.py` |
 | `e1958f1` filters for source, section, state and date | `dhvani/rank/filters.py`, plus a `doc_filter` option on all three rankers |
 | `728c3e4` sample index keeps article text for display | `SampleIndex.articles` holds headline and body |
-| `3b5c763` first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
-| `1a5cf77` highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
-| match chips, filters and score breakdown in the app | rest of `app/streamlit_app.py` |
+| `43f3c50` first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
+| `896eab0` highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
+| `6d88458` match chips, filters and score breakdown in the app | rest of `app/streamlit_app.py` |
 
 ## How to use it
 

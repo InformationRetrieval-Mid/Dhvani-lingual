@@ -55,3 +55,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **"Only here" tags.** When a result shows up in just one of the three stemming columns, it gets tagged. That makes the effect of stemming easy to spot in the demo without reading every column.
 
 **Score breakdown in the app.** Every result has a dropdown showing how its score was built. The brief asks us to show weights and scores, not just final results, and this does it live.
+
+**Rebase instead of merge for my own branch.** When GitHub had a small edit I'd made on the website, I put my local commits on top of it instead of making a merge commit. The history stays a straight line and is easier to read.
