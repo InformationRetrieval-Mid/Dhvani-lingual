@@ -265,10 +265,11 @@ today; phonetic / xling matches are added as extra `expansions` entries later �
 * [x] **Phase 1 (H1–H3):**
   - Implement `langid.py`, `roman.py`, and Soundex + Dhvani-code in `phonetics.py`.
   - **Handoff (H3):** ship the exact-match **query stub** via `build_query()`.
-* [ ] **Phase 2 (H3–H8):**
-  - Implement `editdist.py` (plain Levenshtein + learned edit distance, 2–3 EM re-aligns on Aksharantar train).
-  - Build `kgram.py` candidate index (needs `idx.vocab` by H6; Aksharantar-only until then).
-  - Implement `match.py` four-matcher comparison + top-5 re-ranking.
+* [x] **Phase 2 (H3–H8):**
+  - `editdist.py` — plain Levenshtein + learned edit distance (3 EM re-aligns on 50k Aksharantar pairs); `edit_costs.json` shipped.
+  - `kgram.py` candidate index (built against the Aksharantar word list; swap to Dhrithi's `idx.vocab` at H6).
+  - `match.py` four-matcher comparison + top-5 re-ranking (`weighted_variants`).
+  - `aksharantar.py` loader + `evaluate.py`: word-level acc@1 / MRR — dhvani 0.931, soundex 0.912, learned 0.906, levenshtein 0.895.
 * [ ] **Phase 3 (H8–H12):**
   - Implement `expand.py` weighted expansion wired into `build_query` (`source: "phonetic"`).
   - Implement `context.py` context correction (candidate lattice + Viterbi).
