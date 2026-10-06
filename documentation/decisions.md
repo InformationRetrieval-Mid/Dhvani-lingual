@@ -61,3 +61,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Apple-style redesign.** The frontend isn't graded, but the demo video is, and a clean interface makes the system easier to follow on screen. We followed Apple's design guidelines: system font with tight tracking on large text, a translucent top bar, one accent colour, a segmented control for the ranking model, and filters tucked into a popover so the main page stays simple. Results are grouped lists like the iPhone Settings app.
 
 **Styling lives inside the app file.** We kept all the styling in `app/streamlit_app.py` instead of adding a Streamlit theme file, so the look is in one place. The catch is that Streamlit's own controls default to red, so a few of them get a small colour shift to blue in CSS.
+
+**An explain mode in the terminal.** The brief wants the video to show postings, weights and scores, not only the final results. `--explain` prints each stage in order so we can walk through one query live. It's in the terminal rather than the app because a plain text dump is easier to read on a screen recording.

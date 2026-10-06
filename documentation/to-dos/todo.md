@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 6 Oct, evening
+Last updated: 7 Oct
 
 ## Done
 
@@ -25,16 +25,16 @@ Last updated: 6 Oct, evening
 - [x] Streamlit: highlighted words and snippets
 - [x] Streamlit: match chips, sidebar filters, "why this score" breakdown and "only here" tags
 - [x] Streamlit redesign in an Apple style: top bar, centred search, segmented control, filters popover, grouped result lists
+- [x] `app/cli.py --explain`: query vector, postings, candidates, heap and per-word scores
 
 ## In progress
 
 ### Rishit
-- Nothing uncommitted right now. Next up is the `--explain` CLI.
+- Nothing uncommitted right now. Next up is the query parser.
 
 ## Next
 
 ### Rishit
-- [ ] `cli.py --explain` that prints the query vector, postings, heap and per-word scores
 - [ ] Query parser: phrase, then AND, then phonetic AND, then free text
 - [ ] Speed-ups: index elimination, champion lists, recent-news tier
 - [ ] Snippets with matched words coloured by match type

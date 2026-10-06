@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 6 Oct, after the app redesign
+Last updated: 7 Oct, after adding the explain CLI
 
 ## My part
 Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -20,7 +20,8 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `43f3c50` first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
 | `896eab0` highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
 | `6d88458` match chips, filters and score breakdown in the app | rest of `app/streamlit_app.py` |
-| redesigned the app in an apple style | new look for `app/streamlit_app.py` |
+| `4c95b31` redesigned the app in an apple style | new look for `app/streamlit_app.py` |
+| search from the terminal with --explain | `app/cli.py` |
 
 ## How to use it
 
@@ -75,8 +76,15 @@ Styled after Apple's design guidelines. A translucent bar sits at the top, and a
 .venv/bin/streamlit run app/streamlit_app.py
 ```
 
+**Terminal search and --explain** (`app/cli.py`)
+Searches from the terminal. With `--explain` it prints every step: the query object, the query vector (tf, df, idf and weights, or the BM25 idf), the postings each term touched with positions, how many articles became candidates and how the heap picks the top K, and a full score breakdown for each result.
+```bash
+.venv/bin/python app/cli.py "दिल्ली बारिश" --explain
+.venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
+```
+
 ## Tests
-36 tests in `partwise-tests/rishit/`, all passing.
+40 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
