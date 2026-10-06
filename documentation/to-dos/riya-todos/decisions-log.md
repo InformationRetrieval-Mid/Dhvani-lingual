@@ -20,6 +20,13 @@
     - Biased selection verified: 1,000-iteration simulation confirmed priority distribution ($Q_0 \approx 70.6\%$ relative ratio over $Q_1$) without starving lower queues.
     - Bounded back queues (`max_back_queue_size = 10`) eliminate head-of-line blocking during burst spikes.
 
+- **Sitemap Ingestion & Conditional Discovery:**
+  - Robust namespace-agnostic XML parser implemented in [`dhvani/crawl/sitemap.py`](../../../dhvani/crawl/sitemap.py) supporting standard (`<urlset>`), Google News (`<news:news>`), and sitemap index (`<sitemapindex>`) feeds.
+  - Live survey confirmed working Google News sitemaps across all 5 primary sources (`jagran.com`, `navbharattimes.indiatimes.com`, `livehindustan.com`, `amarujala.com`, `aajtak.in`).
+  - Added regex fallback for truncated/imperfect XML streams so network interruptions do not cause unhandled parse crashes.
+  - Implemented HTTP 304 conditional request support (`If-None-Match`, `If-Modified-Since`) to eliminate redundant bandwidth consumption during polling.
+  - **Empirical Test Result & Verification:** Validated in [`test_sitemap.py`](../../../partwise-tests/riya/test_sitemap.py) (7/7 tests passing including Google News fields, index discovery, conditional headers, and malformed stream resilience).
+
 - **Sample Handoff Sequencing:**
   - Defer generating the 300-article sample (`news_sample_300.jsonl` for H3) until initial extractor, normalizer, and crawler pipeline are complete.
 

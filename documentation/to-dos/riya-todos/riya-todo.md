@@ -37,10 +37,10 @@
 - [x] Write unit tests verifying 8.0s delay enforcement and queue priorities
 
 ## 5. Sitemap & Seed Management (`sitemap.py`)
-- [ ] Implement XML sitemap parser for standard sitemaps
-- [ ] Implement parser for Google News sitemaps (`<news:news>`, `<news:publication_date>`)
-- [ ] Implement sitemap index parser for nested feeds
-- [ ] Add archive sitemap seed discovery
+- [x] Implement XML sitemap parser for standard sitemaps
+- [x] Implement parser for Google News sitemaps (`<news:news>`, `<news:publication_date>`)
+- [x] Implement sitemap index parser for nested feeds
+- [x] Add archive sitemap seed discovery
 
 ## 6. Article & Metadata Extraction (`extractor.py`)
 - [ ] Implement Schema.org JSON-LD extraction (`NewsArticle`, `BlogPosting`)
@@ -83,6 +83,7 @@
 ## 11. Test Suite (`partwise-tests/riya/`)
 - [x] `test_robots.py`: Benchmark custom parser vs `urllib.robotparser` bugs
 - [x] `test_frontier.py`: Validate 8.0s per-host delay and front queue weighting
+- [x] `test_sitemap.py`: Validate standard, Google News, index, and archive sitemaps
 - [ ] `test_normalizer.py`: Validate query stripping and AMP conversion
 - [ ] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [ ] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs

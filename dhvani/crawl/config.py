@@ -45,8 +45,8 @@ PRIMARY_SOURCES = {
         "home_url": "https://navbharattimes.indiatimes.com",
         "robots_url": "https://navbharattimes.indiatimes.com/robots.txt",
         "sitemaps": [
-            "https://navbharattimes.indiatimes.com/sitemap/todaynews_sitemap.xml",
-            "https://navbharattimes.indiatimes.com/sitemap.xml",
+            "https://navbharattimes.indiatimes.com/staticsitemap/nbt/news/sitemap-48hours.xml",
+            "https://navbharattimes.indiatimes.com/sitemapxml.cms",
         ],
     },
     "livehindustan": {
@@ -65,7 +65,7 @@ PRIMARY_SOURCES = {
         "home_url": "https://www.amarujala.com",
         "robots_url": "https://www.amarujala.com/robots.txt",
         "sitemaps": [
-            "https://www.amarujala.com/news-sitemap.xml",
+            "https://www.amarujala.com/sitemap-news-v1.xml",
             "https://www.amarujala.com/sitemap.xml",
         ],
     },
@@ -75,8 +75,8 @@ PRIMARY_SOURCES = {
         "home_url": "https://www.aajtak.in",
         "robots_url": "https://www.aajtak.in/robots.txt",
         "sitemaps": [
-            "https://www.aajtak.in/news-sitemap.xml",
-            "https://www.aajtak.in/sitemap.xml",
+            "https://www.aajtak.in/rssfeeds/news-sitemap.xml",
+            "https://www.aajtak.in/rssfeeds/sitemap.xml",
         ],
     },
 }
