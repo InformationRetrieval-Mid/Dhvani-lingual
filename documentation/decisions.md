@@ -57,3 +57,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Score breakdown in the app.** Every result has a dropdown showing how its score was built. The brief asks us to show weights and scores, not just final results, and this does it live.
 
 **Rebase instead of merge for my own branch.** When GitHub had a small edit I'd made on the website, I put my local commits on top of it instead of making a merge commit. The history stays a straight line and is easier to read.
+
+**Apple-style redesign.** The frontend isn't graded, but the demo video is, and a clean interface makes the system easier to follow on screen. We followed Apple's design guidelines: system font with tight tracking on large text, a translucent top bar, one accent colour, a segmented control for the ranking model, and filters tucked into a popover so the main page stays simple. Results are grouped lists like the iPhone Settings app.
+
+**Styling lives inside the app file.** We kept all the styling in `app/streamlit_app.py` instead of adding a Streamlit theme file, so the look is in one place. The catch is that Streamlit's own controls default to red, so a few of them get a small colour shift to blue in CSS.

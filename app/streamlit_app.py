@@ -6,6 +6,12 @@ Run from the repo root:
 Every query runs against three indexes side by side: no stemming, stemming,
 and auto (stem a word only when it helps). Until the real indexes are ready
 all three columns use the sample index, so they'll look the same.
+
+Design follows Apple's guidelines: a translucent bar that content scrolls
+under, a centred Spotlight-style search field, a segmented control for the
+ranking model, filters one level deeper in a popover, inset grouped lists
+for results, instant press feedback, dark mode, and reduced motion,
+transparency and contrast support.
 """
 
 import html
@@ -26,17 +32,234 @@ from dhvani.rank.vsm import search  # noqa: E402
 
 MODES = [("none", "No stemming"), ("light", "Stemming"), ("auto", "Auto")]
 
-RANKERS = {
-    "Net score (lnc.ltc + zones + proximity + recency)": "net",
-    "lnc.ltc only": "lnc",
-    "BM25": "bm25",
+RANKERS = {"Net score": "net", "lnc.ltc": "lnc", "BM25": "bm25"}
+
+RANKER_NOTES = {
+    "net": "Cosine similarity with headline, proximity and recency boosts.",
+    "lnc": "Plain cosine similarity using SMART lnc.ltc weights.",
+    "bm25": "Okapi BM25 with term saturation and length normalisation.",
 }
 
-# How each kind of match is coloured in snippets and chips.
-MATCH_COLOURS = {"exact": "#c8ecd4", "phonetic": "#cfe0ff", "xling": "#ffe0b8"}
-MATCH_LABELS = {"exact": "exact", "phonetic": "phonetic", "xling": "translated"}
+SUGGESTIONS = ["दिल्ली बारिश", "कोहली शतक", "बिहार चुनाव", "शेयर बाजार"]
+
+MATCH_LABELS = {"exact": "Exact", "phonetic": "Phonetic", "xling": "Translated"}
 
 SENTENCE_END = regex.compile(r"(?<=[।.!?])\s+")
+
+STYLE = """
+<style>
+:root {
+  --dv-page: #f5f5f7;
+  --dv-group: #ffffff;
+  --dv-text: #1d1d1f;
+  --dv-secondary: #6e6e73;
+  --dv-tertiary: #86868b;
+  --dv-accent: #0071e3;
+  --dv-separator: rgba(60, 60, 67, 0.14);
+  --dv-fill: rgba(118, 118, 128, 0.12);
+  --dv-bar: rgba(245, 245, 247, 0.72);
+  --dv-row-hover: rgba(0, 0, 0, 0.025);
+  --dv-row-press: rgba(0, 0, 0, 0.05);
+  --dv-exact: rgba(52, 199, 89, 0.22);
+  --dv-phonetic: rgba(0, 122, 255, 0.18);
+  --dv-xling: rgba(255, 149, 0, 0.24);
+  --dv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+             "Kohinoor Devanagari", "Noto Sans Devanagari", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dv-page: #000000;
+    --dv-group: #1c1c1e;
+    --dv-text: #f5f5f7;
+    --dv-secondary: #a1a1a6;
+    --dv-tertiary: #8e8e93;
+    --dv-accent: #2997ff;
+    --dv-separator: rgba(84, 84, 88, 0.6);
+    --dv-fill: rgba(118, 118, 128, 0.24);
+    --dv-bar: rgba(22, 22, 23, 0.72);
+    --dv-row-hover: rgba(255, 255, 255, 0.035);
+    --dv-row-press: rgba(255, 255, 255, 0.07);
+  }
+}
+
+/* Page and chrome */
+.stApp { background: var(--dv-page); }
+#MainMenu, footer, header[data-testid="stHeader"], [data-testid="stToolbar"],
+[data-testid="stDecoration"], [data-testid="stSidebar"], [data-testid="collapsedControl"] { display: none !important; }
+html, body, [class*="st-"], .stMarkdown, input, textarea, button, select {
+  font-family: var(--dv-font) !important;
+  -webkit-font-smoothing: antialiased;
+}
+[data-testid="stIconMaterial"], [data-testid="stIconMaterial"] * { font-family: "Material Symbols Rounded" !important; }
+.block-container { padding-top: 6.5rem !important; padding-bottom: 5rem; max-width: 1200px; }
+
+/* Translucent top bar; content scrolls underneath it. */
+.dv-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 999990; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--dv-bar);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+}
+.dv-bar::after {   /* scroll edge: a soft fade instead of a hard divider */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -12px; height: 12px;
+  background: linear-gradient(var(--dv-bar), transparent); pointer-events: none;
+}
+.dv-bar-inner {
+  width: 100%; max-width: 1200px; padding: 0 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dv-wordmark { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; color: var(--dv-text); }
+.dv-bar-meta { font-size: 0.78rem; color: var(--dv-tertiary); }
+
+/* Hero: big type with tight leading and negative tracking, centred. */
+.dv-hero { text-align: center; margin: 0 auto 2rem; max-width: 760px; }
+.dv-eyebrow { font-size: 0.95rem; font-weight: 600; color: var(--dv-accent); margin-bottom: 0.6rem; }
+.dv-title {
+  font-size: clamp(2.6rem, 6vw, 4.2rem); font-weight: 700; line-height: 1.04;
+  letter-spacing: -0.035em; color: var(--dv-text); margin: 0;
+}
+.dv-subtitle {
+  font-size: 1.3rem; line-height: 1.4; letter-spacing: -0.012em;
+  color: var(--dv-secondary); margin: 1rem auto 0; max-width: 34rem;
+}
+
+/* Spotlight-style search field */
+div[data-testid="stTextInput"] { max-width: 680px; margin: 0 auto; }
+div[data-testid="stTextInput"] label { display: none; }
+div[data-testid="stTextInputRootElement"] {
+  border-radius: 16px !important; border: 1px solid transparent !important;
+  background: var(--dv-group) !important;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.03), 0 10px 30px rgba(0,0,0,0.07);
+  transition: box-shadow 160ms ease-out, border-color 160ms ease-out;
+}
+div[data-testid="stTextInputRootElement"]:focus-within {
+  border-color: var(--dv-accent) !important;
+  box-shadow: 0 0 0 4px rgba(0,113,227,0.2), 0 10px 30px rgba(0,0,0,0.07);
+}
+div[data-testid="stTextInput"] input {
+  background: transparent !important; font-size: 1.3rem !important; letter-spacing: -0.012em;
+  padding: 1rem 1.25rem 1rem 3.1rem !important; color: var(--dv-text);
+}
+div[data-testid="stTextInputRootElement"]::before {   /* magnifying glass */
+  content: ""; position: absolute; left: 1.15rem; top: 50%; width: 1.15rem; height: 1.15rem;
+  transform: translateY(-50%); opacity: 0.45; pointer-events: none; z-index: 1;
+  background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round'><circle cx='10.5' cy='10.5' r='6.5'/><path d='m15.5 15.5 5 5'/></svg>");
+}
+div[data-testid="stTextInputRootElement"] { position: relative; }
+
+/* Suggestion pills and the segmented control, centred under the search. */
+div[data-testid="stElementContainer"]:has(> div[data-testid="stButtonGroup"]) { align-self: center; }
+div[data-testid="stButtonGroup"] { display: flex; justify-content: center; }
+
+/* Pills: quiet grey fill, no outline, no red. */
+button[data-variant="pills"] {
+  background: var(--dv-fill) !important; border: none !important; color: var(--dv-text) !important;
+  border-radius: 999px !important; font-size: 0.85rem !important; padding: 0.3rem 0.95rem !important;
+  min-height: 0 !important; box-shadow: none !important;
+  transition: transform 100ms ease-out, background 120ms ease-out;
+}
+button[data-variant="pills"]:hover { background: var(--dv-separator) !important; }
+button[data-variant="pills"][data-selected="true"] { background: var(--dv-text) !important; color: var(--dv-page) !important; }
+button[data-variant="pills"] p { color: inherit !important; }
+
+/* Segmented control: grey track, white "thumb" on the selected item. */
+div[role="radiogroup"]:has(> button[data-variant="segmented_control"]) {
+  background: var(--dv-fill); border-radius: 9px; padding: 2px; gap: 0 !important;
+}
+button[data-variant="segmented_control"] {
+  background: transparent !important; border: none !important; color: var(--dv-text) !important;
+  font-size: 0.85rem !important; font-weight: 500 !important; padding: 0.3rem 1.2rem !important;
+  border-radius: 7px !important; box-shadow: none !important; min-height: 0 !important;
+  transition: transform 100ms ease-out, background 160ms ease-out;
+}
+button[data-variant="segmented_control"] p { color: inherit !important; }
+button[data-variant="segmented_control"][data-selected="true"] {
+  background: var(--dv-group) !important; font-weight: 600 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04) !important;
+}
+
+/* Instant press feedback (respond on press, not on release). */
+button:active { transform: scale(0.97); }
+
+/* Popover button for filters */
+div[data-testid="stPopover"] button {
+  background: var(--dv-fill) !important; border: none !important; border-radius: 999px !important;
+  color: var(--dv-accent) !important; font-size: 0.85rem !important; font-weight: 500 !important;
+}
+div[data-testid="stPopoverBody"] [data-baseweb="tag"],
+div[data-testid="stPopoverBody"] [data-testid="stCheckbox"],
+div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(207deg) saturate(1.05); }
+
+.dv-note { text-align: center; font-size: 0.82rem; color: var(--dv-tertiary); margin: 0.75rem 0 2.5rem; }
+.dv-ranker-note { text-align: center; font-size: 0.8rem; color: var(--dv-tertiary); margin-top: 0.35rem; }
+
+/* Inset grouped lists, one per stemming mode. */
+.dv-section-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 0 1rem 0.45rem; font-size: 0.8rem; color: var(--dv-tertiary);
+}
+.dv-section-title { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.015em; color: var(--dv-text); }
+.dv-group {
+  background: var(--dv-group); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  animation: dv-in 260ms ease-out both;
+}
+@keyframes dv-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.dv-row { position: relative; padding: 0.9rem 1rem 0.8rem; transition: background 120ms ease-out; }
+.dv-row + .dv-row::before {   /* inset separator, like iOS lists */
+  content: ""; position: absolute; top: 0; left: 1rem; right: 0; height: 0.5px; background: var(--dv-separator);
+}
+.dv-row:hover { background: var(--dv-row-hover); }
+.dv-row:active { background: var(--dv-row-press); }
+.dv-row-top { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--dv-tertiary); }
+.dv-source { font-weight: 600; color: var(--dv-secondary); text-transform: capitalize; }
+.dv-score { margin-left: auto; font-variant-numeric: tabular-nums; }
+.dv-headline { font-size: 1.02rem; font-weight: 600; line-height: 1.38; letter-spacing: -0.012em; color: var(--dv-text); margin: 0.25rem 0 0.3rem; }
+.dv-snippet { font-size: 0.9rem; line-height: 1.55; color: var(--dv-secondary); }
+.dv-row mark { color: var(--dv-text); padding: 0 0.12em; border-radius: 4px; }
+.dv-row mark.exact { background: var(--dv-exact); }
+.dv-row mark.phonetic { background: var(--dv-phonetic); }
+.dv-row mark.xling { background: var(--dv-xling); }
+.dv-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.55rem; }
+.dv-chip { font-size: 0.7rem; font-weight: 500; padding: 0.12rem 0.55rem; border-radius: 999px; color: var(--dv-text); }
+.dv-chip.exact { background: var(--dv-exact); }
+.dv-chip.phonetic { background: var(--dv-phonetic); }
+.dv-chip.xling { background: var(--dv-xling); }
+.dv-only {
+  font-size: 0.66rem; font-weight: 600; color: #fff; background: var(--dv-accent);
+  border-radius: 999px; padding: 0.05rem 0.45rem;
+}
+
+/* Native disclosure for score details */
+.dv-row details { margin-top: 0.5rem; }
+.dv-row summary {
+  list-style: none; cursor: pointer; font-size: 0.75rem; font-weight: 500; color: var(--dv-accent);
+  display: inline-flex; align-items: center; gap: 0.25rem; user-select: none;
+}
+.dv-row summary::-webkit-details-marker { display: none; }
+.dv-row summary::after { content: "›"; font-size: 1rem; line-height: 1; transition: transform 160ms ease-out; }
+.dv-row details[open] summary::after { transform: rotate(90deg); }
+.dv-table { width: 100%; margin-top: 0.45rem; font-size: 0.78rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.dv-table td { padding: 0.28rem 0; color: var(--dv-secondary); border-top: 0.5px solid var(--dv-separator); }
+.dv-table td:last-child { text-align: right; color: var(--dv-text); }
+.dv-table tr.total td { font-weight: 600; color: var(--dv-text); }
+.dv-empty { padding: 1.4rem 1rem; text-align: center; font-size: 0.88rem; color: var(--dv-tertiary); }
+
+/* Accessibility settings */
+@media (prefers-reduced-motion: reduce) {
+  .dv-group { animation: none; }
+  button:active { transform: none; }
+  .dv-row summary::after { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .dv-bar { background: var(--dv-page); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .dv-group { box-shadow: 0 0 0 1px var(--dv-secondary); }
+  .dv-row + .dv-row::before { background: var(--dv-secondary); height: 1px; }
+}
+</style>
+"""
 
 
 @st.cache_resource
@@ -63,15 +286,12 @@ def term_sources(query):
 
 
 def highlight(text, sources):
-    """Wrap matched words in coloured marks. Escapes everything else."""
+    """Wrap matched words in tinted marks. Escapes everything else."""
     out = []
     for piece in regex.split(r"([\p{L}\p{M}\p{Nd}]+)", text):
         source = sources.get(piece.lower())
         if source:
-            out.append(
-                f'<mark style="background:{MATCH_COLOURS[source]};padding:0 2px;border-radius:3px;color:#1a1a1a">'
-                f"{html.escape(piece)}</mark>"
-            )
+            out.append(f'<mark class="{source}">{html.escape(piece)}</mark>')
         else:
             out.append(html.escape(piece))
     return "".join(out)
@@ -79,81 +299,106 @@ def highlight(text, sources):
 
 def snippet(body, sources, max_words=28):
     """The first sentence that contains a matched word, else the opening words."""
-    sentences = SENTENCE_END.split(body)
-    for sentence in sentences:
+    for sentence in SENTENCE_END.split(body):
         if any(tok in sources for tok in tokenize(sentence)):
             return sentence
     words = body.split()
     return " ".join(words[:max_words]) + (" …" if len(words) > max_words else "")
 
 
-def match_chips(matched_terms, sources):
-    chips = []
-    for term in matched_terms:
-        source = sources.get(term, "exact")
-        chips.append(
-            f'<span style="background:{MATCH_COLOURS[source]};padding:1px 6px;border-radius:10px;color:#1a1a1a;'
-            f'font-size:0.8em;margin-right:4px">{html.escape(term)} · {MATCH_LABELS[source]}</span>'
-        )
-    return "".join(chips)
+def score_table(explain, terms):
+    rows = []
+    if "cosine" in explain:
+        for label, key in (("Cosine", "cosine"), ("Headline match", "zone"),
+                           ("Proximity", "proximity"), ("Recency g(d)", "recency")):
+            rows.append(f"<tr><td>{label}</td><td>{explain[key]:.4f}</td></tr>")
+    for term, value in terms.items():
+        rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
+    if "net" in explain:
+        rows.append(f'<tr class="total"><td>Net score</td><td>{explain["net"]:.4f}</td></tr>')
+    return f'<table class="dv-table">{"".join(rows)}</table>'
 
 
-def show_result(rank_no, doc_id, score, explain, index, sources, only_here):
+def result_row(doc_id, score, explain, index, sources, only_here):
     article = index.articles.get(doc_id, {"headline": doc_id, "body": ""})
     meta = index.meta[doc_id]
     terms = explain.get("terms", explain)
-
-    badge = (
-        ' <span style="background:#fde68a;color:#1a1a1a;padding:1px 6px;border-radius:10px;font-size:0.75em">only here</span>'
-        if only_here else ""
-    )
-    st.markdown(f"**{rank_no}. {highlight(article['headline'], sources)}**{badge}", unsafe_allow_html=True)
-    date = (meta.get("date") or "")[:10]
     place = meta.get("city") or meta.get("state") or ""
-    details = " · ".join(x for x in (meta.get("source"), meta.get("section"), place, date) if x)
-    st.caption(f"{details} · score {score:.3f}")
-    st.markdown(highlight(snippet(article["body"], sources), sources), unsafe_allow_html=True)
-    st.markdown(match_chips(list(terms), sources), unsafe_allow_html=True)
+    date = (meta.get("date") or "")[:10]
+    details = " · ".join(html.escape(x) for x in (meta.get("section"), place, date) if x)
+    only = '<span class="dv-only">Only here</span>' if only_here else ""
+    chips = "".join(
+        f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS[sources.get(t, "exact")]}</span>'
+        for t in terms
+    )
+    return f"""
+    <div class="dv-row">
+      <div class="dv-row-top">
+        <span class="dv-source">{html.escape(meta.get("source") or "")}</span><span>{details}</span>{only}
+        <span class="dv-score">{score:.3f}</span>
+      </div>
+      <div class="dv-headline">{highlight(article["headline"], sources)}</div>
+      <div class="dv-snippet">{highlight(snippet(article["body"], sources), sources)}</div>
+      <div class="dv-chips">{chips}</div>
+      <details><summary>Score details</summary>{score_table(explain, terms)}</details>
+    </div>"""
 
-    with st.expander("Why this score"):
-        if "cosine" in explain:
-            st.write(
-                {
-                    "cosine": round(explain["cosine"], 4),
-                    "zone": round(explain["zone"], 4),
-                    "proximity": round(explain["proximity"], 4),
-                    "recency g(d)": round(explain["recency"], 4),
-                    "net": round(explain["net"], 4),
-                }
-            )
-        st.write({term: round(v, 4) for term, v in terms.items()})
+
+def use_suggestion():
+    choice = st.session_state.get("suggestion")
+    if choice:
+        st.session_state["q"] = choice
 
 
 def main():
-    st.set_page_config(page_title="Dhvani", layout="wide")
-    st.title("Dhvani")
-    st.caption("Hindi news search. Type in Hindi, Hinglish or English.")
+    st.set_page_config(page_title="Dhvani", page_icon="🔎", layout="wide", initial_sidebar_state="collapsed")
+    st.markdown(STYLE, unsafe_allow_html=True)
 
     base_index = load_index("none")
+    st.markdown(
+        f"""
+        <div class="dv-bar"><div class="dv-bar-inner">
+          <span class="dv-wordmark">Dhvani</span>
+          <span class="dv-bar-meta">{base_index.N} articles indexed</span>
+        </div></div>
+        <div class="dv-hero">
+          <div class="dv-eyebrow">Hindi news search</div>
+          <h1 class="dv-title">Search the way you speak.</h1>
+          <p class="dv-subtitle">Type in Hindi, Hinglish or English. Every search runs three ways, so you can see exactly what stemming changes.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    with st.sidebar:
-        st.header("Ranking")
-        ranker = RANKERS[st.selectbox("Ranker", list(RANKERS))]
-        k = st.slider("Results per column", 3, 20, 10)
+    st.session_state.setdefault("q", SUGGESTIONS[0])
+    raw = st.text_input("Search", key="q", placeholder="कल का मौसम  ·  kal ka mausam  ·  weather tomorrow")
+    st.pills("Suggestions", SUGGESTIONS, key="suggestion", on_change=use_suggestion, label_visibility="collapsed")
 
-        st.header("Filters")
-        sources = st.multiselect("Source", field_values(base_index, "source"))
-        sections = st.multiselect("Section", field_values(base_index, "section"))
-        states = st.multiselect("State", field_values(base_index, "state"))
-        use_dates = st.checkbox("Filter by date")
-        date_from = date_to = None
-        if use_dates:
-            date_from = st.date_input("From", key="date_from")
-            date_to = st.date_input("To", key="date_to")
+    # Ranking model and filters share one centred row, aligned on their middles.
+    with st.container(horizontal=True, horizontal_alignment="center", vertical_alignment="center", gap="small"):
+        choice = st.segmented_control("Ranking model", list(RANKERS), default="Net score",
+                                      key="ranker", label_visibility="collapsed")
+        ranker = RANKERS[choice or "Net score"]
+        with st.popover("Filters", use_container_width=False):
+            sources = st.multiselect("Newspaper", field_values(base_index, "source"), placeholder="All newspapers")
+            sections = st.multiselect("Section", field_values(base_index, "section"), placeholder="All sections")
+            states = st.multiselect("State", field_values(base_index, "state"), placeholder="All states")
+            k = st.slider("Results per column", 3, 20, 10)
+            use_dates = st.toggle("Limit to a date range")
+            date_from = date_to = None
+            if use_dates:
+                date_from = st.date_input("From", key="date_from")
+                date_to = st.date_input("To", key="date_to")
+    st.markdown(f'<div class="dv-ranker-note">{RANKER_NOTES[ranker]}</div>', unsafe_allow_html=True)
 
-    raw = st.text_input("Search", value="दिल्ली बारिश", placeholder="कल का मौसम / kal ka mausam / weather tomorrow")
+    if isinstance(base_index, SampleIndex):
+        st.markdown(
+            '<div class="dv-note">Running on the sample index. The three columns will differ once the stemmed indexes are plugged in.</div>',
+            unsafe_allow_html=True,
+        )
+
     if not raw.strip():
-        st.info("Type a query to search.")
+        st.markdown('<div class="dv-empty">Type something to search.</div>', unsafe_allow_html=True)
         return
 
     query = exact_query(raw)
@@ -165,19 +410,27 @@ def main():
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
         results[mode] = run_ranker(ranker, query, index, k, doc_filter)
 
-    if isinstance(load_index("none"), SampleIndex):
-        st.info("Running on the 20-article sample index. The three columns will differ once the stemmed indexes are plugged in.")
-
     ids = {mode: {doc_id for doc_id, _, _ in res} for mode, res in results.items()}
-    columns = st.columns(len(MODES))
+    columns = st.columns(len(MODES), gap="medium")
     for col, (mode, label) in zip(columns, MODES):
+        others = set().union(*(ids[m] for m in ids if m != mode))
+        count = len(results[mode])
+        if results[mode]:
+            rows = "".join(
+                result_row(doc_id, score, explain, load_index(mode), sources_map, doc_id not in others)
+                for doc_id, score, explain in results[mode]
+            )
+        else:
+            rows = '<div class="dv-empty">No matches. Try fewer words or another spelling.</div>'
         with col:
-            st.subheader(label)
-            if not results[mode]:
-                st.write("No results.")
-            others = set().union(*(ids[m] for m in ids if m != mode))
-            for i, (doc_id, score, explain) in enumerate(results[mode], start=1):
-                show_result(i, doc_id, score, explain, load_index(mode), sources_map, doc_id not in others)
+            st.markdown(
+                f"""
+                <div class="dv-section-head"><span class="dv-section-title">{label}</span>
+                <span>{count} result{"s" if count != 1 else ""}</span></div>
+                <div class="dv-group">{rows}</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ Last updated: 6 Oct, evening
 - [x] Streamlit app, first version: search box, ranker choice and the no stemming / stemming / auto columns
 - [x] Streamlit: highlighted words and snippets
 - [x] Streamlit: match chips, sidebar filters, "why this score" breakdown and "only here" tags
+- [x] Streamlit redesign in an Apple style: top bar, centred search, segmented control, filters popover, grouped result lists
 
 ## In progress
 

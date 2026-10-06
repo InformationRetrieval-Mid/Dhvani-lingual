@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 6 Oct, after finishing the app
+Last updated: 6 Oct, after the app redesign
 
 ## My part
 Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -20,6 +20,7 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `43f3c50` first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
 | `896eab0` highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
 | `6d88458` match chips, filters and score breakdown in the app | rest of `app/streamlit_app.py` |
+| redesigned the app in an apple style | new look for `app/streamlit_app.py` |
 
 ## How to use it
 
@@ -69,9 +70,7 @@ rank(q, idx, k=10, doc_filter=f)     # same for search() and search_bm25()
 `idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. The real system will read this from the article file.
 
 **The app** (`app/streamlit_app.py`)
-Search box, a choice of ranker (net score, lnc.ltc or BM25), and three columns: no stemming, stemming and auto. Each result shows its headline, source, section, place, date and score, plus the best-matching sentence from the article. Matched words are highlighted: green for exact, blue for phonetic, orange for translated.
-
-Under each result, chips show which words matched and how. A "Why this score" dropdown breaks the score into cosine, zone, proximity, recency and each word's share. Results that show up in only one of the three columns get an "only here" tag. The sidebar has filters for source, section, state and date range. For now all three columns use the sample index, so they look the same.
+Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched, an "Only here" tag if the result isn't in the other columns, and a "Score details" disclosure with the full breakdown. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
 ```bash
 .venv/bin/streamlit run app/streamlit_app.py
 ```
