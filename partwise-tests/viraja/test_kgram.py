@@ -1,0 +1,30 @@
+from dhvani.query.kgram import KGramIndex, kgrams
+
+# A small Devanagari vocabulary (weather words + unrelated distractors).
+VOCAB = ["मौसम", "बारिश", "तापमान", "क्रिकेट", "चुनाव", "बाजार", "स्कूल"]
+
+
+def test_kgrams_have_boundary_markers():
+    g = kgrams("kal", k=2)
+    assert "$k" in g and "l$" in g
+
+
+def test_devanagari_vocab_is_reachable_from_roman_query():
+    idx = KGramIndex(VOCAB, k=2)
+    cands = [term for term, _score in idx.candidates("mosam", limit=5)]
+    # मौसम romanises to "mausam", which shares most k-grams with "mosam".
+    assert "मौसम" in cands
+    assert cands[0] == "मौसम"
+
+
+def test_candidates_are_sorted_by_jaccard_desc():
+    idx = KGramIndex(VOCAB, k=2)
+    scores = [j for _term, j in idx.candidates("barish", limit=10)]
+    assert scores == sorted(scores, reverse=True)
+    assert 0.0 < scores[0] <= 1.0
+
+
+def test_unrelated_query_returns_few_or_no_candidates():
+    idx = KGramIndex(VOCAB, k=2)
+    # "zzzz" shares no k-grams with any weather/news term.
+    assert idx.candidates("zzzz", limit=5) == []
