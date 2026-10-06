@@ -87,7 +87,11 @@ def intersect_postings(left, right):
     return result
 
 
-def and_search(idx: Index, terms: list[str], zone: str = "body") -> list[str]:
+def and_search(
+    idx: Index,
+    terms: list[str],
+    zone: str = "body",
+) -> list[str]:
     """
     Return documents containing all supplied terms.
 
@@ -114,19 +118,25 @@ def and_search(idx: Index, terms: list[str], zone: str = "body") -> list[str]:
     result = posting_lists[0]
 
     for postings in posting_lists[1:]:
-        matching_doc_ids = intersect_postings(result, postings)
+        matching_doc_ids = intersect_postings(
+            result,
+            postings,
+        )
 
         if not matching_doc_ids:
             return []
 
-        # Convert the matching document IDs back into postings.
+        # Convert matching document IDs back into postings.
         result = [
             posting
             for posting in result
             if posting[0] in matching_doc_ids
         ]
 
-    return [posting[0] for posting in result]
+    return [
+        posting[0]
+        for posting in result
+    ]
 
 
 def phrase_search(
@@ -145,13 +155,19 @@ def phrase_search(
     if len(terms) == 1:
         return sorted(
             doc_id
-            for doc_id, _, _ in idx.postings_for(terms[0], zone)
+            for doc_id, _, _ in idx.postings_for(
+                terms[0],
+                zone,
+            )
         )
 
     postings_by_term = []
 
     for term in terms:
-        postings = idx.postings_for(term, zone)
+        postings = idx.postings_for(
+            term,
+            zone,
+        )
 
         if not postings:
             return []
@@ -163,7 +179,9 @@ def phrase_search(
             }
         )
 
-    candidate_docs = set(postings_by_term[0])
+    candidate_docs = set(
+        postings_by_term[0]
+    )
 
     for postings in postings_by_term[1:]:
         candidate_docs &= set(postings)
@@ -180,11 +198,118 @@ def phrase_search(
                 postings_by_term[1:],
                 start=1,
             ):
-                if start_position + offset not in postings[doc_id]:
+                if (
+                    start_position + offset
+                    not in postings[doc_id]
+                ):
                     matches_phrase = False
                     break
 
             if matches_phrase:
+                matches.append(doc_id)
+                break
+
+    return sorted(matches)
+
+
+def proximity_search(
+    idx: Index,
+    terms: list[str],
+    distance: int,
+    zone: str = "body",
+) -> list[str]:
+    """
+    Return documents where all supplied terms occur within
+    the specified positional distance.
+
+    The order of the terms does not matter.
+
+    Example:
+
+        proximity_search(
+            idx,
+            ["दिल्ली", "बारिश"],
+            3,
+        )
+
+    matches documents where occurrences of "दिल्ली" and
+    "बारिश" are at most 3 positions apart.
+
+    Args:
+        idx:
+            Positional index.
+
+        terms:
+            Terms that must occur near each other.
+
+        distance:
+            Maximum allowed positional distance.
+
+        zone:
+            Index zone, either "headline" or "body".
+    """
+
+    if not terms:
+        return []
+
+    if distance < 0:
+        raise ValueError(
+            "distance must be non-negative"
+        )
+
+    # Retrieve positional information for every term.
+    postings_by_term = []
+
+    for term in terms:
+        postings = idx.postings_for(
+            term,
+            zone,
+        )
+
+        if not postings:
+            return []
+
+        postings_by_term.append(
+            {
+                doc_id: positions
+                for doc_id, _, positions in postings
+            }
+        )
+
+    # Only documents containing every term can match.
+    candidate_docs = set(
+        postings_by_term[0]
+    )
+
+    for postings in postings_by_term[1:]:
+        candidate_docs &= set(postings)
+
+    matches = []
+
+    for doc_id in candidate_docs:
+        all_positions = []
+
+        for postings in postings_by_term:
+            all_positions.append(
+                postings[doc_id]
+            )
+
+        # Check whether there is one occurrence of each
+        # term inside the requested distance window.
+        #
+        # For each possible anchor position, calculate
+        # the closest occurrence of every other term.
+        for anchor in all_positions[0]:
+
+            if all(
+                any(
+                    abs(
+                        anchor - position
+                    ) <= distance
+                    for position in positions
+                )
+                for positions in all_positions[1:]
+            ):
                 matches.append(doc_id)
                 break
 

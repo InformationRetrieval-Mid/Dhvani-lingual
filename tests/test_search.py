@@ -5,6 +5,7 @@ from index.search import (
     build_skip_pointers,
     intersect_postings,
     phrase_search,
+    proximity_search,
 )
 
 
@@ -81,7 +82,10 @@ def test_intersect_postings():
 
     result = intersect_postings(left, right)
 
-    assert result == ["doc2", "doc4"]
+    assert result == [
+        "doc2",
+        "doc4",
+    ]
 
 
 def test_intersect_postings_with_no_overlap():
@@ -107,7 +111,10 @@ def test_and_search():
         "body",
     )
 
-    assert result == ["doc1", "doc2"]
+    assert result == [
+        "doc1",
+        "doc2",
+    ]
 
 
 def test_and_search_returns_empty_when_term_missing():
@@ -131,7 +138,11 @@ def test_and_search_single_term():
         "body",
     )
 
-    assert result == ["doc1", "doc2", "doc3"]
+    assert result == [
+        "doc1",
+        "doc2",
+        "doc3",
+    ]
 
 
 def test_phrase_search():
@@ -143,7 +154,11 @@ def test_phrase_search():
         "body",
     )
 
-    assert result == ["doc1", "doc2", "doc3"]
+    assert result == [
+        "doc1",
+        "doc2",
+        "doc3",
+    ]
 
 
 def test_phrase_search_respects_order():
@@ -155,7 +170,9 @@ def test_phrase_search_respects_order():
         "body",
     )
 
-    assert result == ["doc1"]
+    assert result == [
+        "doc1",
+    ]
 
 
 def test_phrase_search_does_not_match_non_consecutive_terms():
@@ -179,11 +196,102 @@ def test_phrase_search_respects_zone():
         "headline",
     )
 
-    assert result == ["doc1"]
+    assert result == [
+        "doc1",
+    ]
 
 
-def test_empty_search():
+def test_proximity_search_matches_nearby_terms():
     idx = build_test_index()
 
-    assert and_search(idx, []) == []
-    assert phrase_search(idx, []) == []
+    result = proximity_search(
+        idx,
+        ["दिल्ली", "बारिश"],
+        3,
+        "body",
+    )
+
+    assert result == [
+        "doc1",
+    ]
+
+
+def test_proximity_search_does_not_require_order():
+    idx = build_test_index()
+
+    result = proximity_search(
+        idx,
+        ["बारिश", "दिल्ली"],
+        3,
+        "body",
+    )
+
+    assert result == [
+        "doc1",
+    ]
+
+
+def test_proximity_search_respects_distance():
+    idx = build_test_index()
+
+    result = proximity_search(
+        idx,
+        ["दिल्ली", "बारिश"],
+        1,
+        "body",
+    )
+
+    assert result == []
+
+
+def test_proximity_search_can_match_exact_distance():
+    idx = build_test_index()
+
+    result = proximity_search(
+        idx,
+        ["दिल्ली", "बारिश"],
+        4,
+        "body",
+    )
+
+    assert result == [
+        "doc1",
+        "doc2",
+    ]
+
+
+def test_proximity_search_returns_empty_when_term_missing():
+    idx = build_test_index()
+
+    result = proximity_search(
+        idx,
+        ["दिल्ली", "मुंबई"],
+        3,
+        "body",
+    )
+
+    assert result == []
+
+
+def test_proximity_search_empty_terms():
+    idx = build_test_index()
+
+    assert proximity_search(
+        idx,
+        [],
+        3,
+    ) == []
+
+
+def test_proximity_search_rejects_negative_distance():
+    idx = build_test_index()
+
+    try:
+        proximity_search(
+            idx,
+            ["दिल्ली", "बारिश"],
+            -1,
+        )
+        assert False
+    except ValueError:
+        assert True
