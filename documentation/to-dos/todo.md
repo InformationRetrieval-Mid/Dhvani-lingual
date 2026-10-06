@@ -29,16 +29,16 @@ Last updated: 7 Oct
 - [x] Query parser: exact phrase, part of the phrase, all words, all words with variants, then any word
 - [x] Parser stage shown on each result in the app, a switch to turn it off, and a parser step in `--explain`
 
+- [x] Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)
 ## In progress
 
 ### Rishit
-- Nothing uncommitted right now. Next up is the speed-ups.
+- Next up: a translation switch in the app and the CLI.
 
 ## Next
 
 ### Rishit: required
 - [ ] Speed-ups: index elimination, champion lists, recent-news tier
-- [ ] Cross-lingual layer: English words into weighted Hindi words (MUSE + our own news dictionary)
 - [ ] Date-aware "kal"
 - [ ] Collapsing duplicate wire stories ("also in: ...")
 - [ ] PageRank and "first to publish" authority in g(d)

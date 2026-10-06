@@ -69,3 +69,13 @@ A running list of the choices we made and why. Newest at the bottom.
 **Phrases stay inside one zone.** A phrase only counts if the words are next to each other within the headline or within the body. Otherwise the last word of a headline and the first word of the body would wrongly count as a phrase.
 
 **AND starts from the rarest word.** Intersecting the shortest postings list first keeps the result small from the start, which is the query optimisation from Lecture 1.
+
+**Cross-lingual layer as dictionary-based query translation.** English words are looked up in an English to Hindi dictionary and their translations go into the same query vector as Hindi words. That keeps cross-lingual search inside the vector space model, which is what Track 5 asks for, instead of translating whole queries with a separate system.
+
+**Weight split across translations.** "rain" becomes बारिश 0.7 and वर्षा 0.3, so a word with several translations doesn't count more than a word with one.
+
+**Phrases first.** "prime minister" and "stock market" mean something different from their single words, so the longest dictionary phrase is matched first.
+
+**Our own news dictionary, MUSE optional.** A small dictionary of common news words lives in the repo so translation works without any download. The bigger MUSE dictionary is merged in automatically if someone downloads it, and our entries win where both have a word.
+
+**Only top-level data/ is ignored.** The old `.gitignore` rule ignored every folder called data, which would have kept the dictionary out of git. It now only ignores the top-level `data/` folder where crawled articles and downloads live.

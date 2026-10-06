@@ -5,7 +5,7 @@ __pycache__/
 .pytest_cache/
 
 # crawled articles, indexes and downloaded datasets stay local
-data/
+/data/
 *.pkl
 
 # os junk

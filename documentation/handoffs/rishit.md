@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after showing the parser in the app and CLI
+Last updated: 7 Oct, after adding the cross-lingual layer
 
 ## My part
 Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -23,7 +23,8 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `4c95b31` redesigned the app in an apple style | new look for `app/streamlit_app.py` |
 | `202fac6` search from the terminal with --explain | `app/cli.py` |
 | `bdd6b29` query parser that tries the exact phrase first | `dhvani/rank/parser.py` |
-| parser stages shown in the app and the cli | `app/streamlit_app.py`, `app/cli.py` |
+| `6063301` parser stages shown in the app and the cli | `app/streamlit_app.py`, `app/cli.py` |
+| cross-lingual layer for english queries | `dhvani/rank/xling.py` and the English to Hindi news dictionary |
 
 ## How to use it
 
@@ -93,8 +94,15 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 ```
 With `--explain` there's also a step 4b showing how many articles each parser stage found and where it stopped. `--no-parser` turns the parser off.
 
+**Cross-lingual layer** (`dhvani/rank/xling.py`)
+English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
+```python
+from dhvani.rank.xling import translate
+q = translate(exact_query("delhi rain"))   # adds ("दिल्ली", w, "xling"), ("बारिश", w, "xling") ...
+```
+
 ## Tests
-50 tests in `partwise-tests/rishit/`, all passing.
+64 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -105,4 +113,4 @@ With `--explain` there's also a step 4b showing how many articles each parser st
 - **Riya:** `links` and `dup_of` in the article file, for PageRank and duplicate collapsing.
 
 ## Next
-Streamlit app, `--explain` CLI, query parser, speed-ups, cross-lingual layer, then PageRank and authority.
+Translation switch in the app and CLI, the metrics, the experiment runner, then speed-ups, PageRank and authority.
