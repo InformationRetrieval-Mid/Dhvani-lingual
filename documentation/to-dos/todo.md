@@ -23,13 +23,12 @@ Last updated: 6 Oct, evening
 - [x] Sample index keeps article text so results can be displayed
 - [x] Streamlit app, first version: search box, ranker choice and the no stemming / stemming / auto columns
 - [x] Streamlit: highlighted words and snippets
+- [x] Streamlit: match chips, sidebar filters, "why this score" breakdown and "only here" tags
 
 ## In progress
 
-### Rishit (written, not committed yet)
-- [ ] Streamlit: match chips (exact, phonetic, translated)
-- [ ] Streamlit: filters in the sidebar
-- [ ] Streamlit: "why this score" breakdown and "only here" tags
+### Rishit
+- Nothing uncommitted right now. Next up is the `--explain` CLI.
 
 ## Next
 

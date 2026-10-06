@@ -51,3 +51,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Matches coloured by type.** Exact, phonetic and translated matches get different colours, so the demo shows where each result came from at a glance.
 
 **Snippets show the best sentence.** Each result shows the first sentence that contains a query word, falling back to the opening words. It's quick, and it shows the reader why the article matched.
+
+**"Only here" tags.** When a result shows up in just one of the three stemming columns, it gets tagged. That makes the effect of stemming easy to spot in the demo without reading every column.
+
+**Score breakdown in the app.** Every result has a dropdown showing how its score was built. The brief asks us to show weights and scores, not just final results, and this does it live.
