@@ -6,18 +6,19 @@ source "exact". That is the H3 deliverable — a query stub Rishit can score
 against the real query format from day one, replacing his temporary
 ``dhvani/rank/query_stub.py``.
 
-Phonetic and cross-lingual expansions (candidates from the k-gram index,
-re-ranked by edit distance; English words translated via MUSE) get added here in
-later phases, as extra entries in each token's ``expansions`` list. The *shape*
-of the object does not change, so Rishit's ranker keeps working as we grow it.
+Phonetic expansions (candidates from the k-gram index, re-ranked by learned edit
+distance) are added by ``dhvani.query.expand`` when a k-gram ``index`` and edit
+``costs`` are passed; cross-lingual ("xling") expansions are Rishit's. The
+*shape* of the object does not change, so Rishit's ranker keeps working as we
+grow it.
 """
 
 from dhvani.query import langid
 from dhvani.query.tokenize import word_tokens
 
 
-def build_query(raw):
-    """Turn a raw query string into a query object (format 4), exact-match only.
+def build_query(raw, index=None, costs=None, k=5):
+    """Turn a raw query string into a query object (format 4).
 
     Returns::
 
@@ -29,8 +30,12 @@ def build_query(raw):
              "expansions": [(<term>, <weight>, <source>), ...]},
             ...]}
 
-    where ``source`` is one of "exact", "phonetic", "xling". For now the only
-    expansion per token is the word itself: ``(word, 1.0, "exact")``.
+    where ``source`` is one of "exact", "phonetic", "xling".
+
+    With no ``index``/``costs`` it is exact-match only (the H3 stub): one
+    ``(word, 1.0, "exact")`` expansion per token. Pass a ``KGramIndex`` and a
+    learned-cost table ``(table, default)`` and each token also gets its top-``k``
+    phonetic variants appended.
     """
     tokens = []
     for word in word_tokens(raw):
@@ -40,4 +45,9 @@ def build_query(raw):
             "lang": langid.classify(word),
             "expansions": [(word, 1.0, "exact")],
         })
-    return {"raw": raw, "tokens": tokens}
+    query = {"raw": raw, "tokens": tokens}
+
+    if index is not None and costs is not None:
+        from dhvani.query.expand import expand_query
+        expand_query(query, index, costs, k=k)
+    return query
