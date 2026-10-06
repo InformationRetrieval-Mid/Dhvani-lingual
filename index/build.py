@@ -7,18 +7,11 @@ from index.positional import Index
 
 REQUIRED_FIELDS = ("doc_id", "headline", "body")
 METADATA_FIELDS = ("source", "date", "state", "section", "dup_of")
+SUPPORTED_MODES = ("none", "light", "aggr")
 
 
 def iter_articles(path):
-    """
-    Read articles from a JSONL file one article at a time.
-
-    Blank lines are ignored.
-
-    Raises:
-        ValueError: if a line contains invalid JSON or is missing
-                    a required field.
-    """
+    """Read articles from a JSONL file one article at a time."""
     path = Path(path)
 
     if not path.exists():
@@ -66,21 +59,12 @@ def iter_articles(path):
 
 
 def build_index(input_path, mode, output_path=None):
-    """
-    Build one positional index from a JSONL article corpus.
+    """Build one positional index from the JSONL corpus."""
 
-    Args:
-        input_path: Path to data/news.jsonl.
-        mode: Analyzer mode, currently "none" or "light".
-        output_path: Optional path for the resulting pickle index.
-
-    Returns:
-        The populated Index object.
-    """
-    if mode not in {"none", "light"}:
+    if mode not in SUPPORTED_MODES:
         raise ValueError(
             f"Unsupported index mode: {mode}. "
-            "Currently supported modes are 'none' and 'light'."
+            f"Currently supported modes are: {', '.join(SUPPORTED_MODES)}."
         )
 
     index = Index(mode)
@@ -109,19 +93,15 @@ def build_index(input_path, mode, output_path=None):
 
 
 def build_indexes(input_path="data/news.jsonl"):
-    """
-    Build both currently supported indexes:
+    """Build all currently supported index variants."""
 
-        indexes/none.pkl
-        indexes/light.pkl
-
-    Returns:
-        Dictionary mapping mode -> Index.
-    """
     indexes = {}
 
-    for mode in ("none", "light"):
-        indexes[mode] = build_index(input_path, mode)
+    for mode in SUPPORTED_MODES:
+        indexes[mode] = build_index(
+            input_path=input_path,
+            mode=mode,
+        )
 
     return indexes
 
@@ -139,7 +119,7 @@ def main():
 
     parser.add_argument(
         "--mode",
-        choices=("none", "light", "both"),
+        choices=(*SUPPORTED_MODES, "both"),
         default="both",
         help="Indexing mode to build.",
     )
@@ -154,7 +134,9 @@ def main():
 
     if args.mode == "both":
         if args.output is not None:
-            parser.error("--output can only be used with --mode none or --mode light")
+            parser.error(
+                "--output can only be used with a single index mode"
+            )
 
         indexes = build_indexes(args.input)
 

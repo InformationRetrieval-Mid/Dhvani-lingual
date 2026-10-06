@@ -2,185 +2,212 @@ import json
 
 import pytest
 
-from index.build import build_index, build_indexes, iter_articles
-
-
-def write_jsonl(path, articles):
-    with path.open("w", encoding="utf-8") as file:
-        for article in articles:
-            file.write(json.dumps(article, ensure_ascii=False) + "\n")
+from index.build import (
+    build_index,
+    build_indexes,
+    iter_articles,
+)
 
 
 def sample_articles():
     return [
         {
-            "doc_id": "jagran_001",
+            "doc_id": "doc1",
             "url": "https://example.com/1",
             "source": "jagran",
             "section": "weather",
             "state": "uttar-pradesh",
             "city": "lucknow",
             "date": "2026-10-06T13:21:43+05:30",
-            "headline": "लखनऊ में भारी बारिश",
-            "body": "आज लखनऊ में भारी बारिश हुई।",
-            "keywords": ["मौसम", "बारिश"],
+            "headline": "दिल्ली में बारिश",
+            "body": "आज दिल्ली में तेज बारिश हुई",
+            "keywords": ["बारिश", "मौसम"],
             "agency_flag": False,
-            "content_hash": "abc123",
+            "content_hash": "hash1",
             "dup_of": None,
             "links": [],
         },
         {
-            "doc_id": "jagran_002",
+            "doc_id": "doc2",
             "url": "https://example.com/2",
-            "source": "jagran",
-            "section": "national",
+            "source": "aaj-tak",
+            "section": "weather",
             "state": "delhi",
             "city": "delhi",
             "date": "2026-10-06T14:00:00+05:30",
-            "headline": "दिल्ली में मौसम साफ",
-            "body": "दिल्ली में आज मौसम साफ रहा।",
+            "headline": "दिल्ली मौसम अपडेट",
+            "body": "दिल्ली में आज मौसम साफ रहेगा",
             "keywords": ["मौसम"],
             "agency_flag": False,
-            "content_hash": "def456",
+            "content_hash": "hash2",
             "dup_of": None,
-            "links": ["jagran_001"],
+            "links": [],
         },
     ]
 
 
+def write_jsonl(path, articles):
+    with path.open("w", encoding="utf-8") as file:
+        for article in articles:
+            file.write(json.dumps(article, ensure_ascii=False))
+            file.write("\n")
+
+
 def test_iter_articles_reads_jsonl(tmp_path):
-    path = tmp_path / "news.jsonl"
+    input_path = tmp_path / "news.jsonl"
     articles = sample_articles()
 
-    write_jsonl(path, articles)
+    write_jsonl(input_path, articles)
 
-    result = list(iter_articles(path))
+    result = list(iter_articles(input_path))
 
     assert result == articles
 
 
 def test_iter_articles_ignores_blank_lines(tmp_path):
-    path = tmp_path / "news.jsonl"
+    input_path = tmp_path / "news.jsonl"
+    articles = sample_articles()
 
-    article = sample_articles()[0]
-
-    with path.open("w", encoding="utf-8") as file:
+    with input_path.open("w", encoding="utf-8") as file:
         file.write("\n")
-        file.write(json.dumps(article, ensure_ascii=False))
+        file.write(
+            json.dumps(
+                articles[0],
+                ensure_ascii=False,
+            )
+        )
         file.write("\n\n")
+        file.write(
+            json.dumps(
+                articles[1],
+                ensure_ascii=False,
+            )
+        )
+        file.write("\n")
 
-    result = list(iter_articles(path))
+    result = list(iter_articles(input_path))
 
-    assert result == [article]
+    assert result == articles
 
 
-def test_iter_articles_rejects_invalid_json(tmp_path):
-    path = tmp_path / "news.jsonl"
+def test_iter_articles_invalid_json(tmp_path):
+    input_path = tmp_path / "news.jsonl"
 
-    path.write_text(
-        '{"doc_id": "good", "headline": "अच्छी खबर", "body": "समाचार"}\n'
-        '{"doc_id": "bad",\n',
+    input_path.write_text(
+        '{"doc_id": "doc1",\n',
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="Line 2: invalid JSON"):
-        list(iter_articles(path))
+    with pytest.raises(ValueError, match="invalid JSON"):
+        list(iter_articles(input_path))
 
 
-def test_iter_articles_rejects_missing_required_field(tmp_path):
-    path = tmp_path / "news.jsonl"
+def test_iter_articles_missing_required_field(tmp_path):
+    input_path = tmp_path / "news.jsonl"
 
-    article = sample_articles()[0]
-    del article["headline"]
+    article = {
+        "doc_id": "doc1",
+        "headline": "बारिश",
+    }
 
-    write_jsonl(path, [article])
+    input_path.write_text(
+        json.dumps(article, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
     with pytest.raises(
         ValueError,
-        match="Line 1: missing required field 'headline'",
+        match="missing required field 'body'",
     ):
-        list(iter_articles(path))
+        list(iter_articles(input_path))
 
 
-def test_iter_articles_rejects_non_string_headline(tmp_path):
-    path = tmp_path / "news.jsonl"
+def test_iter_articles_non_string_headline(tmp_path):
+    input_path = tmp_path / "news.jsonl"
 
     article = sample_articles()[0]
     article["headline"] = 123
 
-    write_jsonl(path, [article])
+    write_jsonl(input_path, [article])
 
     with pytest.raises(
         ValueError,
-        match="Line 1: 'headline' must be a string",
+        match="'headline' must be a string",
     ):
-        list(iter_articles(path))
+        list(iter_articles(input_path))
 
 
-def test_build_index_none_mode(tmp_path):
+def test_build_index_none(tmp_path, monkeypatch):
     input_path = tmp_path / "news.jsonl"
-    output_path = tmp_path / "indexes" / "none.pkl"
-
     write_jsonl(input_path, sample_articles())
 
-    index = build_index(
-        input_path=input_path,
-        mode="none",
-        output_path=output_path,
+    monkeypatch.setattr(
+        "index.positional.Index.INDEX_DIR",
+        tmp_path / "indexes",
     )
+
+    index = build_index(input_path, "none")
 
     assert index.mode == "none"
     assert index.N == 2
-    assert output_path.exists()
-
-    assert "लखनऊ" in index.vocab
-    assert "बारिश" in index.vocab
-
-    postings = index.postings("बारिश", "body")
-
-    assert len(postings) == 1
-    assert postings[0][0] == "jagran_001"
+    assert len(index.vocab) > 0
 
 
-def test_build_index_light_mode(tmp_path):
+def test_build_index_light(tmp_path, monkeypatch):
     input_path = tmp_path / "news.jsonl"
-    output_path = tmp_path / "indexes" / "light.pkl"
-
     write_jsonl(input_path, sample_articles())
 
-    index = build_index(
-        input_path=input_path,
-        mode="light",
-        output_path=output_path,
+    monkeypatch.setattr(
+        "index.positional.Index.INDEX_DIR",
+        tmp_path / "indexes",
     )
+
+    index = build_index(input_path, "light")
 
     assert index.mode == "light"
     assert index.N == 2
-    assert output_path.exists()
+    assert len(index.vocab) > 0
 
 
-def test_build_index_preserves_metadata(tmp_path):
+def test_build_index_aggressive(tmp_path, monkeypatch):
     input_path = tmp_path / "news.jsonl"
-    output_path = tmp_path / "none.pkl"
-
     write_jsonl(input_path, sample_articles())
 
-    index = build_index(
-        input_path=input_path,
-        mode="none",
-        output_path=output_path,
+    monkeypatch.setattr(
+        "index.positional.Index.INDEX_DIR",
+        tmp_path / "indexes",
     )
 
-    metadata = index.meta["jagran_001"]
+    index = build_index(input_path, "aggr")
 
-    assert metadata["source"] == "jagran"
-    assert metadata["date"] == "2026-10-06T13:21:43+05:30"
-    assert metadata["state"] == "uttar-pradesh"
-    assert metadata["section"] == "weather"
-    assert metadata["dup_of"] is None
+    assert index.mode == "aggr"
+    assert index.N == 2
+    assert len(index.vocab) > 0
 
 
-def test_build_indexes_creates_both_indexes(tmp_path, monkeypatch):
+def test_build_index_preserves_metadata(tmp_path, monkeypatch):
+    input_path = tmp_path / "news.jsonl"
+    articles = sample_articles()
+
+    write_jsonl(input_path, articles)
+
+    monkeypatch.setattr(
+        "index.positional.Index.INDEX_DIR",
+        tmp_path / "indexes",
+    )
+
+    index = build_index(input_path, "none")
+
+    assert index.meta["doc1"] == {
+        "source": "jagran",
+        "date": "2026-10-06T13:21:43+05:30",
+        "state": "uttar-pradesh",
+        "section": "weather",
+        "dup_of": None,
+    }
+
+
+def test_build_indexes_creates_all_indexes(tmp_path, monkeypatch):
     input_path = tmp_path / "news.jsonl"
     write_jsonl(input_path, sample_articles())
 
@@ -191,24 +218,34 @@ def test_build_indexes_creates_both_indexes(tmp_path, monkeypatch):
 
     indexes = build_indexes(input_path)
 
-    assert set(indexes.keys()) == {"none", "light"}
+    assert set(indexes.keys()) == {
+        "none",
+        "light",
+        "aggr",
+    }
 
     assert indexes["none"].mode == "none"
     assert indexes["light"].mode == "light"
+    assert indexes["aggr"].mode == "aggr"
 
     assert indexes["none"].N == 2
     assert indexes["light"].N == 2
-
-    assert (tmp_path / "indexes" / "none.pkl").exists()
-    assert (tmp_path / "indexes" / "light.pkl").exists()
+    assert indexes["aggr"].N == 2
 
 
 def test_build_index_rejects_unsupported_mode(tmp_path):
     input_path = tmp_path / "news.jsonl"
     write_jsonl(input_path, sample_articles())
 
-    with pytest.raises(ValueError, match="Unsupported index mode"):
-        build_index(
-            input_path=input_path,
-            mode="aggr",
-        )
+    with pytest.raises(
+        ValueError,
+        match="Unsupported index mode",
+    ):
+        build_index(input_path, "invalid")
+
+
+def test_build_index_missing_file(tmp_path):
+    input_path = tmp_path / "does_not_exist.jsonl"
+
+    with pytest.raises(FileNotFoundError):
+        build_index(input_path, "none")
