@@ -1,6 +1,11 @@
 from index.positional import Index
 
-from index.search import and_search, phrase_search
+from index.search import (
+    and_search,
+    build_skip_pointers,
+    intersect_postings,
+    phrase_search,
+)
 
 
 def build_test_index():
@@ -28,6 +33,69 @@ def build_test_index():
     )
 
     return idx
+
+
+def test_build_skip_pointers():
+    postings = [
+        ("doc1", 1, [0]),
+        ("doc2", 1, [0]),
+        ("doc3", 1, [0]),
+        ("doc4", 1, [0]),
+        ("doc5", 1, [0]),
+        ("doc6", 1, [0]),
+        ("doc7", 1, [0]),
+        ("doc8", 1, [0]),
+        ("doc9", 1, [0]),
+    ]
+
+    skips = build_skip_pointers(postings)
+
+    assert skips == {
+        0: 3,
+        3: 6,
+    }
+
+
+def test_single_item_has_no_skip_pointer():
+    postings = [
+        ("doc1", 1, [0]),
+    ]
+
+    assert build_skip_pointers(postings) == {}
+
+
+def test_intersect_postings():
+    left = [
+        ("doc1", 1, [0]),
+        ("doc2", 1, [0]),
+        ("doc3", 1, [0]),
+        ("doc4", 1, [0]),
+        ("doc5", 1, [0]),
+    ]
+
+    right = [
+        ("doc2", 1, [0]),
+        ("doc4", 1, [0]),
+        ("doc6", 1, [0]),
+    ]
+
+    result = intersect_postings(left, right)
+
+    assert result == ["doc2", "doc4"]
+
+
+def test_intersect_postings_with_no_overlap():
+    left = [
+        ("doc1", 1, [0]),
+        ("doc2", 1, [0]),
+    ]
+
+    right = [
+        ("doc3", 1, [0]),
+        ("doc4", 1, [0]),
+    ]
+
+    assert intersect_postings(left, right) == []
 
 
 def test_and_search():
@@ -87,13 +155,6 @@ def test_phrase_search_respects_order():
         "body",
     )
 
-    # doc1 contains:
-    # आज दिल्ली में बारिश हुई
-    #
-    # doc2 contains:
-    # दिल्ली में आज तेज बारिश हुई
-    #
-    # Therefore only doc1 contains the exact phrase.
     assert result == ["doc1"]
 
 
@@ -118,10 +179,6 @@ def test_phrase_search_respects_zone():
         "headline",
     )
 
-    # doc1 headline is:
-    # दिल्ली में बारिश
-    #
-    # Therefore the phrase exists in the headline zone.
     assert result == ["doc1"]
 
 

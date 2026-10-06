@@ -1,11 +1,98 @@
+from math import isqrt
+
 from index.positional import Index
+
+
+def build_skip_pointers(postings):
+    """
+    Build skip pointers for a postings list.
+
+    A postings list contains tuples of:
+
+        (doc_id, tf, positions)
+
+    Skip pointers are represented as:
+
+        {current_index: target_index}
+
+    The skip distance is approximately sqrt(n).
+    """
+
+    n = len(postings)
+
+    if n < 2:
+        return {}
+
+    step = max(1, isqrt(n))
+
+    skips = {}
+
+    for index in range(0, n - step, step):
+        skips[index] = index + step
+
+    return skips
+
+
+def intersect_postings(left, right):
+    """
+    Intersect two sorted postings lists using skip pointers.
+
+    Returns the document IDs present in both lists.
+    """
+
+    if not left or not right:
+        return []
+
+    left_skips = build_skip_pointers(left)
+    right_skips = build_skip_pointers(right)
+
+    result = []
+
+    i = 0
+    j = 0
+
+    while i < len(left) and j < len(right):
+        left_doc = left[i][0]
+        right_doc = right[j][0]
+
+        if left_doc == right_doc:
+            result.append(left_doc)
+            i += 1
+            j += 1
+
+        elif left_doc < right_doc:
+            skip_to = left_skips.get(i)
+
+            if (
+                skip_to is not None
+                and skip_to < len(left)
+                and left[skip_to][0] <= right_doc
+            ):
+                i = skip_to
+            else:
+                i += 1
+
+        else:
+            skip_to = right_skips.get(j)
+
+            if (
+                skip_to is not None
+                and skip_to < len(right)
+                and right[skip_to][0] <= left_doc
+            ):
+                j = skip_to
+            else:
+                j += 1
+
+    return result
 
 
 def and_search(idx: Index, terms: list[str], zone: str = "body") -> list[str]:
     """
     Return documents containing all supplied terms.
 
-    Results are returned in sorted document ID order.
+    The smallest postings list is processed first.
+    Skip pointers are used while intersecting postings lists.
     """
 
     if not terms:
@@ -19,15 +106,27 @@ def and_search(idx: Index, terms: list[str], zone: str = "body") -> list[str]:
         if not postings:
             return []
 
-        doc_ids = {doc_id for doc_id, _, _ in postings}
-        posting_lists.append(doc_ids)
+        posting_lists.append(postings)
+
+    # Process the smallest postings list first.
+    posting_lists.sort(key=len)
 
     result = posting_lists[0]
 
-    for doc_ids in posting_lists[1:]:
-        result &= doc_ids
+    for postings in posting_lists[1:]:
+        matching_doc_ids = intersect_postings(result, postings)
 
-    return sorted(result)
+        if not matching_doc_ids:
+            return []
+
+        # Convert the matching document IDs back into postings.
+        result = [
+            posting
+            for posting in result
+            if posting[0] in matching_doc_ids
+        ]
+
+    return [posting[0] for posting in result]
 
 
 def phrase_search(
@@ -38,18 +137,6 @@ def phrase_search(
     """
     Return documents where all terms occur consecutively
     in the supplied order.
-
-    Example:
-
-        phrase_search(idx, ["बारिश", "हुई"])
-
-    matches:
-
-        "आज बारिश हुई"
-
-    but not:
-
-        "बारिश आज हुई"
     """
 
     if not terms:
@@ -61,7 +148,6 @@ def phrase_search(
             for doc_id, _, _ in idx.postings_for(terms[0], zone)
         )
 
-    # Retrieve postings for every term.
     postings_by_term = []
 
     for term in terms:
@@ -77,7 +163,6 @@ def phrase_search(
             }
         )
 
-    # Only documents containing every term can match.
     candidate_docs = set(postings_by_term[0])
 
     for postings in postings_by_term[1:]:
@@ -91,7 +176,10 @@ def phrase_search(
         for start_position in first_positions:
             matches_phrase = True
 
-            for offset, postings in enumerate(postings_by_term[1:], start=1):
+            for offset, postings in enumerate(
+                postings_by_term[1:],
+                start=1,
+            ):
                 if start_position + offset not in postings[doc_id]:
                     matches_phrase = False
                     break
