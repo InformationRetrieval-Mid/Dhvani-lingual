@@ -30,10 +30,11 @@ Last updated: 7 Oct
 - [x] Parser stage shown on each result in the app, a switch to turn it off, and a parser step in `--explain`
 
 - [x] Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)
+- [x] Translation switch in the app's Filters popover and `--no-xling` in the CLI
 ## In progress
 
 ### Rishit
-- Next up: a translation switch in the app and the CLI.
+- Next up: the metrics code.
 
 ## Next
 

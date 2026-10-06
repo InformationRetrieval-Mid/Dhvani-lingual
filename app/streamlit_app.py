@@ -27,6 +27,7 @@ from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
+from dhvani.rank.xling import translate  # noqa: E402
 from dhvani.rank.sample_index import SampleIndex, tokenize  # noqa: E402
 from dhvani.rank.scoring import rank  # noqa: E402
 from dhvani.rank.vsm import search  # noqa: E402
@@ -395,6 +396,8 @@ def main():
             k = st.slider("Results per column", 3, 20, 10)
             use_parser = st.toggle("Smart query parsing", value=True,
                                    help="Try the exact phrase first, then all the words, then any word.")
+            use_xling = st.toggle("Translate English words", value=True,
+                                  help="English words also search for their Hindi translations.")
             use_dates = st.toggle("Limit to a date range")
             date_from = date_to = None
             if use_dates:
@@ -413,6 +416,8 @@ def main():
         return
 
     query = exact_query(raw)
+    if use_xling:
+        query = translate(query)
     sources_map = term_sources(query)
 
     results = {}

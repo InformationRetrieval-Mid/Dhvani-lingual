@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
+from dhvani.rank.xling import translate  # noqa: E402
 from dhvani.rank.sample_index import SampleIndex  # noqa: E402
 from dhvani.rank.scoring import DEFAULT_WEIGHTS, rank  # noqa: E402
 from dhvani.rank.vsm import ZONES, cosine_scores, log_tf, query_vector, search  # noqa: E402
@@ -168,12 +169,16 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
+    parser.add_argument("--no-xling", action="store_true",
+                        help="don't translate English words into Hindi")
     parser.add_argument("--no-parser", action="store_true",
                         help="skip the query parser and rank every article that shares a word")
     args = parser.parse_args(argv)
 
     index = load_index(args.stem)
     query = exact_query(args.query)
+    if not args.no_xling:
+        query = translate(query)
     out = [f'Query: "{args.query}"   ranker: {args.ranker}   index: {args.stem}   k: {args.k}']
 
     if args.explain:
