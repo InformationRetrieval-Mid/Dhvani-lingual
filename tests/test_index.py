@@ -20,13 +20,38 @@ def test_add_document_and_postings():
     assert idx.N == 1
     assert "बारिश" in idx.vocab
 
-    assert idx.postings_for("बारिश", "headline") == [
+    assert idx.postings(
+        "बारिश",
+        "headline",
+    ) == [
         ("doc1", 1, [0])
     ]
 
-    assert idx.postings_for("बारिश", "body") == [
+    assert idx.postings(
+        "बारिश",
+        "body",
+    ) == [
         ("doc1", 1, [3])
     ]
+
+
+def test_postings_for_alias():
+    idx = Index("none")
+
+    idx.add_document(
+        "doc1",
+        "बारिश आज",
+        "आज बारिश हुई",
+        {},
+    )
+
+    assert idx.postings_for(
+        "बारिश",
+        "headline",
+    ) == idx.postings(
+        "बारिश",
+        "headline",
+    )
 
 
 def test_document_frequency_counts_documents_not_occurrences():
@@ -64,7 +89,11 @@ def test_light_index_uses_stems():
 
 
 def test_save_and_load(tmp_path, monkeypatch):
-    monkeypatch.setattr(Index, "INDEX_DIR", tmp_path)
+    monkeypatch.setattr(
+        Index,
+        "INDEX_DIR",
+        tmp_path,
+    )
 
     idx = Index("none")
 
@@ -81,12 +110,18 @@ def test_save_and_load(tmp_path, monkeypatch):
         },
     )
 
-    # Explicit path
-    explicit_path = tmp_path / "explicit.pkl"
+    explicit_path = (
+        tmp_path / "explicit.pkl"
+    )
+
     idx.save(explicit_path)
 
-    with open(explicit_path, "rb") as f:
+    with open(
+        explicit_path,
+        "rb",
+    ) as f:
         import pickle
+
         loaded = pickle.load(f)
 
     assert loaded.mode == "none"
@@ -94,7 +129,6 @@ def test_save_and_load(tmp_path, monkeypatch):
     assert loaded.vocab == idx.vocab
     assert loaded.meta == idx.meta
 
-    # Standard project path
     idx.save()
 
     loaded = Index.load("none")
@@ -102,6 +136,10 @@ def test_save_and_load(tmp_path, monkeypatch):
     assert loaded.mode == "none"
     assert loaded.N == 1
     assert loaded.vocab == idx.vocab
-    assert loaded.postings_for("बारिश", "headline") == [
+
+    assert loaded.postings(
+        "बारिश",
+        "headline",
+    ) == [
         ("doc1", 1, [0])
     ]

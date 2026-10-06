@@ -47,9 +47,7 @@ class Index:
             raise ValueError(f"Unsupported index mode: {mode}")
 
         self.mode = mode
-
-        self.postings = defaultdict(_zone_postings)
-
+        self._postings = defaultdict(_zone_postings)
         self.meta = {}
         self.N = 0
         self.vocab = set()
@@ -72,18 +70,37 @@ class Index:
         self.meta[doc_id] = metadata
         self.N += 1
 
-        self._add_zone(doc_id, headline, "headline")
-        self._add_zone(doc_id, body, "body")
+        self._add_zone(
+            doc_id,
+            headline,
+            "headline",
+        )
 
-    def _add_zone(self, doc_id: str, text: str, zone: str):
+        self._add_zone(
+            doc_id,
+            body,
+            "body",
+        )
+
+    def _add_zone(
+        self,
+        doc_id: str,
+        text: str,
+        zone: str,
+    ):
         """
         Analyze one document zone and add positional postings.
         """
 
         if zone not in {"headline", "body"}:
-            raise ValueError(f"Unsupported zone: {zone}")
+            raise ValueError(
+                f"Unsupported zone: {zone}"
+            )
 
-        analyzed = analyze(text, self.mode)
+        analyzed = analyze(
+            text,
+            self.mode,
+        )
 
         term_positions = defaultdict(list)
 
@@ -91,33 +108,74 @@ class Index:
             term_positions[term].append(position)
 
         for term, positions in term_positions.items():
-            self.postings[term][zone].append(
-                (doc_id, len(positions), positions)
+            self._postings[term][zone].append(
+                (
+                    doc_id,
+                    len(positions),
+                    positions,
+                )
             )
 
             self.vocab.add(term)
 
-    def postings_for(self, term: str, zone: str):
+    def postings_for(
+        self,
+        term: str,
+        zone: str,
+    ):
+        """
+        Internal/legacy-friendly name for retrieving postings.
+        """
+
+        return self.postings(
+            term,
+            zone,
+        )
+
+    def postings(
+        self,
+        term: str,
+        zone: str,
+    ):
         """
         Return postings for a term in a particular zone.
+
+        Each posting has the form:
+
+            (doc_id, tf, positions)
         """
 
         if zone not in {"headline", "body"}:
-            raise ValueError(f"Unsupported zone: {zone}")
+            raise ValueError(
+                f"Unsupported zone: {zone}"
+            )
 
-        return self.postings.get(term, {}).get(zone, [])
+        return self._postings.get(
+            term,
+            {},
+        ).get(
+            zone,
+            [],
+        )
 
     def df(self, term: str) -> int:
         """
         Return document frequency across headline and body.
 
-        A document containing the term in both zones is counted once.
+        A document containing the term in both zones
+        is counted only once.
         """
 
         doc_ids = set()
 
-        for zone in ("headline", "body"):
-            for doc_id, _, _ in self.postings.get(term, {}).get(zone, []):
+        for zone in (
+            "headline",
+            "body",
+        ):
+            for doc_id, _, _ in self.postings(
+                term,
+                zone,
+            ):
                 doc_ids.add(doc_id)
 
         return len(doc_ids)
@@ -126,16 +184,30 @@ class Index:
         """
         Save the index to disk.
 
-        If no path is supplied, use:
+        If no path is supplied:
+
             indexes/{mode}.pkl
         """
 
         if path is None:
-            self.INDEX_DIR.mkdir(parents=True, exist_ok=True)
-            path = self.INDEX_DIR / f"{self.mode}.pkl"
+            self.INDEX_DIR.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
 
-        with open(path, "wb") as f:
-            pickle.dump(self, f)
+            path = (
+                self.INDEX_DIR
+                / f"{self.mode}.pkl"
+            )
+
+        with open(
+            path,
+            "wb",
+        ) as f:
+            pickle.dump(
+                self,
+                f,
+            )
 
     @classmethod
     def load(cls, mode: str):
@@ -143,29 +215,47 @@ class Index:
         Load an index using the shared project interface.
 
         Example:
+
             Index.load("none")
             Index.load("light")
         """
 
-        if mode not in {"none", "light"}:
-            raise ValueError(f"Unsupported index mode: {mode}")
+        if mode not in {
+            "none",
+            "light",
+        }:
+            raise ValueError(
+                f"Unsupported index mode: {mode}"
+            )
 
-        path = cls.INDEX_DIR / f"{mode}.pkl"
+        path = (
+            cls.INDEX_DIR
+            / f"{mode}.pkl"
+        )
 
         if not path.exists():
             raise FileNotFoundError(
                 f"Index file not found: {path}"
             )
 
-        with open(path, "rb") as f:
+        with open(
+            path,
+            "rb",
+        ) as f:
             index = pickle.load(f)
 
-        if not isinstance(index, cls):
-            raise TypeError("Loaded file does not contain an Index")
+        if not isinstance(
+            index,
+            cls,
+        ):
+            raise TypeError(
+                "Loaded file does not contain an Index"
+            )
 
         if index.mode != mode:
             raise ValueError(
-                f"Index mode mismatch: expected {mode}, "
+                "Index mode mismatch: "
+                f"expected {mode}, "
                 f"found {index.mode}"
             )
 
