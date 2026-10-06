@@ -49,22 +49,37 @@ dhvani/
 
 ---
 
-## 3. Core Components & Implementation Design
+## 3. Implementation Design by Task (Dependency Order)
 
-### 1. Robots.txt Compliance (`robots.py`)
-#### Specification & Scope
-Enforces RFC 9309 compliance for target news domains prior to dispatching fetch requests. Handles wildcard and end-of-path patterns used across Indian news sites, maintains per-host rule caching, and automates sitemap discovery.
+### Task 1: Setup, Compliance & Filtering (`config.py`, `robots.py`, `normalizer.py`, `filters.py`)
+#### 1. Configuration & Source Rules (`config.py`)
+* **Whitelisted Sources:** 5 primary domains (*Dainik Jagran*, *Navbharat Times*, *Live Hindustan*, *Amar Ujala*, *Aaj Tak*) and 2 backup domains (*Jansatta*, *Dainik Bhaskar*).
+* **Blacklisted Domains:** *BBC Hindi* (robots.txt scraping prohibition), *News18* and *NDTV* (Cloudflare bot blocks).
+* **Rate Limits & Politeness:** Global 8.0s per-host politeness delay, 15.0s network timeouts, honest `User-Agent`.
 
-#### Rules & Matching Logic
-* **Wildcard & Path Matching:** Converts wildcard (`*`) and path-end (`$`) rules into compiled regular expressions adhering to RFC 9309 §2.2.2.
-* **Precedence:** Enforces longest-match precedence between conflicting `Allow` and `Disallow` rules; equal-length matches resolve in favor of `Allow`.
-* **User-Agent Resolution:** Matches site-specific rules for `CollegeProject_NewsBot` first; falls back to default wildcard (`*`) group if no explicit record exists. Does not alter user-agent to bypass disallow directives.
-* **In-Memory Caching:** Caches parsed rules per host (`scheme://host`) in memory to eliminate redundant HTTP requests across crawl sessions.
-* **Sitemap Extraction:** Extracts `Sitemap:` directives from `robots.txt` and forwards discovered feeds directly into the sitemap discovery queue.
+#### 2. URL Normalization & Route Filtering (`normalizer.py`, `filters.py`)
+* **Normalization Logic:**
+  - Lowercase URL scheme and host.
+  - Strip tracking query parameters: `utm_*`, `ref`, `fbclid`, `amp_js_v`.
+  - Map AMP pages to canonical desktop URLs (strip `/amp/`, `?amp=1`).
+  - Strip default ports and trailing slashes.
+* **Route Exclusions:**
+  - Astrology / Horoscope: `/rashifal/`, `/astrology/`, `/horoscope/` (avoids keyword pollution).
+  - Media: `/photo-gallery/`, `/photos/`, `/videos/`.
+  - Live blogs without full text: `/live-updates/`.
+
+#### 3. Robots.txt Compliance (`robots.py`)
+* **Specification & Scope:** Enforces RFC 9309 compliance for target news domains prior to dispatching fetch requests. Handles wildcard and end-of-path patterns used across Indian news sites, maintains per-host rule caching, and automates sitemap discovery.
+* **Rules & Matching Logic:**
+  - **Wildcard & Path Matching:** Converts wildcard (`*`) and path-end (`$`) rules into compiled regular expressions adhering to RFC 9309 §2.2.2.
+  - **Precedence:** Enforces longest-match precedence between conflicting `Allow` and `Disallow` rules; equal-length matches resolve in favor of `Allow`.
+  - **User-Agent Resolution:** Matches site-specific rules for `CollegeProject_NewsBot` first; falls back to default wildcard (`*`) group if no explicit record exists. Does not alter user-agent to bypass disallow directives.
+  - **In-Memory Caching:** Caches parsed rules per host (`scheme://host`) in memory to eliminate redundant HTTP requests across crawl sessions.
+  - **Sitemap Extraction:** Extracts `Sitemap:` directives from `robots.txt` and forwards discovered feeds directly into the sitemap discovery queue.
 
 ---
 
-### 2. Mercator Frontier Architecture (`frontier.py`)
+### Task 2: Mercator Frontier & Scheduler (`frontier.py`)
 #### How It Works & Concurrency Model
 Separates priority from politeness using a two-tier queue structure driven by a **single-threaded asynchronous event loop (`asyncio` + `heapq`)**:
 * While one request is waiting on network I/O, the event loop can dispatch requests for another eligible host.
@@ -96,16 +111,89 @@ Separates priority from politeness using a two-tier queue structure driven by a 
 ```
 
 #### Asynchronous Queue Loop
-1. Min-Heap inspects top entry `(ready_time, host)`.
+1. Min-Heap inspects top entry `(ready_time, entry_id, host)`.
 2. If `ready_time > now()`, asynchronously sleeps until `ready_time`.
 3. Pop next URL from `host`'s FIFO back queue.
 4. Asynchronously fetch URL, extract content, and append to `data/news.jsonl`.
 5. Reschedule `host` on the heap with `ready_time = now() + 8.0s`.
 
+#### Crawl Budget & Timing Sanity Check
+$$\text{Throughput} = \frac{5 \text{ sites}}{8.0 \text{ s/request}} = 0.625 \text{ req/s} \approx 2,250 \text{ articles/hour}$$
+* **WAF Rate-Limit Compliance:** Indian news portals (Cloudflare/Akamai) typically throttle IPs sending $> 10\text{–}15$ req/min. An 8.0s per-host delay ($7.5\text{ req/min}$) safely avoids rate-limit blocks.
+* **Crawl Schedule:** 5,000 articles in $\approx 2.2 \text{ hours}$; 12,000 articles in $\approx 5.3 \text{ hours}$.
+* 5 sites run round-robin, so no site blocks others while waiting for its 8-second delay.
+
 ---
 
-### 3. Adaptive Recrawling (`recrawl.py`)
+### Task 3: Feed & Seed Management (`sitemap.py`)
+#### Specification & Scope
+Discovers candidate article URLs across all target news portals using standard XML feeds, Google News feeds, and sitemap indexes.
+* **Feed Types Supported:**
+  - Standard `<urlset>` with `<loc>` and `<lastmod>`.
+  - Google News sitemaps (`<news:news>`, `<news:publication_date>`, `<news:title>`).
+  - Sitemap indexes (`<sitemapindex>`, `<sitemap>`) recursively resolved to child feeds.
+  - Archive sitemaps (monthly / yearly archive feeds for historical depth up to ~12k articles).
+* **Fault-Tolerant Parsing:**
+  - Namespace-agnostic element matching (handling variations in `xmlns:news`).
+  - Regex fallback parser for truncated or imperfect XML streams caused by network termination.
+* **Conditional Polling:**
+  - HTTP `304 Not Modified` handling via `If-None-Match` (ETag) and `If-Modified-Since` headers to avoid re-fetching unchanged sitemaps.
+
+---
+
+### Task 4: Content & Metadata Extraction (`extractor.py`)
+#### Extraction Hierarchy & Strategy
+* **Tier 1 (Schema.org JSON-LD):** Primary extraction targeting `schema.org/NewsArticle` or `BlogPosting` tags for `headline`, full `articleBody`, `datePublished`, `keywords`, and `articleSection`.
+* **Tier 2 (Open Graph / Meta Tags):** Used strictly to recover missing metadata such as title, publication date, keywords, and section. `og:description` is never used as a substitute for the full article body.
+* **Tier 3 (HTML DOM - Block-Level Fallback):**
+  - Extract substantive body text from `<article>` or main story containers.
+  - Collect text from `<p>` tags and non-nested leaf `<div>` blocks (e.g. Navbharat Times `<div class="Normal">`), filtering out captions, advertisements, bylines, and related-content widgets.
+  - Prevent double-counting by prioritizing `<p>` blocks or taking only deepest leaf blocks $\ge 25$ characters.
+* **Fields Extracted:**
+  - `headline`: Title string in Devanagari.
+  - `body`: Clean body text without ads, captions, or navigation.
+  - `date`: Publication timestamp converted to **ISO-8601 in IST (`+05:30`)**.
+  - `section`: Normalized category slug.
+  - `state` / `city`: Extracted from URL path patterns; set to `null` if not reliably identified.
+  - `keywords`: Extracted from metadata.
+  - `links`: Collect in-body `<a href="...">` links to other crawled articles (for PageRank).
+  - `content_hash`: MD5 hash of normalized article body.
+  - `agency_flag`: Boolean flag for syndicated wire stories.
+  - `dup_of`: Initialized to `null` (resolved during corpus clustering).
+* **Privacy Enforcement:** **No author names** stored anywhere in the schema (bylines, creators, and authors stripped).
+* **Schema Validation:** Records validated against `documentation/formats.md` via `validate_article_schema()`.
+
+---
+
+### Task 5: Pipeline Execution & Sample Crawl (`crawler.py`)
+#### Asynchronous Pipeline Integration
+Combines sitemap feed ingestion, Mercator frontier queuing, robots.txt gating, downloader, and extraction into a unified crawl pipeline.
+* **Pipeline Flow:**
+  1. Initialize `RobotsParser`, `MercatorFrontier`, and `Config`.
+  2. Parse primary sitemaps via `sitemap.py` and enqueue discovered URLs into frontier priority queues.
+  3. Continuous async event loop pops eligible host from politeness min-heap (enforcing 8.0s per-host delay).
+  4. Fetch article page with retry backoff on HTTP 403, 429, or network errors.
+  5. Extract structured article via `extractor.py` and validate schema.
+  6. Stream validated records line-by-line to `data/news.jsonl`.
+* **Deliverable (H3 Handoff):** Crawl and export `data/news_sample_300.jsonl` (300 clean, diverse articles) for downstream search engine teams.
+
+---
+
+### Task 6: Near-Duplicate & Story Clustering (`dedup.py`)
 #### Why It's Feasible & Grounded in Literature
+Newspapers frequently republish identical or slightly reworded wire stories from PTI, ANI, and Univarta/Bhasha:
+* **Exact Duplicates:** MD5 hash of normalized body text $\to$ `content_hash`.
+* **4-Word Shingles ($n=4$):** Grounded in Broder (1997) syntactic clustering adapted for Hindi grammar. In Hindi, 1- and 2-word shingles collide excessively due to frequent postpositions (*का, की, के, में, से*) and auxiliary verbs (*है, था, रहे*). 4-word shingles capture full syntactic clauses while tolerating minor regional word swaps.
+* **Temporal Window ($\pm 24\text{ hours}$):** Wire syndications occur on the same news cycle; articles published days apart are distinct follow-ups rather than syndicated reprints.
+* **MinHash + LSH (Scalable Candidate Selection):** 64-permutation MinHash signatures partitioned into $b=16$ bands of $r=4$ rows for $O(1)$ candidate bucketing.
+* **Story Clustering for `dup_of`:** If Jaccard $\ge 0.70$, the earliest published article is the root (`dup_of: null`), and later articles point to it (`dup_of: "<earliest_doc_id>"`).
+* **Agency Flag:** Detect wire keywords (`"पीटीआई"`, `"भाषा"`, `"वार्ता"`, `"ANI"`, `"PTI"`) and set `agency_flag: true`.
+* **Empirical Calibration Note:** The $0.70$ Jaccard threshold will be calibrated empirically using the Precision-Recall curve evaluated on 100 labeled article pairs once real articles are crawled.
+
+---
+
+### Task 7: Adaptive Recrawling & Event Prioritization (`recrawl.py`)
+#### Adaptive Recrawling (Freshness Tracking)
 News sites publish sitemaps (`sitemap.xml` / `news-sitemap.xml`) updated throughout the day. Grounded in the **Cho & Garcia-Molina change-rate model** and **RFC 6298** smoothing standards:
 * **Track Source Velocity:** Count new URLs added ($\Delta N$) over elapsed time ($\Delta t$) each time a sitemap is checked:
   $$\lambda_s^{(t)} = \alpha \cdot \frac{\Delta N}{\Delta t} + (1 - \alpha) \cdot \lambda_s^{(t-1)} \quad (\text{EWMA with } \alpha = 0.3)$$
@@ -116,10 +204,7 @@ News sites publish sitemaps (`sitemap.xml` / `news-sitemap.xml`) updated through
   - $\tau_{\max} = 6\text{ hours}$: matches the overnight news lull (11 PM to 5 AM) in Indian newsrooms.
 * **Conditional Fetching:** Send `If-Modified-Since` or `If-None-Match` (ETag) headers. A `304 Not Modified` terminates immediately, saving bandwidth and processing.
 
----
-
-### 4. Event / Burst-Aware Prioritization
-#### Why It's Feasible & Grounded in News Cycles
+#### Event / Burst-Aware Prioritization
 Breaking events (e.g. weather alerts, elections, accidents) produce sharp spikes in article volume under specific sections:
 * **Time Windows:** 
   - Rolling 60-minute window captures the acute 45–90 minute breaking news cycle in Indian regional dailies.
@@ -135,65 +220,15 @@ Breaking events (e.g. weather alerts, elections, accidents) produce sharp spikes
 
 ---
 
-### 5. URL Normalization & Route Filtering (`normalizer.py`, `filters.py`)
-#### Normalization
-* Lowercase scheme and host.
-* Strip tracking query params: `utm_*`, `ref`, `fbclid`, `amp_js_v`.
-* Map AMP pages to canonical desktop URLs (drop `/amp/`, `?amp=1`).
-* Strip default ports and trailing slashes.
-
-#### Filters
-* Skip non-article pages:
-  - Astrology/Horoscope: `/rashifal/`, `/astrology/`, `/horoscope/` (avoids keyword pollution).
-  - Media: `/photo-gallery/`, `/photos/`, `/videos/`.
-  - Live blogs without full text: `/live-updates/`.
+### Task 8: Shared Evaluation Tooling (`dhvani/eval/pool.py`)
+* **TREC Run Pooling:** Read standard TREC run files: `qid Q0 doc_id rank score run_name`.
+* **Pool Formation:** Extract top-$k$ ($k=10$ or $20$) documents per information need across all runs.
+* **Judgment Template Generation:** Deduplicate documents and generate human judgment sheets: `need_id 0 doc_id rel`.
+* **Handoff Documentation:** Document ingestion format, pool utility, and schema in `documentation/handoffs/riya.md`.
 
 ---
 
-### 6. Article & Metadata Extraction (`extractor.py`)
-#### Extraction Strategy
-* **Primary:** Parse Schema.org JSON-LD (`schema.org/NewsArticle` or `BlogPosting`).
-* **Metadata Fallback:** Open Graph and meta tags for missing titles, dates, sections, and keywords (never substituting for full body text).
-* **Body Fallback:** HTML DOM tags (`<article>`, `<h1>`, `<p>`).
-* **Fields Extracted:**
-  - `headline`: Title string in Devanagari.
-  - `body`: Clean body text without ads, captions, or navigation.
-  - `date`: Publication timestamp converted to **ISO-8601 in IST (`+05:30`)**.
-  - `section`: Normalized category slug.
-  - `state` / `city`: Extracted from URL path patterns; set to `null` if not reliably identified.
-  - `keywords`: Extracted from metadata.
-  - `links`: Collect in-body `<a href="...">` links to other crawled articles (for PageRank).
-  - **No author names** stored anywhere in the schema.
-
----
-
-### 7. Near-Duplicate & Story Clustering (`dedup.py`)
-#### Why It's Feasible & Grounded in Literature
-Newspapers frequently republish identical or slightly reworded wire stories from PTI, ANI, and Univarta/Bhasha:
-* **Exact Duplicates:** MD5 hash of normalized body text $\to$ `content_hash`.
-* **4-Word Shingles ($n=4$):** Grounded in Broder (1997) syntactic clustering adapted for Hindi grammar. In Hindi, 1- and 2-word shingles collide excessively due to frequent postpositions (*का, की, के, में, से*) and auxiliary verbs (*है, था, रहे*). 4-word shingles capture full syntactic clauses while tolerating minor regional word swaps.
-* **Temporal Window ($\pm 24\text{ hours}$):** Wire syndications occur on the same news cycle; articles published days apart are distinct follow-ups rather than syndicated reprints.
-* **MinHash + LSH (Scalable Candidate Selection):** 64-permutation MinHash signatures partitioned into $b=16$ bands of $r=4$ rows for $O(1)$ candidate bucketing.
-* **Story Clustering for `dup_of`:** If Jaccard $\ge 0.70$, the earliest published article is the root (`dup_of: null`), and later articles point to it (`dup_of: "<earliest_doc_id>"`).
-* **Agency Flag:** Detect wire keywords (`"पीटीआई"`, `"भाषा"`, `"वार्ता"`, `"ANI"`, `"PTI"`) and set `agency_flag: true`.
-* **Empirical Calibration Note:** The $0.70$ Jaccard threshold will be calibrated empirically using the Precision-Recall curve evaluated on 100 labeled article pairs once real articles are crawled.
-
----
-
-### 8. Crawl Budget & Timing Sanity Check
-$$\text{Throughput} = \frac{5 \text{ sites}}{8.0 \text{ s/request}} = 0.625 \text{ req/s} \approx 2,250 \text{ articles/hour}$$
-* **WAF Rate-Limit Compliance:** Indian news portals (Cloudflare/Akamai) typically throttle IPs sending $> 10\text{–}15$ req/min. An 8.0s per-host delay ($7.5\text{ req/min}$) safely avoids rate-limit blocks.
-* **Crawl Schedule:** 5,000 articles in $\approx 2.2 \text{ hours}$; 12,000 articles in $\approx 5.3 \text{ hours}$.
-* 5 sites run round-robin, so no site blocks others while waiting for its 8-second delay.
-
-### 9. Shared Tooling: TREC Run Pooling (`dhvani/eval/pool.py`)
-* Read standard TREC run files: `qid Q0 doc_id rank score run_name`.
-* Extract top-$k$ ($k=10$ or $20$) documents per information need across all runs.
-* Deduplicate documents and generate human judgment sheets: `need_id 0 doc_id rel`.
-
----
-
-### 10. Optional Enhancement: Neural / Semantic Utility Prioritization (`dhvani/crawl/utility.py`)
+### Optional Enhancement: Neural / Semantic Utility Prioritization (`dhvani/crawl/utility.py`)
 #### Grounding in Literature & Concept
 Standard focused crawlers target a specific query, which is unsuited for a general search engine where queries are unknown in advance. 
 

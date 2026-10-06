@@ -9,12 +9,18 @@ def normalize_url(raw_url: str) -> str:
 
     resolving AMP paths, and stripping trailing slashes.
     """
-    if not raw_url:
+    if not raw_url or not raw_url.strip():
         return ""
     # Normalize scheme & lower host
     parsed = urlparse(raw_url.strip())
     scheme = parsed.scheme.lower() or "https"
     netloc = parsed.netloc.lower()
+
+    # Strip default ports (:80 for http, :443 for https)
+    if scheme == "http" and netloc.endswith(":80"):
+        netloc = netloc[:-3]
+    elif scheme == "https" and netloc.endswith(":443"):
+        netloc = netloc[:-4]
 
     # Drop tracking query params
     clean_params = {}
