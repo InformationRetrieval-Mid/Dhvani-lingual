@@ -139,11 +139,15 @@ class SampleIndex:
         self.postings_by_zone = {zone: defaultdict(list) for zone in ZONES}
         self.meta = {}
         self.doc_norm = {}
+        # Full text for display only (headline, snippets). The real system
+        # reads this from the article file instead.
+        self.articles = {}
         doc_freq = Counter()
 
         for art in sorted(articles, key=lambda a: a["doc_id"]):
             doc_id = art["doc_id"]
             self.meta[doc_id] = {k: art.get(k) for k in ("source", "section", "state", "city", "date", "dup_of", "links")}
+            self.articles[doc_id] = {"headline": art["headline"], "body": art["body"]}
             whole_doc_tf = Counter()
             for zone in ZONES:
                 positions = defaultdict(list)
