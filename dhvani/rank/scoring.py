@@ -73,7 +73,7 @@ def _latest_date(index):
     return max(datetime.fromisoformat(d) for d in dates)
 
 
-def rank(query, index, k=10, weights=None, now=None):
+def rank(query, index, k=10, weights=None, now=None, doc_filter=None):
     """Top k documents by net score.
 
     Returns [(doc_id, net_score, explain)] where explain holds every part of
@@ -96,6 +96,8 @@ def rank(query, index, k=10, weights=None, now=None):
 
     scored = []
     for doc_id, cosine in cos.items():
+        if doc_filter and not doc_filter(doc_id):
+            continue
         by_zone = positions[doc_id]
 
         zone_score = sum(

@@ -90,8 +90,11 @@ def bm25_scores(query, index, k1=K1, b=B, headline_boost=1.0):
     return scores, contributions
 
 
-def search_bm25(query, index, k=10, k1=K1, b=B, headline_boost=1.0):
+def search_bm25(query, index, k=10, k1=K1, b=B, headline_boost=1.0, doc_filter=None):
     """Top k by BM25: [(doc_id, score, {term: contribution})], best first."""
     scores, contributions = bm25_scores(query, index, k1, b, headline_boost)
-    top = heapq.nlargest(k, scores.items(), key=lambda item: (item[1], item[0]))
+    candidates = scores.items()
+    if doc_filter:
+        candidates = [(d, s) for d, s in candidates if doc_filter(d)]
+    top = heapq.nlargest(k, candidates, key=lambda item: (item[1], item[0]))
     return [(doc_id, score, contributions[doc_id]) for doc_id, score in top]

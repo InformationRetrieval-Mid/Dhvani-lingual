@@ -50,14 +50,17 @@ def query_vector(query, index):
     return {term: w / norm for term, w in raw.items()}
 
 
-def search(query, index, k=10):
+def search(query, index, k=10, doc_filter=None):
     """Rank documents for a query with lnc.ltc and return the top k.
 
     Returns [(doc_id, score, explain)], best first. explain maps each
     matching term to its contribution, which --explain prints later.
     """
     scores, contributions = cosine_scores(query, index)
-    top = heapq.nlargest(k, scores.items(), key=lambda item: (item[1], item[0]))
+    candidates = scores.items()
+    if doc_filter:
+        candidates = [(d, s) for d, s in candidates if doc_filter(d)]
+    top = heapq.nlargest(k, candidates, key=lambda item: (item[1], item[0]))
     return [(doc_id, score, contributions[doc_id]) for doc_id, score in top]
 
 
