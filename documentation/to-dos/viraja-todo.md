@@ -274,9 +274,10 @@ today; phonetic / xling matches are added as extra `expansions` entries later �
   - `expand.py` — weighted phonetic expansion wired into `build_query` (`source: "phonetic"`).
   - `context.py` — context correction (candidate lattice + Viterbi over co-occurrence).
   - **Integration:** `test_integration.py` scores `build_query` output through Rishit's `vsm.search` (skips until `dhvani/rank/` is present); Hindi `मौसम` and Hinglish `mosam`→मौसम both hit the weather docs.
-* [ ] **Phase 4 (H12–H22):** *(sleep shift H17–H22)*
-  - Add Rocchio query expansion (top-10 PRF).
-  - Produce the edit-cost heatmap and build the 50-name test set.
+* [x] **Phase 4 (H12–H22):** *(sleep shift H17–H22)*
+  - `rocchio.py` — Rocchio top-10 pseudo-relevance feedback (adds `"prf"` terms).
+  - `heatmap.py` — edit-cost heatmap → `documentation/figures/edit_cost_heatmap.png`.
+  - `names.py` + `names_testset.tsv` — 50-name set; acc@1 soundex/dhvani 1.000, learned 0.993, levenshtein 0.973.
 * [ ] **Phase 5 (H22–H28):**
   - Judge the pools (~2 h).
   - **Results table:** the phonetic methods compared (word-by-word and on full queries); with vs without query expansion.

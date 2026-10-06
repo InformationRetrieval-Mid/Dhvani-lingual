@@ -3,7 +3,7 @@
 Living notes on what my part gives the team, what I need back, and the calls I
 made at forks in the road. If you rename something I expose, tell me first.
 
-## What I expose right now (Phase 0–3)
+## What I expose right now (Phase 0–4)
 
 All importable as `from dhvani.query.X import ...`:
 
@@ -22,8 +22,21 @@ All importable as `from dhvani.query.X import ...`:
 | `expand` | `expand_query(query, index, costs)` | appends each token's phonetic variants to its `expansions` list |
 | `context` | `correct(query, cooccur)` / `best_path(...)` | context correction: pick the variant combo that co-occurs most (Viterbi over a lattice) |
 | `build` | `build_query(raw, index=None, costs=None)` | the **query object** (format 4). No index → exact-only (H3 stub). Pass a `KGramIndex` + costs → tokens also carry `"phonetic"` expansions |
+| `rocchio` | `expand_query(query, relevant_vecs)` / `rocchio(...)` | Rocchio PRF: fold terms from the top results back into the query (adds `"prf"` tokens) |
+| `names` | `load_names()` / `evaluate(names, costs)` | the 50-name test set + its accuracy@1 / MRR eval |
+| `heatmap` | `render(table, default, out)` / `cost_matrix(...)` | edit-cost heatmap PNG from `edit_costs.json` |
 
-Tests: `partwise-tests/viraja/` (**43 passing, 1 skipped** — the skip is the end-to-end ranker test, which runs once `dhvani/rank/` is present). Run `python -m pytest partwise-tests/viraja/`.
+Tests: `partwise-tests/viraja/` (**50 passing, 1 skipped** — the skip is the end-to-end ranker test, which runs once `dhvani/rank/` is present). Run `python -m pytest partwise-tests/viraja/`.
+
+### Phase 4 — 50-name test set (150 variant queries)
+| matcher | accuracy@1 | MRR |
+|---|---|---|
+| levenshtein | 0.973 | 0.987 |
+| **soundex** | **1.000** | **1.000** |
+| **dhvani (ours)** | **1.000** | **1.000** |
+| learned | 0.993 | 0.997 |
+
+Phonetic codes nail name variants (Lakshmi/Laxmi, Siddharth/Sidharth). Edit-cost heatmap: `documentation/figures/edit_cost_heatmap.png` (regenerate with `python -m dhvani.query.heatmap`).
 
 ### Phase 2 word-level results (Aksharantar test split, 1500 queries / 1156-word vocab)
 | matcher | accuracy@1 | MRR |
@@ -110,9 +123,23 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
    The old per-language config was removed from the HF dataset; it now ships one
    zip per language, so `aksharantar.py` pulls `hin.zip` via `huggingface_hub`.
 
+9. **Rocchio terms use a new `"prf"` source tag** (a 4th provenance beyond
+   `exact`/`phonetic`/`xling`). **Rishit:** your ranker ignores the source string
+   when scoring (`for term, weight, _source in ...`), so this is additive and
+   safe; `"prf"` is only for snippet/`--explain` labelling. Flag if you'd rather
+   I reuse an existing tag.
+
+10. **PRF terms are appended as new tokens**, never merged into an existing
+    token's `expansions`, so the original query tokens stay exactly as built.
+
+11. **50-name set is committed reference data** (`dhvani/query/names_testset.tsv`,
+    small, curated — not article text), and the heatmap PNG is committed under
+    `documentation/figures/` as a report asset.
+
 ## Dependency note for packaging
 Runtime + tests need `regex` and `pytest`. Re-training the edit costs needs
 `huggingface_hub` (to pull `hin.zip`); the shipped `edit_costs.json` means
-teammates don't need it just to run the matcher. Phase-4 heatmap will want
-`numpy`/`matplotlib`. We still have no shared `requirements.txt` — someone
-should add one and I'll list my deps there.
+teammates don't need it just to run the matcher. The edit-cost **heatmap** needs
+`matplotlib` (imported lazily — only `python -m dhvani.query.heatmap` needs it,
+nothing else does). We still have no shared `requirements.txt` — someone should
+add one and I'll list my deps there.
