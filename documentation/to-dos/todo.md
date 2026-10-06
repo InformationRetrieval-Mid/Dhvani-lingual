@@ -21,11 +21,15 @@ Last updated: 6 Oct, evening
 - [x] BM25
 - [x] Filters for source, section, state and date, usable by all three rankers
 - [x] Sample index keeps article text so results can be displayed
+- [x] Streamlit app, first version: search box, ranker choice and the no stemming / stemming / auto columns
 
 ## In progress
 
 ### Rishit (written, not committed yet)
-- [ ] Streamlit app with the no stemming / stemming / auto columns
+- [ ] Streamlit: highlighted words and snippets
+- [ ] Streamlit: match chips (exact, phonetic, translated)
+- [ ] Streamlit: filters in the sidebar
+- [ ] Streamlit: "why this score" breakdown and "only here" tags
 
 ## Next
 
