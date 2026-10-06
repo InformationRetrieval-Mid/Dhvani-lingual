@@ -27,6 +27,21 @@
   - Implemented HTTP 304 conditional request support (`If-None-Match`, `If-Modified-Since`) to eliminate redundant bandwidth consumption during polling.
   - **Empirical Test Result & Verification:** Validated in [`test_sitemap.py`](../../../partwise-tests/riya/test_sitemap.py) (7/7 tests passing including Google News fields, index discovery, conditional headers, and malformed stream resilience).
 
+- **Article & Metadata Extraction Pipeline:**
+  - 3-tier hierarchy in [`dhvani/crawl/extractor.py`](../../../dhvani/crawl/extractor.py):
+    - **Tier 1 (Schema.org JSON-LD):** Primary source for `headline`, full `articleBody`, `datePublished`, `keywords`, and `articleSection`.
+    - **Tier 2 (Open Graph / Meta Tags):** Used strictly to recover missing metadata (title, publication date, keywords, section). `og:description` is never used as a substitute for the full article body.
+    - **Tier 3 (HTML DOM - Block-Level Fallback):**
+      - **Problem:** Many Indian news CMSs (e.g. Navbharat Times `<div class="Normal">`, Amar Ujala story blocks) wrap body paragraphs in `<div>` elements rather than semantic `<p>` tags. Strict `<p>`-only extraction caused empty body false negatives.
+      - **Risk (Double-Counting):** Naive iteration over `find_all(["p", "div"])` causes parent wrapper `<div>`s and child `<div>`/`<p>` tags to repeat identical text multiple times.
+      - **Solution:** Decompose boilerplate elements (captions, image credits, related-content boxes, ads, social shares, bylines). Extract text from `<p>` tags and non-nested leaf `<div>` blocks (substantive length $\ge 25$ chars). When `<p>` tags provide substantive text, they take precedence; otherwise, leaf block `<div>` elements are aggregated without parent duplication.
+  - **Strict IST Date Formatting:** All timestamps parsed and converted to ISO-8601 with `+05:30` offset.
+  - **Zero Author Privacy Enforcement:** Clearly identified author/byline elements removed where necessary, avoiding blind wildcard deletion of classes/IDs containing "author". Record schema strictly excludes author, creator, editor, and byline fields.
+  - **Conservative Geographic Tagging:** If state or city cannot be reliably identified from URL path structures, fields are explicitly set to `null` rather than guessing.
+  - **Contract Validation:** Extracted articles must pass `validate_article_schema()` verifying `documentation/formats.md` compliance before being written to `data/news.jsonl`.
+  - **Deduplication Lineage:** Extractor computes `content_hash` and `agency_flag`, leaving `dup_of: null`; cross-article deduplication is resolved later during corpus clustering.
+  - **Empirical Test Result & Verification:** Validated in [`test_extractor.py`](../../../partwise-tests/riya/test_extractor.py) (JSON-LD priority, meta fallback without og:description substitution, DOM block-level and leaf-div extraction without double-counting, IST date parsing, author removal, and schema compliance).
+
 - **Sample Handoff Sequencing:**
   - Defer generating the 300-article sample (`news_sample_300.jsonl` for H3) until initial extractor, normalizer, and crawler pipeline are complete.
 

@@ -153,16 +153,17 @@ Breaking events (e.g. weather alerts, elections, accidents) produce sharp spikes
 ### 6. Article & Metadata Extraction (`extractor.py`)
 #### Extraction Strategy
 * **Primary:** Parse Schema.org JSON-LD (`schema.org/NewsArticle` or `BlogPosting`).
-* **Fallback:** Standard HTML tags (`<article>`, `<h1>`, `<p>`).
+* **Metadata Fallback:** Open Graph and meta tags for missing titles, dates, sections, and keywords (never substituting for full body text).
+* **Body Fallback:** HTML DOM tags (`<article>`, `<h1>`, `<p>`).
 * **Fields Extracted:**
   - `headline`: Title string in Devanagari.
   - `body`: Clean body text without ads, captions, or navigation.
   - `date`: Publication timestamp converted to **ISO-8601 in IST (`+05:30`)**.
   - `section`: Normalized category slug.
-  - `state` / `city`: Extracted from URL path patterns (e.g., `/lucknow/` $\to$ `city: "lucknow"`).
+  - `state` / `city`: Extracted from URL path patterns; set to `null` if not reliably identified.
   - `keywords`: Extracted from metadata.
   - `links`: Collect in-body `<a href="...">` links to other crawled articles (for PageRank).
-  - **No author names** stored.
+  - **No author names** stored anywhere in the schema.
 
 ---
 

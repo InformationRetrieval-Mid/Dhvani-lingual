@@ -43,14 +43,14 @@
 - [x] Add archive sitemap seed discovery
 
 ## 6. Article & Metadata Extraction (`extractor.py`)
-- [ ] Implement Schema.org JSON-LD extraction (`NewsArticle`, `BlogPosting`)
-- [ ] Implement HTML fallback extraction (`<h1>`, `<article>`, `<p>`)
-- [ ] Implement date parsing to strict ISO-8601 with IST offset (`+05:30`)
-- [ ] Implement state and city regex extraction from URL paths
-- [ ] Implement section slug extraction and normalization
-- [ ] Implement in-body hyperlink extraction for PageRank (`links` field)
-- [ ] Enforce zero author names stored in extracted records
-- [ ] Validate extracted output against `documentation/formats.md`
+- [x] Implement Schema.org JSON-LD extraction (`NewsArticle`, `BlogPosting`)
+- [x] Implement HTML fallback extraction (`<h1>`, `<article>`, `<p>`)
+- [x] Implement date parsing to strict ISO-8601 with IST offset (`+05:30`)
+- [x] Implement state and city regex extraction from URL paths
+- [x] Implement section slug extraction and normalization
+- [x] Implement in-body hyperlink extraction for PageRank (`links` field)
+- [x] Enforce zero author names stored in extracted records
+- [x] Validate extracted output against `documentation/formats.md`
 
 ## 7. Deduplication & Story Lineage (`dedup.py`)
 - [x] Implement MD5 body text hashing for exact duplicates (`content_hash`)
@@ -85,7 +85,7 @@
 - [x] `test_frontier.py`: Validate 8.0s per-host delay and front queue weighting
 - [x] `test_sitemap.py`: Validate standard, Google News, index, and archive sitemaps
 - [ ] `test_normalizer.py`: Validate query stripping and AMP conversion
-- [ ] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
+- [x] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [ ] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
 - [ ] `test_format_compliance.py`: Validate schema compliance with `formats.md`
 
