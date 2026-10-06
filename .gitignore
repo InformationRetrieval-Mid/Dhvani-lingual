@@ -20,6 +20,7 @@ data/sitemaps/
 data/cache/
 data/*.txt
 !data/.gitkeep
+!data/news_sample_300.jsonl
 
 # IDE & OS
 .vscode/
