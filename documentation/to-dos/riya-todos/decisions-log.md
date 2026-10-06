@@ -7,12 +7,18 @@
   - No attempt to bypass Disallow rules by altering user-agent.
 
 - **Frontier Concurrency Model (`asyncio` + `heapq`):**
-  - Use a single-threaded asynchronous event loop with `asyncio` and `heapq`.
-  - Maintain Front queues for URL priority ($Q_0$–$Q_3$), one FIFO back queue per host for politeness, and min-heap `(next_allowed_time, host)` for scheduling.
+  - Use a single-threaded asynchronous event loop with `asyncio` and `heapq` implemented in [`dhvani/crawl/frontier.py`](../../../dhvani/crawl/frontier.py).
+  - Maintain Front queues for URL priority ($Q_0$–$Q_3$), one FIFO back queue per host for politeness, and min-heap `(next_allowed_time, entry_id, host)` for scheduling.
   - When a host becomes eligible, asynchronously dispatch its next URL; while waiting on network I/O, the event loop handles another eligible host.
   - After a request completes, reschedule that host on the heap with the required 8-second delay.
   - Theoretical scheduling across 5 hosts is $8/5 = 1.6\text{ s/request}$.
   - Single-threaded model avoids locks, thread synchronization, and concurrent file-write conflicts while overlapping network I/O.
+  - **Empirical Test Result & Verification:** Validated in [`test_frontier.py`](../../../partwise-tests/riya/test_frontier.py):
+    - Multi-host concurrency verified: distinct hosts dispatch concurrently with zero inter-host blocking.
+    - Politeness verified: consecutive requests to the same host strictly wait $8.0\text{s}$ via deterministic simulated clock.
+    - Deterministic tie-breaking: monotonic `entry_id` resolves simultaneous host eligibility in strict FIFO order.
+    - Biased selection verified: 1,000-iteration simulation confirmed priority distribution ($Q_0 \approx 70.6\%$ relative ratio over $Q_1$) without starving lower queues.
+    - Bounded back queues (`max_back_queue_size = 10`) eliminate head-of-line blocking during burst spikes.
 
 - **Sample Handoff Sequencing:**
   - Defer generating the 300-article sample (`news_sample_300.jsonl` for H3) until initial extractor, normalizer, and crawler pipeline are complete.

@@ -29,12 +29,12 @@
 - [x] Write unit tests verifying wildcard support, caching, precedence, and user-agent selection
 
 ## 4. Mercator Frontier (`frontier.py`)
-- [ ] Implement 4 priority front queues (Q0: Bursts, Q1: Fresh, Q2: Links, Q3: Archive)
-- [ ] Implement biased random selector for front queue sampling
-- [ ] Implement per-host FIFO back queues for politeness isolation
-- [ ] Implement min-heap tracking `(next_allowed_time, host)` to enforce 8.0s delay
-- [ ] Implement seen-URL deduplication set
-- [ ] Write unit tests verifying 8.0s delay enforcement and queue priorities
+- [x] Implement 4 priority front queues (Q0: Bursts, Q1: Fresh, Q2: Links, Q3: Archive)
+- [x] Implement biased random selector for front queue sampling
+- [x] Implement per-host FIFO back queues for politeness isolation
+- [x] Implement min-heap tracking `(next_allowed_time, host)` to enforce 8.0s delay
+- [x] Implement seen-URL deduplication set
+- [x] Write unit tests verifying 8.0s delay enforcement and queue priorities
 
 ## 5. Sitemap & Seed Management (`sitemap.py`)
 - [ ] Implement XML sitemap parser for standard sitemaps
@@ -82,7 +82,7 @@
 
 ## 11. Test Suite (`partwise-tests/riya/`)
 - [x] `test_robots.py`: Benchmark custom parser vs `urllib.robotparser` bugs
-- [ ] `test_frontier.py`: Validate 8.0s per-host delay and front queue weighting
+- [x] `test_frontier.py`: Validate 8.0s per-host delay and front queue weighting
 - [ ] `test_normalizer.py`: Validate query stripping and AMP conversion
 - [ ] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [ ] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
