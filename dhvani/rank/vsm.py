@@ -56,10 +56,21 @@ def search(query, index, k=10):
     Returns [(doc_id, score, explain)], best first. explain maps each
     matching term to its contribution, which --explain prints later.
     """
+    scores, contributions = cosine_scores(query, index)
+    top = heapq.nlargest(k, scores.items(), key=lambda item: (item[1], item[0]))
+    return [(doc_id, score, contributions[doc_id]) for doc_id, score in top]
+
+
+def cosine_scores(query, index):
+    """Cosine score for every document that shares a term with the query.
+
+    Returns (scores, contributions): {doc_id: score} and
+    {doc_id: {term: contribution}}.
+    """
     qvec = query_vector(query, index)
 
-    # Term-at-a-time accumulation (Lecture 6 "computing cosine scores"),
-    # only touching documents that contain at least one query term.
+    # Term-at-a-time accumulation, only touching documents that contain at
+    # least one query term.
     scores = defaultdict(float)
     contributions = defaultdict(dict)
     for term, q_weight in qvec.items():
@@ -72,6 +83,4 @@ def search(query, index, k=10):
             part = q_weight * d_weight
             scores[doc_id] += part
             contributions[doc_id][term] = part
-
-    top = heapq.nlargest(k, scores.items(), key=lambda item: (item[1], item[0]))
-    return [(doc_id, score, contributions[doc_id]) for doc_id, score in top]
+    return scores, contributions
