@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 6 Oct, after the first version of the app
+Last updated: 6 Oct, after adding highlights and snippets to the app
 
 ## My part
 Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -17,7 +17,8 @@ Ranking, cross-lingual layer and the app. Code lives in `dhvani/rank/` and `app/
 | `0009026` added bm25 | `dhvani/rank/bm25.py` |
 | `e1958f1` filters for source, section, state and date | `dhvani/rank/filters.py`, plus a `doc_filter` option on all three rankers |
 | `728c3e4` sample index keeps article text for display | `SampleIndex.articles` holds headline and body |
-| first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
+| `3b5c763` first version of the streamlit app with the three stemming columns | `app/streamlit_app.py` |
+| highlighted query words and snippets in the app | best-matching sentence for each result, matched words coloured |
 
 ## How to use it
 
@@ -67,7 +68,7 @@ rank(q, idx, k=10, doc_filter=f)     # same for search() and search_bm25()
 `idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. The real system will read this from the article file.
 
 **The app** (`app/streamlit_app.py`)
-Search box, a choice of ranker (net score, lnc.ltc or BM25), and three columns: no stemming, stemming and auto. Each result shows its headline, source, section, place, date and score. For now all three columns use the sample index, so they look the same.
+Search box, a choice of ranker (net score, lnc.ltc or BM25), and three columns: no stemming, stemming and auto. Each result shows its headline, source, section, place, date and score, plus the best-matching sentence from the article. Matched words are highlighted: green for exact, blue for phonetic, orange for translated. For now all three columns use the sample index, so they look the same.
 ```bash
 .venv/bin/streamlit run app/streamlit_app.py
 ```

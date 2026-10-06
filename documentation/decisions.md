@@ -49,3 +49,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Streamlit for the app.** The frontend isn't graded, and Streamlit gives us three columns, filters and a score breakdown with very little code.
 
 **Matches coloured by type.** Exact, phonetic and translated matches get different colours, so the demo shows where each result came from at a glance.
+
+**Snippets show the best sentence.** Each result shows the first sentence that contains a query word, falling back to the opening words. It's quick, and it shows the reader why the article matched.

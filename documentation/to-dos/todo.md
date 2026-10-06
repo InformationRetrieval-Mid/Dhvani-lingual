@@ -22,11 +22,11 @@ Last updated: 6 Oct, evening
 - [x] Filters for source, section, state and date, usable by all three rankers
 - [x] Sample index keeps article text so results can be displayed
 - [x] Streamlit app, first version: search box, ranker choice and the no stemming / stemming / auto columns
+- [x] Streamlit: highlighted words and snippets
 
 ## In progress
 
 ### Rishit (written, not committed yet)
-- [ ] Streamlit: highlighted words and snippets
 - [ ] Streamlit: match chips (exact, phonetic, translated)
 - [ ] Streamlit: filters in the sidebar
 - [ ] Streamlit: "why this score" breakdown and "only here" tags
