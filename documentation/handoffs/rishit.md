@@ -1,4 +1,4 @@
-# Rishit's handoff
+# Handoff
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
