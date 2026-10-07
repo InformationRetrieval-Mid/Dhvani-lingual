@@ -26,6 +26,15 @@ from dhvani.eval.metrics import average_11_point, average_precision, evaluate, r
 from dhvani.rank.parser import parse_and_rank
 from dhvani.rank.query_stub import exact_query
 from dhvani.rank.sample_index import SampleIndex
+from dhvani.rank.speedups import (
+    ChampionLists,
+    RecencyTiers,
+    overlap_at_k,
+    search_champions,
+    search_index_elimination,
+    search_tiered,
+)
+from dhvani.rank.vsm import search
 from dhvani.rank.xling import translate
 
 SAMPLE_DIR = Path(__file__).resolve().parent / "sample"
@@ -124,6 +133,38 @@ def xling_comparison(queries, qrels, loader=default_loader, ranker="net", k=METR
         table, _ = score_run(run, english, qrels, k=k)
         out[name] = table.get("all", {})
     return out
+
+
+def speedup_table(queries, index, k=METRICS_K, query_builder=None, champion_r=(2, 5, 10, 50)):
+    """Speed vs quality for the Lecture 7 speed-ups, against exact lnc.ltc.
+
+    For each method: the mean share of candidate articles actually scored, and
+    the mean share of the exact top k it kept (overlap@k). Lower "scored" is
+    faster; higher "kept" is closer to the exact ranking.
+    """
+    query_builder = query_builder or build_query
+    methods = [("index elimination", lambda q: search_index_elimination(q, index, k=k))]
+    for r in champion_r:
+        champs = ChampionLists(index, r=r)
+        methods.append((f"champion lists, r={r}", lambda q, c=champs: search_champions(q, index, c, k=k)))
+    tiers = RecencyTiers(index)
+    methods.append(("recent-news tiers", lambda q: search_tiered(q, index, tiers, k=k)))
+
+    rows = []
+    for name, run in methods:
+        scored, kept, n = 0.0, 0.0, 0
+        for _qid, _need, _form, text in queries:
+            q = query_builder(text)
+            exact = search(q, index, k=k)
+            if not exact:
+                continue
+            fast, stats = run(q)
+            scored += stats["scored"] / stats["full_candidates"] if stats["full_candidates"] else 0.0
+            kept += overlap_at_k(fast, exact, k=k)
+            n += 1
+        if n:
+            rows.append((name, scored / n, kept / n))
+    return rows
 
 
 def results_rows(results, k=METRICS_K):
@@ -232,6 +273,15 @@ def main(argv=None):
         print(f"\nCross-lingual: English queries, translation off vs on ({args.ranker})")
         _print_table(["setup", f"P@{k}", f"R@{k}", "MAP", f"nDCG@{k}"],
                      [(name, m[f"P@{k}"], m[f"R@{k}"], m["MAP"], m[f"nDCG@{k}"]) for name, m in xling.items() if m])
+
+    speed = speedup_table(queries, default_loader("none"))
+    if speed:
+        print(f"\nSpeed-ups vs exact lnc.ltc (mean over queries, k = {k})")
+        _print_table(["method", "share scored", f"top-{k} kept"], speed)
+        with open(Path(args.out) / "speedups.csv", "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["method", "share_scored", f"top{k}_kept"])
+            w.writerows(speed)
 
     plot = plot_pr_curves(queries, qrels, args.out, args.ranker)
     print(f"\nPR curves: {plot}" if plot else "\nPR curves skipped: matplotlib isn't installed")

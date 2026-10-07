@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the speed-ups to the app and CLI
+Last updated: 7 Oct, after adding the speed-ups results table
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -75,7 +75,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `fb53231` authority g(d) in the app and cli, with its parts shown in score details | `app/streamlit_app.py`, `app/cli.py`, a `static=` option in `parser.py` |
 | `26f980d` duplicate collapsing: one result per wire story, with the other papers listed | `dhvani/rank/collapse.py`, `app/streamlit_app.py`, `app/cli.py`, a fix in `kal.py` |
 | `e545370` renamed the to-do to rishit-todo and crossed out what's done | `documentation/to-dos/rishit-todo.md` |
-| speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
+| `24b3804` speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
+| speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
 
 ## How to use it
 
@@ -185,7 +186,7 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Recent-news tiers** (`dhvani/rank/speedups.py`)
 `RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
 
-All three speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions` or `--speedup tiers`, and the output says how many of the candidate articles were scored. Both use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
+All three speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions` or `--speedup tiers`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; the real numbers come from the full crawl. Both use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
 
 **Date-aware kal** (`dhvani/rank/kal.py`)
 कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. It only reorders within a query-parser stage, so a stricter match stays above a looser one. In the app it's the "Date-aware kal" switch (on by default), boosted results get a "कल · tomorrow" or "कल · yesterday" tag, and Score details shows the boost. In the CLI, results show `[kal: tomorrow]`, `--explain` adds a step 4c, and `--no-kal` turns it off.
@@ -210,7 +211,7 @@ results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 ```
 
 ## Tests
-143 tests in `partwise-tests/rishit/`, all passing.
+144 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -222,4 +223,4 @@ results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
 
 ## Next
-The speed-ups results table, my 8 information needs, then merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.
+My 8 information needs, then merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.

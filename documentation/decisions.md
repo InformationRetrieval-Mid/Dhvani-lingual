@@ -133,3 +133,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Speed-ups run on lnc.ltc in the app and CLI.** They're shortcuts for cosine scoring, so they're compared against plain lnc.ltc. The app keeps them off by default and shows how many articles were scored, so the saving is visible next to the results.
 
 **Champion list size grows with the corpus.** r is N / 20 with a minimum of 5, so the lists stay useful on the 300-article sample and on the full crawl without retuning.
+
+**Speed-ups are judged by overlap with full search.** For each speed-up the table shows how much of the exact top k it keeps and what share of articles it scored. That's the trade-off Lecture 7 describes, and it doesn't need relevance judgments, so it can be run as soon as the corpus is frozen.

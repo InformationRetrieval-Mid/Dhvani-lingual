@@ -48,7 +48,7 @@ Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on
 
 ### Rishit: next up
 - [x] ~~Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored~~
-- [ ] Speed-ups results table in the experiment runner: overlap with full search and articles scored
+- [x] ~~Speed-ups results table in the experiment runner: overlap with full search and articles scored~~
 - [ ] My 8 information needs, picked from stories in Riya's crawl
 - [ ] Merge `rishit` into `main` again after those three
 - [ ] Plug the real pieces in on `main`: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text from `idx.text`
