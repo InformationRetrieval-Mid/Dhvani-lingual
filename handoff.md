@@ -4,22 +4,24 @@
 **Repository:** `Dhvani-lingual`  
 **Branch:** `Dhrithi`  
 **Owner:** Dhrithi  
-**Current milestone:** Phase 2 complete  
-**Test status:** 83 passed, 0 failed
+**Current milestone:** Phase 1-3 complete + Selective AUTO complete; Phase 4 in progress  
+**Latest pushed commit:** `da8ae0c`  
+**Test status:** 99 passed, 0 failed
 
 ---
 
-## 1. Responsibility
+# 1. P2 Responsibility
 
 P2 owns the text-processing and indexing layer of Dhvani.
 
-The P2 pipeline currently covers:
+The implemented P2 pipeline currently covers:
 
 - Hindi Unicode normalization
 - Hindi/Hinglish tokenization
 - No-stemming analysis
 - Light stemming
 - Aggressive stemming foundation
+- Selective/corpus-derived AUTO stemming
 - Positional indexing
 - Headline/body zones
 - Document metadata
@@ -31,75 +33,62 @@ The P2 pipeline currently covers:
 - JSONL corpus ingestion
 - Index serialization/loading
 - Query-to-index integration
-
-The planned later P2 work includes:
-
-- Corpus-derived stop words
-- IDF
-- Zipf analysis
-- Stem-difference analysis
-- Selective/automatic stemming
-- YASS
-- Extended-biword indexing
-- Index compression
-- Evaluation tooling
+- Corpus-derived stopword analysis
+- IDF calculation
+- Document norms and document lengths
+- Real-corpus validation
 
 ---
 
-# 2. Current architecture
+# 2. Current Architecture
 
-The current flow is:
+The analysis pipeline is:
 
-    Raw article
-        |
-        v
-    normalize()
-        |
-        v
-    tokenize()
-        |
-        v
-    analyze(mode)
-        |
-        +---- none
-        |
-        +---- light
-        |
-        +---- aggr
-        |
-        v
+    Raw article/query
+          |
+          v
+      normalize()
+          |
+          v
+       tokenize()
+          |
+          v
+       analyze(mode)
+          |
+          +---- none
+          |
+          +---- light
+          |
+          +---- aggr
+          |
+          +---- auto
+          |
+          v
     Positional Index
-        |
-        v
-    Search
-        |
-        v
-    Query results
+          |
+          v
+        Search
 
+The supported analyzer modes are:
 
-For queries:
+    none
+    light
+    aggr
+    auto
 
-    raw query
-        |
-        v
-    analyze(query, mode)
-        |
-        v
-    query terms
-        |
-        v
-    Boolean / phrase / proximity search
-        |
-        v
-    matching document IDs
+The shared analyzer API is:
+
+    analyze(text, mode)
+
+It returns:
+
+    [(term, position), ...]
 
 ---
 
-# 3. Implemented files
+# 3. Text Processing
 
-## Text processing
-
-### `text/normalize.py`
+## 3.1 `text/normalize.py`
 
 Responsible for Unicode normalization.
 
@@ -108,20 +97,20 @@ Current behavior:
 - NFC normalization
 - Removes zero-width joiner
 - Removes zero-width non-joiner
-- Handles the specified `हिंदी -> हिन्दी` normalization case
+- Normalizes the specified Hindi spelling case
 - Collapses repeated whitespace
 
-The normalizer intentionally avoids broad anusvara replacement because generic conversion was found to corrupt valid Hindi words.
+The normalizer intentionally avoids broad anusvara replacement because generic conversion can corrupt valid Hindi words.
 
 ---
 
-### `text/tokenize.py`
+## 3.2 `text/tokenize.py`
 
-Uses the `regex` package and the Unicode-aware pattern:
+Uses the `regex` package and Unicode-aware pattern:
 
     [\p{L}\p{M}\p{Nd}]+
 
-This keeps:
+This preserves:
 
 - Devanagari letters
 - Combining marks
@@ -131,24 +120,30 @@ while treating punctuation and whitespace as token boundaries.
 
 ---
 
-### `text/stem.py`
+## 3.3 `text/stem.py`
 
 Implements the light Hindi stemmer.
 
-The implementation follows the suffix-stripping behavior used for the project's light stemming requirement.
+Entry point:
 
-Examples covered by tests include:
+    stem(word)
 
-    लड़कियाँ -> लड़क
+The implementation uses the project's light Hindi suffix inventory.
+
+Examples include:
+
     लड़कियों -> लड़क
+    लड़कियाँ -> लड़क
     किताबों -> किताब
     खाना -> खा
     खाता -> खा
     खाती -> खा
 
+The light stemmer can occasionally produce undesirable lexical collisions. This is expected and is one reason AUTO/selective stemming was added.
+
 ---
 
-### `text/aggressive_stem.py`
+## 3.4 `text/aggressive_stem.py`
 
 Provides the current aggressive suffix-based stemmer.
 
@@ -156,54 +151,119 @@ Entry point:
 
     stem_aggressive(word)
 
-It uses a larger suffix inventory than the light stemmer and is intended to improve recall by collapsing more morphological variants.
+This uses a larger suffix inventory than the light stemmer.
 
-Examples:
+Important:
 
-    लड़कियाँ -> लड़क
-    लड़कियों -> लड़क
-    किताबों -> किताब
-    लड़कों -> लड़क
-    लड़के -> लड़क
+**This implementation is NOT YASS.**
 
-The aggressive stemmer is currently a suffix-stripping implementation. It is not yet the YASS stemmer.
+It is currently only an experimental aggressive suffix-stripping stemmer. It should not be described as the YASS implementation.
+
+The aggressive stemmer was deliberately not further tuned for the current milestone.
 
 ---
 
-### `text/analyzer.py`
+# 4. Selective / AUTO Stemming
 
-Shared analyzer API:
+## 4.1 Purpose
 
-    analyze(text, mode)
+AUTO is a corpus-derived selective stemming mode.
 
-Supported modes:
+The objective is not to stem every word aggressively. Instead, AUTO should:
 
-    none
-    light
-    aggr
+1. Identify useful morphological classes from the corpus.
+2. Detect classes where different surface forms map to a common light stem.
+3. Check for corpus-observed collisions.
+4. Keep only conservative candidate classes.
+5. Apply stemming only to approved surface forms.
 
-Returns:
-
-    [(term, position), ...]
-
-Example:
-
-    analyze("लड़कियाँ किताबों", "light")
-
-returns:
-
-    [
-        ("लड़क", 0),
-        ("किताब", 1)
-    ]
-
-The analyzer validates unsupported modes.
+This avoids some false matches introduced by unrestricted light stemming.
 
 ---
 
-# 4. Index implementation
+## 4.2 Files
 
-## `index/positional.py`
+Relevant files:
+
+    text/auto_stem.py
+    scripts/analyze_stems.py
+    scripts/analyze_stem_collisions.py
+    scripts/analyze_auto_candidates.py
+
+The candidate-generation pipeline is corpus-derived.
+
+The current AUTO implementation uses:
+
+    data/auto_candidates.tsv
+
+and the development corpus:
+
+    data/dev_news.jsonl
+
+These are local generated artifacts and are intentionally not committed to Git.
+
+---
+
+## 4.3 Conservative AUTO behavior
+
+Examples from the current implementation:
+
+    दिक्कतें -> दिक्कत
+    दिक्कतों -> दिक्कत
+
+but:
+
+    विधानसभा -> विधानसभा
+    विधानसभाओं -> विधानसभाओं
+
+and:
+
+    भारी -> भारी
+    भारती -> भारती
+
+This is intentional.
+
+The light stemmer currently produces:
+
+    भारी -> भार
+    भारती -> भार
+
+AUTO avoids this collision.
+
+Similarly:
+
+    विधानसभा -> विधानसभ
+
+under light stemming, while AUTO keeps the natural surface form unchanged.
+
+---
+
+## 4.4 AUTO validation
+
+The analyzer sanity test produced:
+
+    NONE :
+    [('दिक्कतें', 0), ('दिक्कतों', 1),
+     ('विधानसभा', 2), ('विधानसभाओं', 3),
+     ('भारी', 4), ('भारती', 5)]
+
+    LIGHT:
+    [('दिक्कत', 0), ('दिक्कत', 1),
+     ('विधानसभ', 2), ('विधानसभ', 3),
+     ('भार', 4), ('भार', 5)]
+
+    AUTO:
+    [('दिक्कत', 0), ('दिक्कत', 1),
+     ('विधानसभा', 2), ('विधानसभाओं', 3),
+     ('भारी', 4), ('भारती', 5)]
+
+This confirms that AUTO is selectively applying useful stemming while avoiding known light-stemming collisions.
+
+---
+
+# 5. Index Implementation
+
+## 5.1 `index/positional.py`
 
 Main index class:
 
@@ -214,27 +274,37 @@ Supported modes:
     none
     light
     aggr
+    auto
 
 The index stores:
 
+- document IDs
+- term frequencies
+- positional postings
+- headline/body zones
 - document metadata
 - vocabulary
-- number of documents
-- positional postings
-- document norms placeholder
-- headline/body zones
+- document frequency
+- document norms
+- document lengths
+- raw article text
 
 ---
 
-## Index contract
+## 5.2 Index API
 
-The index exposes:
+The shared index contract is:
+
+    idx = Index.load(mode)
 
     idx.postings(term, zone)
-
-where:
-
-    zone = "headline" | "body"
+    idx.df(term)
+    idx.N
+    idx.vocab
+    idx.doc_norm[doc_id]
+    idx.doc_len[doc_id]
+    idx.meta[doc_id]
+    idx.text[doc_id]
 
 Postings have the form:
 
@@ -243,25 +313,26 @@ Postings have the form:
         ...
     ]
 
-The index also exposes:
+Zones:
 
-    idx.df(term)
-    idx.N
-    idx.vocab
-    idx.doc_norm
-    idx.meta
+    headline
+    body
 
-Metadata contains:
+Metadata includes:
 
     source
     date
     state
+    city
     section
     dup_of
+    links
+
+The positional structure must be preserved because it is required for phrase and proximity search.
 
 ---
 
-# 5. Search implementation
+# 6. Search Implementation
 
 ## `index/search.py`
 
@@ -277,32 +348,34 @@ Only documents containing every query term are returned.
 
 ### Smallest-postings-first
 
-The search implementation prioritizes the smallest postings list.
-
-This reduces the candidate document set early and avoids unnecessary intersections.
+The search implementation starts with the smallest postings list to reduce the candidate set early.
 
 ---
 
 ### Skip pointers
 
-Skip pointers are generated for postings lists to accelerate intersections.
-
-Relevant functionality:
+Implemented:
 
     build_skip_pointers()
     intersect_postings()
+
+Skip pointers are used to accelerate postings-list intersections.
 
 ---
 
 ### Phrase search
 
+Implemented:
+
     phrase_search(idx, terms, zone="body")
 
-Uses positional information to identify terms occurring consecutively.
+Uses positional information to identify consecutive query terms.
 
 ---
 
 ### Proximity search
+
+Implemented:
 
     proximity_search(
         idx,
@@ -311,17 +384,15 @@ Uses positional information to identify terms occurring consecutively.
         zone="body"
     )
 
-Finds documents where query terms occur within the requested positional distance.
-
-The current implementation treats the first query term as the anchor and checks whether the other terms occur within the supplied absolute distance.
+The current implementation treats the first query term as the anchor and checks whether other query terms occur within the supplied absolute positional distance.
 
 ---
 
-# 6. Query integration
+# 7. Query Integration
 
 ## `index/query.py`
 
-Provides:
+Main API:
 
     search_query(idx, query, mode=None, zone="body")
 
@@ -333,25 +404,16 @@ The function:
 4. Extracts analyzed terms.
 5. Runs Boolean AND search.
 
-Example:
+Supported modes:
 
-    search_query(
-        light_index,
-        "दिल्ली बारिश",
-        mode="light"
-    )
+    none
+    light
+    aggr
+    auto
 
----
+The existing comparison helper:
 
-## Comparing no-stem and light
-
-The helper:
-
-    search_both(
-        idx_none,
-        idx_light,
-        query
-    )
+    search_both(idx_none, idx_light, query)
 
 returns:
 
@@ -360,95 +422,220 @@ returns:
         "light": [...]
     }
 
-This is the current basis for comparing the two Phase 2 search columns.
-
 ---
 
-# 7. JSONL index building
+# 8. Index Building
 
 ## `index/build.py`
 
-The index builder reads:
+The builder reads JSONL articles.
 
-    data/news.jsonl
-
-Required article fields:
+Required fields:
 
     doc_id
     headline
     body
 
-Metadata copied into the index:
+Relevant metadata fields:
 
     source
     date
     state
+    city
     section
     dup_of
+    links
 
 Supported build modes:
 
     none
     light
     aggr
+    auto
 
-Build all three:
+Build all supported indexes:
 
-    python -m index.build --mode both
+    python -m index.build --input data/dev_news.jsonl --mode all
 
-Build one:
+Build a single mode:
 
-    python -m index.build --mode none
-    python -m index.build --mode light
-    python -m index.build --mode aggr
+    python -m index.build --input data/dev_news.jsonl --mode auto
 
-The default input path is:
-
-    data/news.jsonl
+Generated `.pkl` files are local build artifacts and should not be committed.
 
 ---
 
-# 8. Data contract
+# 9. Real Corpus
 
-The article format follows:
+A 1,000-article Hindi news development corpus from ILSUM-2.0 was converted into the Dhvani JSONL format.
 
-    documentation/formats.md
+Local corpus:
 
-Expected structure:
+    data/dev_news.jsonl
 
-    {
-      "doc_id": "...",
-      "url": "...",
-      "source": "...",
-      "section": "...",
-      "state": "...",
-      "city": "...",
-      "date": "...",
-      "headline": "...",
-      "body": "...",
-      "keywords": [],
-      "agency_flag": false,
-      "content_hash": "...",
-      "dup_of": null,
-      "links": []
-    }
+The corpus is intentionally not committed to Git.
 
-The builder currently only requires:
+Earlier index statistics:
 
-    doc_id
-    headline
-    body
+| Index | Documents | Vocabulary |
+|---|---:|---:|
+| none | 1,000 | 27,263 |
+| light | 1,000 | 21,104 |
+| aggr | 1,000 | 22,086 |
 
-and preserves the relevant metadata fields required by the index contract.
+AUTO was subsequently built on the same development corpus.
 
 ---
 
-# 9. Tests
+# 10. Real-Corpus Query Validation
+
+Representative results from the 1,000-document corpus:
+
+| Query | NONE | LIGHT | AUTO |
+|---|---:|---:|---:|
+| बारिश | 110 | 110 | 110 |
+| भारी बारिश | 3 | 3 | 3 |
+| उत्तर प्रदेश | 7 | 9 | 7 |
+| मौसम | 92 | 93 | 92 |
+| तेज बारिश | 5 | 7 | 5 |
+| लोगों की मौत | 7 | 7 | 7 |
+
+These results demonstrate that AUTO does not simply reproduce LIGHT stemming.
+
+Examples:
+
+    उत्तर प्रदेश
+    NONE = 7
+    LIGHT = 9
+    AUTO = 7
+
+    तेज बारिश
+    NONE = 5
+    LIGHT = 7
+    AUTO = 5
+
+This supports the design goal of conservative selective stemming.
+
+---
+
+# 11. Positional / Phrase Validation
+
+Real-corpus phrase tests were performed on the 1,000-document corpus.
+
+Representative exact phrase results:
+
+    भारी बारिश -> 46 documents
+    उत्तर प्रदेश -> 41 documents
+    जम्मू कश्मीर -> 27 documents
+    तेज बारिश -> 20 documents
+
+Representative proximity tests:
+
+    बारिश + मौसम, distance <= 3 -> 25 documents
+    बारिश + संभावना, distance <= 5 -> 15 documents
+    उत्तर + प्रदेश, distance <= 5 -> 41 documents
+
+Manual inspection of positional postings confirmed that adjacent terms receive consecutive positions.
+
+---
+
+# 12. Stopword Analysis
+
+Corpus-derived stopword analysis has been implemented.
+
+The conservative candidate set was selected using document frequency.
+
+The current 90%-DF candidate list contains 15 terms:
+
+    के
+    में
+    है
+    की
+    से
+    को
+    कर
+    और
+    पर
+    का
+    हैं
+    रह
+    हो
+    ने
+    भी
+
+These are currently treated as stopword candidates for analysis/query work.
+
+They remain indexed; removal from the index is not currently performed.
+
+Relevant scripts include:
+
+    scripts/analyze_stopwords.py
+    scripts/build_stopword_candidates.py
+    scripts/stopword_stats.py
+
+---
+
+# 13. IDF
+
+IDF calculation is implemented in:
+
+    index/scoring.py
+
+Current formula:
+
+    IDF(t) = log10(N / df(t))
+
+where:
+
+    N  = number of documents
+    df = document frequency of the term
+
+Examples from the development corpus:
+
+    बारिश -> approximately 2.2073
+    मौसम   -> approximately 2.3645
+    सरकार  -> approximately 1.0051
+
+Very common terms have IDF values close to zero.
+
+The current scoring module provides:
+
+    idf(index, term)
+    idf_table(index, terms)
+
+Final ranked retrieval is not yet implemented.
+
+---
+
+# 14. Document Norms
+
+The index currently stores document norms using the lnc-style document weighting:
+
+    w = 1 + log10(tf)
+
+The norm is calculated across analyzed headline/body terms.
+
+The index also stores analyzed document length.
+
+These values are available through:
+
+    idx.doc_norm
+    idx.doc_len
+
+They are intended for later ranked retrieval.
+
+---
+
+# 15. Tests
 
 Current test status:
 
-    83 passed
+    99 passed
     0 failed
+
+Run:
+
+    python -m pytest -q
 
 Tests cover:
 
@@ -456,11 +643,13 @@ Tests cover:
 - tokenization
 - light stemming
 - aggressive stemming
+- AUTO stemming
 - analyzer modes
 - invalid analyzer modes
 - index construction
 - postings
 - document frequency
+- document norms
 - Boolean search
 - skip pointers
 - phrase search
@@ -471,102 +660,145 @@ Tests cover:
 - metadata
 - index building
 - aggressive index building
+- AUTO index building
 - query integration
 - none/light comparison
 
-Run the complete suite with:
+The latest full test run completed with:
 
-    C:\Python314\python.exe -m pytest -q
-
----
-
-# 10. Current limitations
-
-The following are NOT complete yet:
-
-1. Selective/automatic stemming
-2. YASS
-3. Corpus-derived stop words
-4. IDF pipeline
-5. Zipf analysis/plotting
-6. Stem-diff evaluation
-7. Extended-biword index
-8. Variable-byte compression
-9. Gamma coding
-10. Full corpus index
-11. Retrieval evaluation
-12. Integration into the final Streamlit UI
-
-The aggressive stemmer should not be described as YASS.
+    99 passed
 
 ---
 
-# 11. Phase 2 completion
+# 16. Git Status / Repository State
 
-Phase 2 is complete.
+Latest pushed branch:
 
-Implemented Phase 2 requirements:
+    Dhrithi
+
+Latest pushed commit:
+
+    da8ae0c
+
+The repository is currently configured so generated development data and serialized indexes are not committed.
+
+`.gitignore` includes:
+
+    __pycache__/
+    *.py[cod]
+    .pytest_cache/
+    data/
+    indexes/*.pkl
+
+Do not commit:
+
+    data/
+    indexes/*.pkl
+
+The local development corpus and generated indexes can be rebuilt when required.
+
+---
+
+# 17. Phase Status
+
+## Phase 1
+
+**Complete.**
+
+Implemented:
+
+- normalization
+- tokenization
+- light stemming
+- initial analyzer pipeline
+
+---
+
+## Phase 2
+
+**Complete.**
+
+Implemented:
 
 - positional indexes
 - headline/body zones
 - metadata
-- Boolean search
+- Boolean AND
 - smallest-postings-list-first
 - skip pointers
 - phrase search
 - proximity search
 - index builder
 - query integration
-- no-stem/light comparison
-
-Final test state:
-
-    83 passed, 0 failed
 
 ---
 
-# 12. Next phase
+## Phase 3
 
-The next major P2 work is Phase 3:
+**Core work complete.**
 
-1. Aggressive stemming refinement
-2. Stop-word discovery
-3. IDF
-4. Zipf analysis
-5. Stem-difference tooling
-6. Evaluation preparation
+Implemented:
 
-After that:
+- aggressive stemming foundation
+- corpus-derived stopword analysis
+- IDF
+- document norms
+- document lengths
+- real-corpus testing
+- stem collision analysis supporting selective stemming
 
-- selective stemming / auto mode
-- YASS
-- extended-biword indexing
-- compression
-- final evaluation
+Aggressive stemming should remain separate from YASS.
 
 ---
 
-# 13. Handoff instructions
+## Phase 4
 
-Before modifying the branch:
+**In progress.**
 
-    git pull origin Dhrithi
+Completed Phase 4 work:
 
-Run tests:
+- selective/corpus-derived AUTO stemming
+- AUTO candidate analysis
+- AUTO collision analysis
+- conservative AUTO mapping
+- AUTO analyzer integration
+- AUTO index
+- real-corpus AUTO validation
 
-    C:\Python314\python.exe -m pytest -q
+Remaining Phase 4 work:
 
-Expected current result:
+1. YASS implementation
+2. Extended-biword / phrase indexing
+3. Variable-byte compression
+4. Gamma compression
+5. Final/full H18 corpus rebuild
+6. Any required integration with the final application
 
-    83 passed
+---
 
-Do not modify the shared analyzer/index contracts without coordinating with the other team members.
+# 18. YASS
 
-In particular, preserve:
+YASS has **not** been implemented yet.
 
-    analyze(text, mode)
+Important:
 
-and:
+    aggressive_stem.py != YASS
+
+Do not describe the current aggressive suffix stemmer as YASS.
+
+The YASS implementation should be based on the actual YASS method/reference rather than inventing a YASS-like heuristic.
+
+---
+
+# 19. Extended-Biword Index
+
+Extended-biword indexing is still pending.
+
+The existing positional index and phrase-search implementation should be preserved.
+
+Do not replace positional postings with simple document-ID sets.
+
+The extended-biword implementation should be added without breaking:
 
     idx.postings(term, zone)
     idx.df(term)
@@ -575,155 +807,121 @@ and:
     idx.doc_norm
     idx.meta
 
-These are shared interfaces.
+---
+
+# 20. Compression
+
+Still pending:
+
+- Variable-byte encoding
+- Gamma coding
+
+Compression should be implemented as an additional representation/utility rather than destroying the existing readable positional index representation.
+
+The uncompressed index should remain available for debugging and phrase/proximity functionality.
 
 ---
 
-# 14. Important design decision
+# 21. Full Corpus
 
-The index is positional and zone-aware.
+The current 1,000-document ILSUM corpus is a development/test corpus.
 
-Do not replace the positional postings structure with a simple set of document IDs.
+When the final H18 corpus is available:
 
-The positions are required for:
+1. Regenerate the corpus-derived AUTO candidates.
+2. Regenerate AUTO mappings.
+3. Rebuild all required indexes.
+4. Run the complete test suite.
+5. Run representative real queries.
+6. Verify metadata and positional behavior.
 
-- phrase search
-- proximity search
-- future extended-biword functionality
+Because AUTO is corpus-derived, its candidate files must correspond to the corpus used to build the AUTO index.
 
-and the headline/body separation is required for zone-aware ranking later.
+---
 
+# 22. Phase 5 / Evaluation
 
-## P2 Status Update — Phase 2 Complete
+Final retrieval evaluation is **not P2's responsibility**.
 
-### Completed
+P2 should provide the indexing, analyzer, search primitives, and data required by the application/evaluation owner.
 
-P2's Phase 1 and Phase 2 text-processing and indexing work has been implemented and tested.
+Do not expand P2 scope into final evaluation unless explicitly requested by the team.
 
-#### Text processing
+---
 
-- Hindi Unicode normalization using NFC.
-- Removal of zero-width joiners/non-joiners.
-- Hindi `हिंदी` / `हिन्दी` normalization.
-- Whitespace normalization.
-- Unicode-aware Hindi/Hinglish tokenization using:
-  `[\p{L}\p{M}\p{Nd}]+`
-- Light Hindi stemming based on the Ramanathan & Rao suffix inventory.
-- Aggressive Hindi stemming implemented as a separate analysis mode.
+# 23. Important Shared Contracts
 
-#### Positional indexes
+Do not break the analyzer API:
 
-Implemented separate positional indexes for:
+    analyze(text, mode)
 
-- `none`
-- `light`
-- `aggr`
+Current supported modes:
 
-Each index stores:
+    none
+    light
+    aggr
+    auto
 
-- document ID
-- term frequency
-- positional information
-- headline/body zones
-- document metadata
-- vocabulary
-- document frequency
+Do not break the index API:
 
-The index follows the shared `Index.load(mode)` / `idx.postings(term, zone)` API.
+    Index.load(mode)
 
-#### Boolean and positional search
+    idx.postings(term, zone)
+    idx.df(term)
+    idx.N
+    idx.vocab
+    idx.doc_norm
+    idx.doc_len
+    idx.meta
+    idx.text
 
-Implemented:
+Postings must remain positional:
 
-- Boolean AND search
-- smallest-postings-list-first processing
-- skip pointers
-- exact phrase search using positional intersections
-- proximity search using positional information
+    (doc_id, tf, [positions])
 
-Search has been tested on both synthetic test documents and a real Hindi news corpus.
+The headline/body distinction must also be preserved.
 
-### Real-corpus validation
+These interfaces are shared with the rest of the Dhvani project.
 
-A 1,000-article Hindi corpus from ILSUM-2.0 was converted to the shared Dhvani JSONL article format and used to build all three indexes.
+---
 
-Index statistics:
+# 24. Handoff Instructions
 
-| Index | Documents | Vocabulary |
-|---|---:|---:|
-| none | 1,000 | 27,263 |
-| light | 1,000 | 21,104 |
-| aggr | 1,000 | 22,086 |
+Before modifying the branch:
 
-Real-corpus query testing showed that stemming changes retrieval for some queries while leaving others unchanged.
+    git pull origin Dhrithi
 
-Examples:
+Run tests:
 
-- `उत्तर प्रदेश`: none = 7 results, light/aggr = 9 results
-- `तेज बारिश`: none = 5 results, light/aggr = 7 results
-- `बारिश`: all modes = 110 results
-- `मौसम`: none = 92 results, light/aggr = 93 results
+    python -m pytest -q
 
-Phrase and positional search were also tested on the 1,000-document corpus.
+Expected current result:
 
-Example exact phrase results:
+    99 passed
 
-- `भारी बारिश` → 46 documents
-- `उत्तर प्रदेश` → 41 documents
-- `जम्मू कश्मीर` → 27 documents
-- `तेज बारिश` → 20 documents
+Generated artifacts should not be committed:
 
-Example proximity searches:
+    data/
+    indexes/*.pkl
 
-- `बारिश + मौसम`, distance ≤ 3 → 25 documents
-- `बारिश + संभावना`, distance ≤ 5 → 15 documents
-- `उत्तर + प्रदेश`, distance ≤ 5 → 41 documents
+When modifying shared analyzer/index contracts, coordinate with the other team members.
 
-The positional postings were manually inspected on real documents to verify that adjacent terms have consecutive positions.
+---
 
-### Phase 2 status
+# 25. Current Checkpoint
 
-**P2 backend/core Phase 2 is complete.**
+**P2 has completed the core text-processing and indexing work through Phase 3 and has implemented the selective AUTO stemming portion of Phase 4.**
 
-Implemented components:
+The current repository checkpoint is:
 
-- positional inverted indexes
-- headline/body zones
-- metadata storage
-- Boolean search
-- smallest-postings-list-first optimization
-- skip pointers
-- phrase search
-- proximity search
-- query integration
-- real-corpus validation
+    da8ae0c
 
-The Streamlit/application integration is not part of P2's implementation and will be handled by the application owner (P4).
+The next major P2 tasks are:
 
-### Current limitations / known gaps
+    1. YASS
+    2. Extended-biword indexing
+    3. Variable-byte compression
+    4. Gamma compression
+    5. Final H18 corpus rebuild
 
-The following shared-contract items are still to be completed or extended in later phases:
-
-- `doc_norm` is currently initialized but not populated with TF-IDF document norms.
-- Full field indexing beyond headline/body is not yet implemented.
-- The full shared query-object format is not yet implemented.
-- `yass` and `auto` analysis modes are planned for later phases.
-- Stop-word/IDF processing is not yet implemented.
-- Selective stemming is not yet implemented.
-- The current search layer is Boolean/positional and does not yet provide final ranked TF-IDF/BM25 results.
-
-### Files added for real-corpus validation
-
-- `scripts/make_dev_corpus.py`
-- `scripts/test_real_queries.py`
-- `scripts/test_real_phrase_search.py`
-
-The development corpus and generated `.pkl` indexes are local test artifacts and should not be committed to Git.
-
-### Git checkpoint
-
-Real-corpus helper scripts were committed and pushed on branch `Dhrithi`:
-
-`7cacc00 — add real corpus testing scripts`
-
-Next P2 work: **Phase 3 — aggressive stemming evaluation, stop words, IDF/Zipf analysis, and stem-diff tooling.**
+The branch is currently in a clean checkpoint before continuing Phase 4 development.
