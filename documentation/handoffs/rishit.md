@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the feedback match type
+Last updated: 7 Oct, after adding index elimination
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -65,6 +65,7 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `a39e4fa` experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
 | `ae172cd` stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
 | `fea28e2` feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
+| index elimination: skip low-idf words and score only real contenders | `dhvani/rank/speedups.py` |
 
 ## How to use it
 
@@ -161,8 +162,15 @@ df, collection frequency and idf for every term, the most frequent terms (Hindi 
 .venv/bin/python -m dhvani.eval.corpus_stats
 ```
 
+**Index elimination** (`dhvani/rank/speedups.py`)
+Scores fewer articles. Query words with low idf (below 0.3 by default) are skipped, always keeping at least the rarest word. With 3 or more query words, an article has to contain at least 75% of them (3 of 4, as in Lecture 7). If that leaves fewer than k articles it relaxes one word at a time. Returns `(results, stats)`, where stats says how many articles were scored compared with full search. `overlap_at_k()` measures how much of the exact top k was kept.
+```python
+from dhvani.rank.speedups import search_index_elimination, overlap_at_k
+results, stats = search_index_elimination(q, idx, k=10)
+```
+
 ## Tests
-87 tests in `partwise-tests/rishit/`, all passing.
+96 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

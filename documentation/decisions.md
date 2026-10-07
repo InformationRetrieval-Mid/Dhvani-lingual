@@ -96,3 +96,5 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **idf uses log10 everywhere.** The lecture slides use log10(N/df), and so does this branch. The base doesn't change any ranking, but the idf numbers in the report should all be on the same scale, so we've asked Dhrithi to switch her `idf()` from the natural log as well.
 
+**Index elimination relaxes instead of returning nothing.** Skipping common words and asking for most of the query words cuts how many articles get scored, which is the point. But on a short or unusual query that rule can leave too few articles, so it loosens one word at a time until there are k. Speed shouldn't cost the user an empty page.
+
