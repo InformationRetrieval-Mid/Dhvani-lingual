@@ -1,8 +1,43 @@
 # Handoff
 
-What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
+What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
 Last updated: 7 Oct, after adding the feedback match type
+
+## Start here (for anyone, or any AI tool, picking this up)
+
+**The project.** Dhvani is a Hindi + Hinglish news search engine for CSD358 Track 5 (multilingual and Indic-language search). Queries can be Hindi, Hinglish (Roman-script Hindi, any spelling), English or a mix, and every search runs on three indexes side by side: no stemming, stemming and auto. The full plan is `documentation/dhvani-plan.md` and the shared data formats are `documentation/formats.md`.
+
+**Who owns what.**
+| Person | Branch | Part | Code |
+|---|---|---|---|
+| Riya | `riya` | Crawler and corpus | `dhvani/crawl/`, `dhvani/eval/pool.py` |
+| Dhrithi | `Dhrithi` | Text processing and indexes | top-level `text/`, `index/`, `scripts/`, tests in top-level `tests/` |
+| Viraja | `Viraja` | Hinglish phonetic layer | `dhvani/query/` |
+| Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
+
+Each person commits to their own branch. Nothing has been merged into `main` yet, so `main` only has the plan and the formats.
+
+**Setup.**
+```bash
+python3 -m venv .venv
+.venv/bin/pip install regex streamlit pytest      # matplotlib too, if you want the plots
+.venv/bin/python -m pytest partwise-tests/rishit -q
+.venv/bin/streamlit run app/streamlit_app.py
+```
+
+**Rules for working in this repo.**
+- Commits go under the person who did the work. No AI co-author lines or tool names in commit messages.
+- Small commits with short, plain messages. Ask Rishit before pushing anything from this branch.
+- With every commit on this branch, update this handoff, the to-do list and the decisions log.
+- No em dashes in the docs; keep the writing plain.
+- Article text never goes in git. Only the top-level `data/` folder is ignored, so crawled articles, indexes and downloads go there.
+- Don't change a shared format in `formats.md` without telling the group.
+
+**Where things stand right now.** Everything here runs on the 20-article sample index with exact-match queries plus English translation. The real pieces exist on teammates' branches but aren't plugged in yet:
+- Viraja's `build_query(raw, index=None, costs=None)` in `dhvani/query/build.py` is ready to replace `query_stub.exact_query`.
+- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light and aggr. Its `doc_norm` is empty and `meta` doesn't keep `links` or `city` yet; there's no `auto` mode yet.
+- Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`.
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -29,7 +64,7 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `561d129` metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
 | `a39e4fa` experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
 | `ae172cd` stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
-| feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
+| `fea28e2` feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
 
 ## How to use it
 
@@ -41,7 +76,7 @@ idx = SampleIndex.load("none")
 ```
 
 **Query stub** (`dhvani/rank/query_stub.py`)
-Builds the query object from `formats.md` with exact matches only, until Viraja's layer is ready.
+Builds the query object from `formats.md` with exact matches only. It stands in for Viraja's `dhvani.query.build.build_query`, which is finished on her branch and has the same output shape; swap the import once the branches are merged.
 ```python
 from dhvani.rank.query_stub import exact_query
 q = exact_query("दिल्ली बारिश")
@@ -133,9 +168,10 @@ df, collection frequency and idf for every term, the most frequent terms (Hindi 
 ```
 
 ## What I need from others
-- **Dhrithi:** the real index with the methods in `formats.md`. My code only needs `postings`, `df`, `N`, `vocab`, `doc_norm` and `meta`. If you add `doc_len`, BM25 will use it directly.
-- **Viraja:** the query object with expansions. The ranker already reads the expansion weights.
-- **Riya:** `links` and `dup_of` in the article file, for PageRank and duplicate collapsing.
+- **Dhrithi:** keep `links` and `city` in the index's `meta` (PageRank and the result rows need them), fill `doc_norm` if possible, add `doc_len` if possible, and the `auto` mode (selective stemming) for the third column. Build the none and light indexes on Riya's 300-article sample, then on the full crawl. Use log10 in `idf()` so the numbers match the slides and this branch.
+- **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
+- **Riya:** the full crawl for the freeze. Keep article text out of git (only metadata in the repo, full text on Drive) because the repo is public.
+- **Everyone:** 8 information needs each (Hindi, Hinglish and English forms) and the merge into `main`.
 
 ## Next
 Speed-ups (index elimination, champion lists, recent tier), date-aware "kal", duplicate collapsing, PageRank and authority, then learning-to-rank after judging.

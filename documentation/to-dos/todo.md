@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct
+Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -28,22 +28,26 @@ Last updated: 7 Oct
 - [x] `app/cli.py --explain`: query vector, postings, candidates, heap and per-word scores
 - [x] Query parser: exact phrase, part of the phrase, all words, all words with variants, then any word
 - [x] Parser stage shown on each result in the app, a switch to turn it off, and a parser step in `--explain`
-
 - [x] Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)
 - [x] Translation switch in the app's Filters popover and `--no-xling` in the CLI
 - [x] Metrics: P@k, R@k, MAP, nDCG and 11-point PR, checked against the lecture examples
 - [x] Experiment runner: every stemming mode x every ranker x every query, run files, tables, stemming comparison, translation off vs on
 - [x] Stop words and idf on the Hindi corpus: top-idf table, stop words from the data, Zipf fit, no idf vs idf vs removed
 - [x] Feedback (Rocchio `prf`) match type shown in the app, and kept out of the parser's strict stages
+
 ## In progress
 
-### Rishit
-- Next up: the speed-ups.
+### Rishit (written, not committed)
+- [ ] `requirements.txt` for the whole team (regex, httpx, requests, beautifulsoup4, streamlit, pytest; matplotlib, huggingface_hub and datasets optional). Waiting for the go-ahead to commit.
+- [ ] Ranker works out `doc_norm` from the postings when an index leaves it empty (`dhvani/rank/vsm.py` + `partwise-tests/rishit/test_doc_norm.py`). Held back on purpose to give Dhrithi time to fill `doc_norm` in her index; commit it only if she doesn't.
+
+### Rishit: next up
+- [ ] Speed-ups: index elimination, champion lists, recent-news tier
+- [ ] Plug the real pieces in once branches are merged: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text read from Riya's article file
 
 ## Next
 
 ### Rishit: required
-- [ ] Speed-ups: index elimination, champion lists, recent-news tier
 - [ ] Date-aware "kal"
 - [ ] Collapsing duplicate wire stories ("also in: ...")
 - [ ] PageRank and "first to publish" authority in g(d)
@@ -61,36 +65,59 @@ Last updated: 7 Oct
 - [ ] Autocomplete with prefix search over the term dictionary
 
 ### Rishit: needed from teammates
-| From | What | By | Until then |
-|---|---|---|---|
-| Dhrithi | Real indexes for none, light and auto with the `formats.md` methods, ideally plus `doc_len` and article text | H8 | Sample index |
-| Dhrithi | `analyze(text, mode)` so queries are processed like articles | H8 | Sample tokenizer |
-| Viraja | Query object with Hinglish expansions | H12 | Exact-match stub |
-| Viraja | Agree the handoff: her language ID tags English words, my layer adds translated expansions | Now | Nothing |
-| Riya | `news.jsonl` with `links`, `dup_of`, `date`, `source`, `section`, `state` | H8 sample, H18 frozen | Sample articles |
-| Riya | Pooling script | H22 | Nothing needed yet |
-| Everyone | 8 information needs each, then judgments | H10, H25 | Nothing needed yet |
+| From | What | Status |
+|---|---|---|
+| Dhrithi | Real indexes for none, light and auto with the `formats.md` methods | none, light and aggr exist; no auto yet; not built on Riya's sample yet |
+| Dhrithi | `doc_norm` filled, `links` and `city` kept in `meta`, `doc_len` if possible | `doc_norm` empty, `links` and `city` missing |
+| Dhrithi | `analyze(text, mode)` so queries are processed like articles | Done (`text/analyzer.py`) |
+| Viraja | Query object with Hinglish expansions | Done (`dhvani/query/build.py`), not merged yet |
+| Viraja | Agree the split with the cross-lingual layer for English words and names | Asked |
+| Riya | Article file with `links`, `dup_of`, `date`, `source`, `section`, `state` | 300-article sample done with every field; full crawl not done |
+| Riya | Pooling script | Started (`dhvani/eval/pool.py`); CLI not finished |
+| Everyone | 8 information needs each, then judgments | Not started |
 
-### Riya
-- [ ] robots.txt checker, Mercator frontier, sitemap crawling
-- [ ] Article extraction, near-duplicates, MinHash + LSH, adaptive recrawl
-- [ ] Pooling script
+### Riya (from branch `riya`)
+- [x] robots.txt checker (RFC 9309, wildcards, longest match) with tests against the real sites' files
+- [x] Mercator frontier: priority front queues, per-site back queues, heap enforcing the 8 s gap
+- [x] Sitemap parser (Google News and archive sitemaps), URL normalization, route filters, polite backoff
+- [x] JSON-LD extraction with HTML fallback, IST dates, state and city from URLs, `links`, no author names
+- [x] Near-duplicate clustering: MD5, 4-word shingles, MinHash + LSH, 24 h window, Jaccard 0.70 (0 duplicates in the 300 sample)
+- [x] 300-article sample (`data/news_sample_300.jsonl`) with corpus and dedup stats
+- [ ] Full crawl of 5,000+ articles (needed for the freeze)
+- [ ] Adaptive recrawl, burst detection, conditional requests
+- [ ] Pooling CLI, format-compliance test, dedup threshold precision/recall table
 
-### Dhrithi
-- [ ] Normalizer and tokenizer
-- [ ] Light, aggressive and YASS stemmers, selective stemming (auto)
-- [ ] Positional indexes, Boolean search, extended-biword phrase index, compression
+### Dhrithi (from branch `Dhrithi`)
+- [x] Normalizer, tokenizer, `analyze(text, mode)` for none, light and aggr
+- [x] Light stemmer (Ramanathan & Rao) and aggressive stemmer
+- [x] Positional index with headline and body zones, df, metadata, save and load, JSONL builder
+- [x] Boolean AND (smallest list first), skip pointers, phrase and proximity search
+- [x] `idf()` helper and a hand-made stop word list
+- [ ] Selective stemming (the auto column)
+- [ ] Indexes built on Riya's sample, then on the full crawl
+- [ ] Stem-diff report
+- [ ] YASS, extended biwords, compression (extras, can wait)
 
-### Viraja
-- [ ] Language ID, Roman spellings, Soundex, Dhvani-code, learned edit distance
-- [ ] k-gram candidates, weighted expansion, context correction
-- [ ] Rocchio query expansion
+### Viraja (from branch `Viraja`)
+- [x] Language ID, Roman spellings, lecture Soundex, Dhvani-code, learned edit distance (trained on 50k Aksharantar pairs)
+- [x] k-gram candidates, top-5 weighted variants, Viterbi context correction
+- [x] `build_query` in the shared query format, Rocchio pseudo-relevance feedback (`prf` tag)
+- [x] Word-level results (Dhvani-code best: Acc@1 0.931 on Aksharantar) and the 50-name test set, edit-cost heatmap
+- [ ] Point the k-gram index at Dhrithi's real vocabulary
+- [ ] End-to-end test with Rishit's ranker after the merge
 
 ### Everyone
-- [ ] 8 information needs each by H10
-- [ ] Judging (H22 to H25)
+- [ ] 8 information needs each (Hindi, Hinglish and English forms)
+- [ ] Merge all branches into `main`
+- [ ] Judging after the freeze
 - [ ] Own results table, report section and video segment
-- [ ] Merge into `main` at the checkpoints: H3, H8, H12, H22, H28
+
+### Open issues
+- **Article text in a public repo.** Riya's `data/news_sample_300.jsonl` is committed and the repo is public. Plan: keep only metadata in git and share the full text on Drive.
+- **Merge clashes to sort out:** four different `.gitignore` files, `dhvani/eval/__init__.py` on both Riya's and Rishit's branches, a top-level `conftest.py` on Riya's, and Riya's edit to `formats.md`.
+- **Folder layout:** Dhrithi's code is in top-level `text/`, `index/` and `tests/` instead of under `dhvani/`; imports need to keep working after the merge.
+- **Index file in git:** `indexes/aggr.pkl` is committed on Dhrithi's branch.
+- **idf log base:** Dhrithi's `idf()` uses the natural log; this branch and the slides use log10. Rankings are the same either way, but the numbers in the report should match.
 
 ## Checkpoints
 | Hour | What should work |

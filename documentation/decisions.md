@@ -91,3 +91,8 @@ A running list of the choices we made and why. Newest at the bottom.
 **Three ways to handle stop words.** No idf (lnc.lnc) lets every word count fully, idf (lnc.ltc) keeps stop words but pushes them towards zero, and removing them drops them from the query. Comparing the three shows whether removing stop words still matters once idf is in place.
 
 **Feedback words only count in scoring.** Viraja's Rocchio expansion adds words from the top results as extra query tokens tagged `prf`. They aren't words the user typed, so the query parser leaves them out of the phrase and "all words" stages; otherwise a good result could be dropped just for missing a feedback word. They still add to the score and to the "some words" stage, and the app shows them as purple "Feedback" matches.
+
+**Wait for Dhrithi before covering doc_norm.** Dhrithi's index leaves `doc_norm` empty, which lnc.ltc needs. The ranker can work it out from her postings itself, and that change is written, but we're holding it back to give her time to fill it in her own index first. If she doesn't, we commit the fallback.
+
+**idf uses log10 everywhere.** The lecture slides use log10(N/df), and so does this branch. The base doesn't change any ranking, but the idf numbers in the report should all be on the same scale, so we've asked Dhrithi to switch her `idf()` from the natural log as well.
+
