@@ -15,6 +15,7 @@ the source changes nothing here.
 from collections import defaultdict
 
 from dhvani.query.langid import script
+from dhvani.query.phonetics import dhvani_code
 from dhvani.query.roman import romanize
 
 
@@ -42,11 +43,27 @@ class KGramIndex:
         self.k = k
         self.postings = defaultdict(set)   # k-gram -> {terms}
         self._grams = {}                   # term -> frozenset(k-grams)
+        self._by_code = defaultdict(set)   # Dhvani-code -> {terms}
         for term in vocab:
-            grams = kgrams(_canonical(term), k)
+            canonical = _canonical(term)
+            grams = kgrams(canonical, k)
             self._grams[term] = grams
             for g in grams:
                 self.postings[g].add(term)
+            self._by_code[dhvani_code(canonical)].add(term)
+
+    def phonetic_candidates(self, word):
+        """Terms that share ``word``'s Dhvani-code, whatever their spelling.
+
+        This is the safety net for phonetically-close but spelling-distant pairs
+        like ``iyer`` / ``अय्यर`` (both code ``26``): their k-gram overlap is tiny,
+        so k-gram search alone can drop the right term from the candidate pool
+        before the matcher ever ranks it.
+        """
+        code = dhvani_code(_canonical(word))
+        if not code:
+            return set()
+        return set(self._by_code.get(code, set()))
 
     def candidates(self, word, limit=50):
         """Return ``[(term, jaccard), ...]`` for the ``limit`` best matches.

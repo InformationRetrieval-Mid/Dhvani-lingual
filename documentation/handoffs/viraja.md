@@ -157,6 +157,13 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
     small, curated — not article text), and the heatmap PNG is committed under
     `documentation/figures/` as a report asset.
 
+12. **Candidate generation now uses Dhvani-code, not just k-grams.** Fixed a bug
+    where a name like `iyer` matched the wrong word (`श्रेयस`) because the right
+    term `अय्यर` has near-zero k-gram overlap and got truncated from the pool
+    before Dhvani-code could rank it. `KGramIndex.phonetic_candidates(word)` now
+    always adds same-Dhvani-code terms to the pool, so phonetically-close but
+    spelling-distant pairs are never missed.
+
 ## Dependency note for packaging
 Runtime + tests need `regex` and `pytest`. Re-training the edit costs needs
 `huggingface_hub` (to pull `hin.zip`); the shipped `edit_costs.json` means

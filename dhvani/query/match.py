@@ -35,6 +35,14 @@ def _ranked(word, index, matcher, costs=None, pool=50):
     score for ``soundex``/``dhvani``).
     """
     cands = index.candidates(word, limit=pool)
+    # Always include same-Dhvani-code terms, even if their k-gram overlap was too
+    # low to make the pool (e.g. iyer / अय्यर). Without this the right phonetic
+    # match can be truncated away before any matcher ranks it.
+    seen = {term for term, _j in cands}
+    for term in index.phonetic_candidates(word):
+        if term not in seen:
+            cands.append((term, 0.0))
+            seen.add(term)
     qr = _canonical(word)
 
     scored = []
