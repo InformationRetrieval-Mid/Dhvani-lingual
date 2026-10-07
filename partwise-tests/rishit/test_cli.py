@@ -77,3 +77,8 @@ def test_speedups_report_how_many_were_scored():
     for name in ("elim", "champions", "tiers", "clusters", "impact"):
         text = cli.run(["दिल्ली बारिश", "--k", "3", "--speedup", name])
         assert "Scored" in text and "articles that share a query word" in text
+
+
+def test_rrf_ranker_shows_ranks_in_each_list():
+    text = cli.run(["दिल्ली बारिश", "--k", "2", "--ranker", "rrf", "--explain"])
+    assert "ranks: lnc.ltc #" in text and "rrf = sum of 1 / (60 + rank)" in text

@@ -1,158 +1,105 @@
 # Rishit's to-do
 
-The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
+The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 17:15
+
+## My novelty
+
+What my part adds beyond the lecture basics, and where each one stands.
+
+| Idea | What it does | Status |
+|---|---|---|
+| Cross-lingual ranking | English query words become weighted Hindi terms inside the lnc.ltc query vector, so "weather tomorrow" and "कल का मौसम" are scored against the same words | ~~Done~~ |
+| Stemming columns with match types | Every search runs on no stemming, light stemming and auto side by side, and each result shows how each word matched (exact, phonetic, translated, feedback) | ~~Done~~ |
+| Date-aware कल | Works out from the query whether कल means yesterday or tomorrow and boosts articles about that day | ~~Done~~ |
+| Authority g(d): PageRank and first to publish | g(d) = recency + PageRank over the links between articles + credit for the paper that ran a wire story first | ~~Done~~ |
+| Duplicate collapsing | A wire story carried by several papers shows once, with "also in" the others (22 story clusters in the full crawl) | ~~Done~~ |
+| BM25 | Second ranking model next to lnc.ltc and the net score | ~~Done~~ |
+| Dense re-ranking | Multilingual e5 re-scores the top 50, with Viraja's Devanagari spellings added to Hinglish queries so e5 understands them | ~~Done~~ |
+| Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | Built, not committed yet |
+| Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
+| Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
 
-### Team
-- [x] ~~Picked Track 5 and the project: Hindi + Hinglish news search~~
-- [x] ~~Checked robots.txt for the Hindi news sites and picked 5 to crawl~~
-- [x] ~~Wrote the project plan and split the work between Riya, Dhrithi, Viraja and Rishit~~
-- [x] ~~Wrote down the 5 shared formats (`documentation/formats.md`)~~
-- [x] ~~Set up the repo, branches and folder structure~~
-
-### Rishit (committed on `rishit`)
-- [x] ~~`dhvani` package and `.gitignore`~~
-- [x] ~~Sample index (20 hand-written articles) to build ranking on before the real index exists~~
-- [x] ~~lnc.ltc scoring with heap top-K~~
-- [x] ~~Net score: cosine + zone weights + proximity + recency~~
-- [x] ~~BM25~~
-- [x] ~~Filters for source, section, state and date, usable by all three rankers~~
-- [x] ~~Sample index keeps article text so results can be displayed~~
-- [x] ~~Streamlit app, first version: search box, ranker choice and the no stemming / stemming / auto columns~~
-- [x] ~~Streamlit: highlighted words and snippets~~
-- [x] ~~Streamlit: match chips, sidebar filters, "why this score" breakdown and "only here" tags~~
-- [x] ~~Streamlit redesign in an Apple style: top bar, centred search, segmented control, filters popover, grouped result lists~~
-- [x] ~~`app/cli.py --explain`: query vector, postings, candidates, heap and per-word scores~~
+### Ranking
+- [x] ~~lnc.ltc with heap top-K~~
+- [x] ~~Net score: cosine + zone weights + proximity + g(d)~~
+- [x] ~~BM25 (k1 1.2, b 0.75)~~
+- [x] ~~Filters for newspaper, section, state and date, on every ranker~~
 - [x] ~~Query parser: exact phrase, part of the phrase, all words, all words with variants, then any word~~
-- [x] ~~Parser stage shown on each result in the app, a switch to turn it off, and a parser step in `--explain`~~
-- [x] ~~Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)~~
-- [x] ~~Translation switch in the app's Filters popover and `--no-xling` in the CLI~~
-- [x] ~~Metrics: P@k, R@k, MAP, nDCG and 11-point PR, checked against the lecture examples~~
-- [x] ~~Experiment runner: every stemming mode x every ranker x every query, run files, tables, stemming comparison, translation off vs on~~
-- [x] ~~Stop words and idf on the Hindi corpus: top-idf table, stop words from the data, Zipf fit, no idf vs idf vs removed~~
-- [x] ~~Feedback (Rocchio `prf`) match type shown in the app, and kept out of the parser's strict stages~~
-- [x] ~~Index elimination: skip low-idf query words and only score articles matching most of the query~~
+- [x] ~~Date-aware कल, as a re-ranking step that keeps parser stages in order~~
+- [x] ~~PageRank (damping 0.85, power iteration) and first-to-publish credit in g(d)~~
+- [x] ~~Duplicate collapsing with "also in"~~
+- [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
+
+### Query side
+- [x] ~~Cross-lingual layer with an English to Hindi news dictionary (about 180 entries)~~
+- [x] ~~Real query pipeline: Viraja's `build_query` with phonetic variants, then translation, then Dhrithi's analyzer for each index mode~~
+- [x] ~~Weak phonetic variants dropped, letter case matched for Roman words~~
+
+### Speed-ups (Lecture 7)
+- [x] ~~Index elimination~~
 - [x] ~~Champion lists, with the high/low fallback and optional g(d) ordering~~
-- [x] ~~Recent-news tiers: newest articles first, older tiers only if needed~~
-- [x] ~~`requirements.txt` for the whole team~~
-- [x] ~~Date-aware kal: tell yesterday from tomorrow from the query, boost articles about the right day~~
-- [x] ~~Date-aware kal shown in the app (switch, tag, boost in Score details) and the CLI (`--explain` step 4c, `--no-kal`)~~
-- [x] ~~PageRank and first-to-publish authority in g(d), usable by the net score and champion lists~~
-- [x] ~~Authority g(d) used in the app and CLI, with recency, PageRank and first to publish shown in the score breakdown~~
-- [x] ~~Duplicate collapsing: one result per wire story with "also in" the other papers, in the app and CLI~~
+- [x] ~~Recent-news tiers~~
+- [x] ~~Cluster pruning (leaders and followers)~~
+- [x] ~~Impact-ordered postings with early stopping~~
+
+### Evaluation code
+- [x] ~~Metrics: P@k, R@k, F1, MAP, nDCG and 11-point PR, checked against the lecture examples~~
+- [x] ~~Experiment runner: every stemming mode x every ranker x every query, TREC run files, tables, wins and losses, translation off vs on~~
+- [x] ~~Speed-ups table (articles scored vs top 10 kept)~~
+- [x] ~~Stop words, idf and Zipf analysis with plots~~
+- [x] ~~My 8 information needs (R01 to R08), in four forms each~~
+
+### App and CLI
+- [x] ~~Streamlit app: three stemming columns, highlighted snippets, match chips, filters, score breakdown, parser stage, "only here" tags~~
+- [x] ~~Switches for parsing, authority, collapsing, kal, translation and dense, plus a speed-up menu~~
+- [x] ~~`app/cli.py` with `--explain` showing every step, and flags for every feature~~
+
+### Integration
+- [x] ~~Dhrithi's index and Viraja's query layer plugged into the app and CLI, with a fallback to the sample index~~
+- [x] ~~End-to-end: Hindi, Hinglish and English versions of a need find the same articles~~
+- [x] ~~Running on Riya's full crawl: 5,000 articles, four indexes built in about 30 s, searches in under 0.1 s~~
+- [x] ~~Merged into `main` up to the plug-in work~~
 
 ## In progress
+- [ ] Commit rank fusion (RRF), then merge `rishit` into `main` again (cluster pruning, impact-ordered postings, dense, the full-crawl numbers and RRF aren't on `main` yet)
 
-### Rishit: next up
-- [x] ~~Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored~~
-- [x] ~~Speed-ups results table in the experiment runner: overlap with full search and articles scored~~
-- [x] ~~My 8 information needs, picked from stories in Riya's crawl (R01 to R08)~~
-- [x] ~~Merge `rishit` into `main` again after those three~~
-- [x] ~~Plug the real pieces in: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text from `idx.text`~~
-- [ ] Merge the plug-in work into `main`
-- [x] ~~End-to-end check: Hindi, Hinglish and English forms of a need all find the right articles on Riya's 300 articles (H12)~~
+## Remaining
 
-## Next
-
-### Rishit: required
-- [x] ~~Results file started (`documentation/results/rishit-results.md`), with early speed-ups numbers on the 300 articles~~
-- [x] ~~Speed-ups table, stop words, idf and Zipf on Riya's full crawl (5,000 articles, before the freeze), with plots~~
-- [ ] Run every experiment on the frozen corpus: lnc.ltc vs BM25, translation off vs on, stemming modes, speed-ups, wins and losses, and the plots
-- [ ] Judging the pooled results with the team
-- [ ] Learning-to-rank (after judging)
-- [ ] My results tables, report section and video segment
-- [ ] Put the final report and video together (H28 to H34)
-- [x] ~~Dense re-ranker (multilingual e5, optional install)~~
-
-### Rishit: extras (in rough order)
-- [ ] Rank fusion (RRF) of lnc.ltc, BM25 and dense
+### Can do now
+- [ ] Point the experiment runner and the corpus stats script at the real index by default (they still load the 20-article sample unless told otherwise)
+- [ ] Embed the full crawl for dense re-ranking (one run of about 3 to 4 minutes, cached in `data/dense/`)
+- [ ] Result diversification (MMR) so the top 10 isn't one story told several ways
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
-- [ ] Query difficulty prediction with a "low confidence" hint
-- [ ] Evaluation dashboard tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
-- [x] ~~Cluster pruning (leaders and followers), compared with champion lists for speed vs quality~~
-- [x] ~~Impact-ordered postings with early stopping (high/low lists are already the champion-list fallback)~~
-- [ ] Result diversification (MMR) so the top 10 isn't one story repeated
+- [ ] Query difficulty hint ("low confidence") for queries whose top scores are weak
+- [ ] Evaluation tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
 - [ ] Autocomplete with prefix search over the term dictionary
 
-### Rishit: needed from teammates
-| From | What | Status |
+### Once the corpus is frozen
+- [ ] Rebuild the four indexes from Riya's cleaned file instead of my local copy
+- [ ] Rerun the speed-ups table, stop words, idf and Zipf on the frozen corpus
+- [ ] Run all 120 queries through every system and write the TREC run files for pooling
+
+### Once there are judgments
+- [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
+- [ ] Translation off vs on for the English queries
+- [ ] lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off
+- [ ] Stop word experiment: no idf vs idf vs stop words removed
+- [ ] Wins and losses per query
+- [ ] Learning-to-rank: learn the net score's weights (cosine, zone, proximity, g(d), and the dense mix) from the judgments
+
+## What my code is waiting on
+| From | What | Why it matters for my part |
 |---|---|---|
-| Dhrithi | Real indexes for none, light and auto with the `formats.md` methods | none, light, aggr and auto exist and were tested on Riya's sample; full-crawl build waits for the freeze |
-| Dhrithi | `doc_norm` filled, `links` and `city` kept in `meta`, `doc_len` if possible | Done |
-| Dhrithi | `analyze(text, mode)` so queries are processed like articles | Done (`text/analyzer.py`) |
-| Viraja | Query object with Hinglish expansions | Done (`dhvani/query/build.py`), merged into `main` |
-| Viraja | Agree the split with the cross-lingual layer for English words and names | Asked |
-| Riya | Article file with `links`, `dup_of`, `date`, `source`, `section`, `state` | 300-article sample done with every field; full crawl not done |
-| Riya | Pooling script | Started (`dhvani/eval/pool.py`); CLI not finished |
-| Everyone | 8 information needs each, then judgments | Viraja's and Rishit's 8 done; Riya's and Dhrithi's not yet |
+| Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
+| Riya | Pooling script CLI | Turns my run files into the pools we judge |
+| Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
+| Viraja | Less phonetic expansion for English words ("farmers" gets हार्मोन्स, "snow" gets now) | Adds noise to English queries in the sparse rankers |
+| Everyone | Judgments | All quality numbers and learning-to-rank |
 
-### Riya (from branch `riya`)
-- [x] ~~robots.txt checker (RFC 9309, wildcards, longest match) with tests against the real sites' files~~
-- [x] ~~Mercator frontier: priority front queues, per-site back queues, heap enforcing the 8 s gap~~
-- [x] ~~Sitemap parser (Google News and archive sitemaps), URL normalization, route filters, polite backoff~~
-- [x] ~~JSON-LD extraction with HTML fallback, IST dates, state and city from URLs, `links`, no author names~~
-- [x] ~~Near-duplicate clustering: MD5, 4-word shingles, MinHash + LSH, 24 h window, Jaccard 0.70 (0 duplicates in the 300 sample)~~
-- [x] ~~300-article sample (`data/news_sample_300.jsonl`) with corpus and dedup stats~~
-- [x] ~~Crawler fix for burst detection (`is_bursting`), merged into `main`~~
-- [ ] Full crawl of 5,000+ articles (needed for the freeze)
-- [ ] Adaptive recrawl, burst detection, conditional requests
-- [ ] Pooling CLI, format-compliance test, dedup threshold precision/recall table
-
-### Dhrithi (from branch `Dhrithi`)
-- [x] ~~Normalizer, tokenizer, `analyze(text, mode)` for none, light and aggr~~
-- [x] ~~Light stemmer (Ramanathan & Rao) and aggressive stemmer~~
-- [x] ~~Positional index with headline and body zones, df, metadata, save and load, JSONL builder~~
-- [x] ~~Boolean AND (smallest list first), skip pointers, phrase and proximity search~~
-- [x] ~~`idf()` helper and a hand-made stop word list~~
-- [x] ~~Selective stemming (the auto column)~~
-- [x] ~~Stop word analysis and idf aligned to base 10~~
-- [x] ~~Auto stemming works on a fresh checkout without the generated files~~
-- [ ] Indexes built on the full crawl
-- [ ] Stem-diff report
-- [ ] YASS, extended biwords, compression (extras, can wait)
-
-### Viraja (from branch `Viraja`)
-- [x] ~~Language ID, Roman spellings, lecture Soundex, Dhvani-code, learned edit distance (trained on 50k Aksharantar pairs)~~
-- [x] ~~k-gram candidates, top-5 weighted variants, Viterbi context correction~~
-- [x] ~~`build_query` in the shared query format, Rocchio pseudo-relevance feedback (`prf` tag)~~
-- [x] ~~Word-level results (Dhvani-code best: Acc@1 0.931 on Aksharantar) and the 50-name test set, edit-cost heatmap~~
-- [x] ~~8 information needs (V01 to V08)~~
-- [ ] Point the k-gram index at Dhrithi's real vocabulary
-- [ ] End-to-end test with Rishit's ranker after the merge
-
-### Everyone
-- [ ] 8 information needs each (Hindi, Hinglish and English forms)
-- [x] ~~Riya's, Dhrithi's and Viraja's branches merged into `main` (sample corpus left out of git)~~
-- [x] ~~`rishit` merged into `main` (up to duplicate collapsing)~~
-- [x] ~~Riya's crawler fix and Dhrithi's auto stemming fix merged into `main`~~
-- [ ] Judging after the freeze
-- [ ] Own results table, report section and video segment
-
-### Open issues
-- **Article text in a public repo.** Riya's `data/news_sample_300.jsonl` is left out of git on `main`, but it's still committed on her own branch. Plan: share the full text on Drive.
-- ~~**Merge clashes:** `.gitignore` files combined into one on `main`, `dhvani/eval/__init__.py` combined.~~
-- ~~**Tests that need local files:** fixed by Dhrithi; auto stemming now falls back to no stemming when the generated files are missing.~~
-- **Auto column on a fresh checkout:** without Dhrithi's generated files the auto column gives the same results as no stemming. She needs to commit the small candidates file or document how to generate it.
-- **HTML left in article bodies:** 24 of Riya's 300 articles have `<a class=backlink ...>` tags in the body, so words like "href" get indexed. Needs fixing in the crawler before the full crawl.
-- **No case folding in the normalizer:** "Iyer" and "iyer" are different index terms. The query side works around it; Dhrithi's normalizer should lowercase.
-- **Riya's test writes a report into `data/`:** `test_crawler_recrawl_integration` writes `data/result-documentation/crawl_stats.md` for a fake 2-article crawl on every test run. It should write to the test's temporary folder.
-- **अय्यर gets almost no weight for "iyer":** Viraja's Dhvani-code fix brings अय्यर into the candidates, but "iyer" is also an English word in the index and takes 97% of the weight, and एयर and ईयर rank above अय्यर.
-- **English words get phonetic expansions:** Viraja's language ID gives almost every Roman word 0.9 Hinglish, so "farmers worried about snow" also searches हार्मोन्स, world and now. Dense re-ranking ignores weak phonetic guesses, but the sparse query still has them.
-- **Riya's full crawl needs cleaning before the freeze:** one article saved twice (`jagran_40397148`, which stops Dhrithi's index builder), HTML in 249 bodies, 106 astrology pages, about 50 section and live-blog pages saved as articles (for example `amarujala.com/technology`, which now shows up in results), and 103 bodies under 30 words.
-- **Two test files share a name:** `test_build.py` and `test_scoring.py` are in both `tests/` and `partwise-tests/`, so running both folders in one pytest command errors. Run them separately, or rename Dhrithi's two files.
-- ~~**Folder layout:** Dhrithi's top-level `text/` and `index/` import fine on `main`.~~
-- ~~**idf log base:** Dhrithi moved to log10, same as this branch and the slides.~~
-
-## Checkpoints
-| Hour | What should work |
-|---|---|
-| H3 | Sample articles and query stub shared, crawler running |
-| H8 | A Hindi query shows no-stem and stem results in the app |
-| H12 | Hindi, Hinglish and English versions of a query all work |
-| H18 | News snapshot frozen |
-| H22 | Every system can produce results for all 120 queries |
-| H28 | All tables and graphs done |
-| H36 | Report, video and repo submitted |
+## Known issues in my part
+- Two test files share a name with Dhrithi's (`test_build.py`, `test_scoring.py`), so `tests/` and `partwise-tests/` have to be run as separate pytest commands.
+- The dense mix (0.5 first stage, 0.5 e5) and the net score weights are hand-picked for now; learning-to-rank should set them.

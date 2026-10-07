@@ -10,6 +10,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | lnc.ltc vs BM25 vs net score | Waiting for judgments |
 | Stop words, idf and Zipf | Riya's full crawl, before the freeze (5,000 articles) |
 | Dense re-ranking vs sparse only | Waiting for judgments |
+| Rank fusion (RRF) vs single rankers | Waiting for judgments |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
 

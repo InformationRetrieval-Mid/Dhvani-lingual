@@ -28,6 +28,7 @@ from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -48,12 +49,13 @@ from dhvani.rank.vsm import search  # noqa: E402
 
 MODES = [("none", "No stemming"), ("light", "Stemming"), ("auto", "Auto")]
 
-RANKERS = {"Net score": "net", "lnc.ltc": "lnc", "BM25": "bm25"}
+RANKERS = {"Net score": "net", "lnc.ltc": "lnc", "BM25": "bm25", "Fusion": "rrf"}
 
 RANKER_NOTES = {
     "net": "Cosine similarity with headline, proximity and recency boosts.",
     "lnc": "Plain cosine similarity using SMART lnc.ltc weights.",
     "bm25": "Okapi BM25 with term saturation and length normalisation.",
+    "rrf": "Reciprocal rank fusion of lnc.ltc, BM25 and the net score (and dense when it's on).",
 }
 
 SUGGESTIONS = ["भूकंप के झटके", "shreyas iyer shatak", "smriti mandhana captain", "chardham yatra record"]
@@ -345,9 +347,11 @@ def run_speedup(name, query, mode, k, doc_filter):
     return search_impact(query, index, load_impact(mode), k=k, max_docs=max(20, index.N // 15), doc_filter=doc_filter)
 
 
-def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):
+def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None, dense=None):
     if use_parser:
-        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static)
+        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static, dense=dense)
+    if ranker == "rrf":
+        return search_rrf(query, index, k=k, doc_filter=doc_filter, static=static, dense=dense)
     if ranker == "net":
         return rank(query, index, k=k, doc_filter=doc_filter, static=static)
     if ranker == "lnc":
@@ -395,6 +399,10 @@ def score_table(explain, terms, parts=None):
         if explain.get("static") and parts:
             for label, key in (("  recency", "recency"), ("  PageRank", "pagerank"), ("  first to publish", "original")):
                 rows.append(f"<tr><td>{label}</td><td>{parts[key]:.4f}</td></tr>")
+    if "rrf" in explain:
+        for name, r in explain["rrf"].items():
+            rows.append(f"<tr><td>Rank in {html.escape(name)}</td><td>{'#' + str(r) if r else '-'}</td></tr>")
+        rows.append(f'<tr class="total"><td>RRF score</td><td>{explain["rrf_score"]:.4f}</td></tr>')
     for term, value in terms.items():
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
@@ -536,8 +544,9 @@ def main():
         if speedup != "Off":
             results[mode], speed_stats[mode] = run_speedup(speedup, queries[mode], mode, pool, doc_filter)
         else:
-            results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static)
-        if use_dense:
+            fuse_dense = load_dense(mode) if use_dense and ranker == "rrf" else None
+            results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static, fuse_dense)
+        if use_dense and not (ranker == "rrf" and speedup == "Off"):
             results[mode] = dense_rerank(results[mode], queries[mode], load_dense(mode))
         if use_kal:
             results[mode] = apply_kal(results[mode], queries[mode], index)

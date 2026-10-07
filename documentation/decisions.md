@@ -181,3 +181,13 @@ A running list of the choices we made and why. Newest at the bottom.
 **Function words stay in the index.** The top-df words are all Hindi function words with idf near 0, so lnc.ltc already ignores them in practice. Keeping them means phrase queries like "भूकंप के झटके" still match exactly.
 
 **Zipf slope reported over the frequent words.** The fit over every word is pulled down by the 40,255 words that appear once, so the report quotes the slope over the top 1,000 words (-0.90) next to the overall one (-1.45).
+
+**RRF with c = 60.** That's the value from Cormack, Clarke and Buettcher (SIGIR 2009), which works well without tuning. RRF only looks at ranks, so lnc.ltc, BM25, the net score and e5 can be combined without making their scores comparable.
+
+**The net score is one of the fused lists.** It already carries zones, proximity and authority, so fusing it with plain lnc.ltc and BM25 lets those signals count without hand-picking weights between the three.
+
+**Dense only orders what the index found.** In fusion the dense list is the sparse lists' candidates ordered by e5 cosine, so dense never brings in an article that no IR ranker matched.
+
+**Dense is used once, not twice.** With Fusion and Dense both on, dense is one of the fused lists and the separate re-ranking step is skipped.
+
+**My to-do covers only my code.** Team items like the report, the video and the README, and the teammates' own task lists, are tracked by each person. My to-do keeps my code, my novelty with what's done and left, and only the outside things my code is waiting on.

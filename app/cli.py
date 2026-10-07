@@ -22,6 +22,7 @@ from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, s
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -39,7 +40,7 @@ from dhvani.rank.real_index import load_index, make_query  # noqa: E402
 from dhvani.rank.scoring import DEFAULT_WEIGHTS, rank  # noqa: E402
 from dhvani.rank.vsm import ZONES, cosine_scores, log_tf, query_vector, search  # noqa: E402
 
-RANKERS = ("net", "lnc", "bm25")
+RANKERS = ("net", "lnc", "bm25", "rrf")
 MAX_POSTINGS_SHOWN = 6
 
 
@@ -155,7 +156,11 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
         out.append(f"    {article['headline']}")
     out.append(f"    {meta.get('source')} · {meta.get('section')} · {(meta.get('date') or '')[:10]}")
     terms = explain.get("terms", explain)
-    if ranker == "net":
+    if ranker == "rrf" and explain.get("rrf"):
+        ranks = ", ".join(f"{name} #{r}" if r else f"{name} -" for name, r in explain["rrf"].items())
+        out.append(f"    ranks: {ranks}")
+        out.append(f"    rrf = sum of 1 / (60 + rank) = {explain['rrf_score']:.4f}")
+    elif ranker == "net":
         w = DEFAULT_WEIGHTS
         out.append(f"    cosine            {explain['cosine']:.4f}")
         for term, part in terms.items():
@@ -187,7 +192,7 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
 def run(argv=None):
     parser = argparse.ArgumentParser(description="Search Dhvani from the terminal.")
     parser.add_argument("query", help="what to search for")
-    parser.add_argument("--ranker", choices=RANKERS, default="net", help="net (default), lnc or bm25")
+    parser.add_argument("--ranker", choices=RANKERS, default="net", help="net (default), lnc, bm25 or rrf (fusion of all of them)")
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
@@ -224,6 +229,12 @@ def run(argv=None):
     if args.dense:
         pool = max(pool, DEFAULT_DEPTH)
     speed_stats = None
+    dense = None
+    if args.dense:
+        if dense_available():
+            dense = DenseIndex(index, SentenceEncoder())
+        else:
+            out.append("Dense re-ranking needs sentence-transformers: pip install -r requirements-dense.txt")
     if args.speedup == "elim":
         results, speed_stats = search_index_elimination(query, index, k=pool)
     elif args.speedup == "champions":
@@ -236,7 +247,9 @@ def run(argv=None):
     elif args.speedup == "impact":
         results, speed_stats = search_impact(query, index, ImpactOrdered(index), k=pool, max_docs=max(20, index.N // 15))
     elif not args.no_parser:
-        results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static)
+        results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static, dense=dense)
+    elif args.ranker == "rrf":
+        results = search_rrf(query, index, k=pool, static=static, dense=dense)
     elif args.ranker == "net":
         results = rank(query, index, k=pool, static=static)
     elif args.ranker == "lnc":
@@ -248,14 +261,15 @@ def run(argv=None):
         heading(out, f"Speed-up: {speed_stats['method']}") if args.explain else None
         out.append(f"Scored {speed_stats['scored']} of {speed_stats['full_candidates']} articles that share a query word.")
 
-    if args.dense:
-        if not dense_available():
-            out.append("Dense re-ranking needs sentence-transformers: pip install -r requirements-dense.txt")
-        else:
-            if args.explain:
-                heading(out, "4b. Dense re-ranking")
-                out.append(f"Top {DEFAULT_DEPTH} re-scored: {1 - DEFAULT_ALPHA} x first stage + {DEFAULT_ALPHA} x e5 cosine (both scaled to 0 to 1).")
-            results = dense_rerank(results, query, DenseIndex(index, SentenceEncoder()))
+    if dense is not None and args.ranker == "rrf" and not args.speedup:
+        if args.explain:
+            heading(out, "4b. Fusion")
+            out.append("Dense (e5) is one of the fused lists: rrf = sum of 1 / (60 + rank) over lnc.ltc, BM25, net score and dense.")
+    elif dense is not None:
+        if args.explain:
+            heading(out, "4b. Dense re-ranking")
+            out.append(f"Top {DEFAULT_DEPTH} re-scored: {1 - DEFAULT_ALPHA} x first stage + {DEFAULT_ALPHA} x e5 cosine (both scaled to 0 to 1).")
+        results = dense_rerank(results, query, dense)
 
     if not args.no_kal:
         intent = kal_intent(query)
