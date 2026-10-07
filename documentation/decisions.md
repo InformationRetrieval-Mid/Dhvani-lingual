@@ -98,3 +98,5 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **Index elimination relaxes instead of returning nothing.** Skipping common words and asking for most of the query words cuts how many articles get scored, which is the point. But on a short or unusual query that rule can leave too few articles, so it loosens one word at a time until there are k. Speed shouldn't cost the user an empty page.
 
+**Champion lists fall back instead of coming up short.** r is fixed when the lists are built, so a query can end up with fewer than k contenders. Instead of returning a short page, the search then scores the full postings, which is Lecture 7's high list then low list. Ordering by weight + g(d) is built in so recency and PageRank can shape the lists later.
+

@@ -75,3 +75,53 @@ def test_overlap_at_k():
     b = [("x", 1, {}), ("q", 1, {}), ("z", 1, {})]
     assert overlap_at_k(a, b, k=3) == 2 / 3
     assert overlap_at_k(a, [], k=3) == 1.0
+
+
+# --- champion lists ----------------------------------------------------------
+
+from dhvani.rank.speedups import ChampionLists, search_champions  # noqa: E402
+
+
+def test_champion_list_is_at_most_r_and_ordered_by_weight():
+    idx = SampleIndex.load()
+    champs = ChampionLists(idx, r=2)
+    lst = champs.champions("बारिश")
+    assert len(lst) == 2
+    from dhvani.rank.speedups import _doc_tf
+    from dhvani.rank.vsm import log_tf
+    weight = {d: log_tf(tf) / idx.doc_norm[d] for d, tf in _doc_tf(idx, "बारिश").items()}
+    assert weight[lst[0]] >= weight[lst[1]]
+    assert all(weight[d] <= weight[lst[-1]] for d in weight if d not in lst)
+
+
+def test_big_r_gives_the_exact_ranking():
+    idx = SampleIndex.load()
+    q = exact_query("मौसम बारिश")
+    fast, stats = search_champions(q, idx, ChampionLists(idx, r=1000), k=5)
+    exact = search(q, idx, k=5)
+    assert [d for d, _, _ in fast] == [d for d, _, _ in exact]
+    assert not stats["fell_back"]
+
+
+def test_small_r_scores_fewer_articles():
+    idx = SampleIndex.load()
+    q = exact_query("मौसम बारिश दिल्ली")
+    fast, stats = search_champions(q, idx, ChampionLists(idx, r=2), k=3)
+    assert stats["scored"] < stats["full_candidates"]
+    assert overlap_at_k(fast, search(q, idx, k=3), k=3) >= 2 / 3
+
+
+def test_falls_back_when_champions_are_too_few():
+    idx = SampleIndex.load()
+    q = exact_query("मौसम")
+    results, stats = search_champions(q, idx, ChampionLists(idx, r=1), k=4)
+    assert stats["fell_back"]
+    assert len(results) == 4
+
+
+def test_static_scores_pull_an_article_into_the_list():
+    idx = SampleIndex.load()
+    plain = ChampionLists(idx, r=1).champions("बारिश")
+    loser = next(d for d, _, _ in idx.postings("बारिश", "body") if d not in plain)
+    boosted = ChampionLists(idx, r=1, static_scores={loser: 10.0}).champions("बारिश")
+    assert boosted == [loser]

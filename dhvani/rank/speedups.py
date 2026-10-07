@@ -117,3 +117,57 @@ def search_index_elimination(query, index, k=10, min_idf=0.3, min_match=None, do
         "full_candidates": len(all_candidates),
     }
     return _top(scores, contributions, k), stats
+
+
+# --- Champion lists ---------------------------------------------------------
+#
+# For each term, precompute the r articles where the term carries the most
+# weight (its "champion list"). At query time only articles in the champion
+# lists of the query terms get scored. r is fixed when the lists are built,
+# so a query can end up with fewer than k contenders; then we fall back to the
+# full postings, which is Lecture 7's high list / low list idea.
+#
+# With static_scores (g(d), e.g. recency or PageRank) the lists are ordered by
+# term weight + g(d) instead, so authoritative articles make the list too.
+
+class ChampionLists:
+    def __init__(self, index, r=50, static_scores=None):
+        self.r = r
+        self.lists = {}
+        g = static_scores or {}
+        for term in index.vocab:
+            weights = {d: log_tf(tf) / index.doc_norm[d] for d, tf in _doc_tf(index, term).items()}
+            ranked = heapq.nlargest(r, weights.items(), key=lambda item: (item[1] + g.get(item[0], 0.0), item[0]))
+            self.lists[term] = [d for d, _ in ranked]
+
+    def champions(self, term):
+        return self.lists.get(term, [])
+
+
+def search_champions(query, index, champions, k=10, doc_filter=None):
+    """lnc.ltc scoring only the champion-list articles of the query terms."""
+    qvec = query_vector(query, index)
+    all_candidates = set()
+    for term in qvec:
+        all_candidates.update(_doc_tf(index, term))
+
+    candidates = set()
+    for term in qvec:
+        candidates.update(champions.champions(term))
+    if doc_filter:
+        candidates = {d for d in candidates if doc_filter(d)}
+
+    fell_back = False
+    if len(candidates) < k:
+        fell_back = True
+        candidates = {d for d in all_candidates if not doc_filter or doc_filter(d)}
+
+    scores, contributions = _score(qvec, index, candidates, doc_filter)
+    stats = {
+        "method": "champion lists",
+        "r": champions.r,
+        "scored": len(candidates),
+        "full_candidates": len(all_candidates),
+        "fell_back": fell_back,
+    }
+    return _top(scores, contributions, k), stats
