@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding recent-news tiers
+Last updated: 7 Oct, after adding requirements.txt
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -21,7 +21,7 @@ Each person commits to their own branch. Nothing has been merged into `main` yet
 **Setup.**
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install regex streamlit pytest      # matplotlib too, if you want the plots
+.venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest partwise-tests/rishit -q
 .venv/bin/streamlit run app/streamlit_app.py
 ```
@@ -36,7 +36,7 @@ python3 -m venv .venv
 
 **Where things stand right now.** Everything here runs on the 20-article sample index with exact-match queries plus English translation. The real pieces exist on teammates' branches but aren't plugged in yet:
 - Viraja's `build_query(raw, index=None, costs=None)` in `dhvani/query/build.py` is ready to replace `query_stub.exact_query`.
-- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light and aggr. Its `doc_norm` is empty and `meta` doesn't keep `links` or `city` yet; there's no `auto` mode yet.
+- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light and aggr, with `doc_norm`, `doc_len`, `links` and `city` filled in. There's no `auto` mode yet.
 - Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`.
 
 ## My part
@@ -67,7 +67,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `fea28e2` feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
 | `60ac8d1` index elimination: skip low-idf words and score only real contenders | `dhvani/rank/speedups.py` |
 | `bedb0e8` champion lists: precompute each term's top articles and score only those | `dhvani/rank/speedups.py` |
-| recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
+| `1f6f519` recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
+| added requirements.txt for the whole team | `requirements.txt` |
 
 ## How to use it
 
@@ -184,7 +185,7 @@ results, stats = search_index_elimination(q, idx, k=10)
 ```
 
 ## What I need from others
-- **Dhrithi:** keep `links` and `city` in the index's `meta` (PageRank and the result rows need them), fill `doc_norm` if possible, add `doc_len` if possible, and the `auto` mode (selective stemming) for the third column. Build the none and light indexes on Riya's 300-article sample, then on the full crawl. Use log10 in `idf()` so the numbers match the slides and this branch.
+- **Dhrithi:** the `auto` mode (selective stemming) for the third column. Build the none and light indexes on Riya's 300-article sample, then on the full crawl. (`doc_norm`, `doc_len`, `links`, `city` and log10 idf are done.)
 - **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
 - **Riya:** the full crawl for the freeze. Keep article text out of git (only metadata in the repo, full text on Drive) because the repo is public.
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms) and the merge into `main`.

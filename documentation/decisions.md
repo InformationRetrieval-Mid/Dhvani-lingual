@@ -92,7 +92,7 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **Feedback words only count in scoring.** Viraja's Rocchio expansion adds words from the top results as extra query tokens tagged `prf`. They aren't words the user typed, so the query parser leaves them out of the phrase and "all words" stages; otherwise a good result could be dropped just for missing a feedback word. They still add to the score and to the "some words" stage, and the app shows them as purple "Feedback" matches.
 
-**Wait for Dhrithi before covering doc_norm.** Dhrithi's index leaves `doc_norm` empty, which lnc.ltc needs. The ranker can work it out from her postings itself, and that change is written, but we're holding it back to give her time to fill it in her own index first. If she doesn't, we commit the fallback.
+**Wait for Dhrithi before covering doc_norm.** Dhrithi's index leaves `doc_norm` empty, which lnc.ltc needs. The ranker can work it out from her postings itself, and that change is written, but we're holding it back to give her time to fill it in her own index first. If she doesn't, we commit the fallback. She filled `doc_norm` (same lnc formula), `doc_len`, `links` and `city` in her index, so the fallback was dropped.
 
 **idf uses log10 everywhere.** The lecture slides use log10(N/df), and so does this branch. The base doesn't change any ranking, but the idf numbers in the report should all be on the same scale, so we've asked Dhrithi to switch her `idf()` from the natural log as well.
 
@@ -101,4 +101,6 @@ A running list of the choices we made and why. Newest at the bottom.
 **Champion lists fall back instead of coming up short.** r is fixed when the lists are built, so a query can end up with fewer than k contenders. Instead of returning a short page, the search then scores the full postings, which is Lecture 7's high list then low list. Ordering by weight + g(d) is built in so recency and PageRank can shape the lists later.
 
 **Fresh news first, even over a slightly better older match.** The tiered search stops at the newest tier once it has k results, so an older article with a higher cosine can be left out. For news that's usually what a reader wants, and it means only a fraction of the articles get scored. Searching all tiers gives back the exact ranking when freshness doesn't matter.
+
+**One requirements.txt for everyone.** It lists what every part of the code actually imports, so anyone can set up with one command. Plotting and dataset downloads are marked optional because the search engine runs without them.
 

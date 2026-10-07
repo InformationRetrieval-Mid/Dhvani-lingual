@@ -37,12 +37,9 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Index elimination: skip low-idf query words and only score articles matching most of the query
 - [x] Champion lists, with the high/low fallback and optional g(d) ordering
 - [x] Recent-news tiers: newest articles first, older tiers only if needed
+- [x] `requirements.txt` for the whole team
 
 ## In progress
-
-### Rishit (written, not committed)
-- [ ] `requirements.txt` for the whole team (regex, httpx, requests, beautifulsoup4, streamlit, pytest; matplotlib, huggingface_hub and datasets optional). Waiting for the go-ahead to commit.
-- [ ] Ranker works out `doc_norm` from the postings when an index leaves it empty (`dhvani/rank/vsm.py` + `partwise-tests/rishit/test_doc_norm.py`). Held back on purpose to give Dhrithi time to fill `doc_norm` in her index; commit it only if she doesn't.
 
 ### Rishit: next up
 - [ ] Plug the real pieces in once branches are merged: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text read from Riya's article file
@@ -70,7 +67,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 | From | What | Status |
 |---|---|---|
 | Dhrithi | Real indexes for none, light and auto with the `formats.md` methods | none, light and aggr exist; no auto yet; not built on Riya's sample yet |
-| Dhrithi | `doc_norm` filled, `links` and `city` kept in `meta`, `doc_len` if possible | `doc_norm` empty, `links` and `city` missing |
+| Dhrithi | `doc_norm` filled, `links` and `city` kept in `meta`, `doc_len` if possible | Done |
 | Dhrithi | `analyze(text, mode)` so queries are processed like articles | Done (`text/analyzer.py`) |
 | Viraja | Query object with Hinglish expansions | Done (`dhvani/query/build.py`), not merged yet |
 | Viraja | Agree the split with the cross-lingual layer for English words and names | Asked |
