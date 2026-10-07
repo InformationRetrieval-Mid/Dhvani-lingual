@@ -45,3 +45,10 @@ def test_dhvani_code_collapses_doubled_consonants():
 def test_dhvani_code_drops_vowels_only():
     # A pure-vowel string has no consonant skeleton.
     assert dhvani_code("आओ") == ""
+
+
+def test_anusvara_is_homorganic_nasal():
+    # anusvara before a labial is म (so भूकंप codes like भूकम्प and "bhukamp"),
+    # elsewhere it is न (हिंदी like हिन्दी).
+    assert dhvani_code("भूकंप") == dhvani_code("भूकम्प") == dhvani_code("bhukamp")
+    assert dhvani_code("हिंदी") == dhvani_code("हिन्दी")

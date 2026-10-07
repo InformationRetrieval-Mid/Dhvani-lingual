@@ -35,3 +35,10 @@ def test_phonetic_candidates_catch_same_sounding_distant_spellings():
     idx = KGramIndex(["अय्यर", "श्रेयस", "मौसम"], k=2)
     assert "अय्यर" in idx.phonetic_candidates("iyer")
     assert "श्रेयस" not in idx.phonetic_candidates("iyer")  # different code
+
+
+def test_phonetic_candidates_also_use_soundex():
+    # delhi / दिल्ली differ in Dhvani-code over the silent "h" but share Soundex,
+    # so Soundex keying is the second net that surfaces दिल्ली.
+    idx = KGramIndex(["दिल्ली", "मौसम"], k=2)
+    assert "दिल्ली" in idx.phonetic_candidates("delhi")
