@@ -8,7 +8,7 @@ from text.tokenize import tokenize
 from text.stem import stem
 
 
-INPUT_PATH = Path("data/dev_news.jsonl")
+INPUT_PATH = Path("data/news_dedup/news_dedup.jsonl")
 OUTPUT_PATH = Path("data/auto_candidates.tsv")
 
 MIN_CLASS_FREQUENCY = 5
