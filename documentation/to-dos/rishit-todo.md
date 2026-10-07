@@ -123,3 +123,34 @@ What my part adds beyond the lecture basics, and where each one stands.
 - The frozen corpus wasn't cleaned beyond the one repeated article: 249 bodies have HTML tags, and 900 pages (18%) are section and listing pages and 104 (2%) are horoscopes. Ranking now pushes the listing pages and horoscopes below real articles; the HTML leftovers remain a limitation.
 - Two test files share a name with Dhrithi's (`test_build.py`, `test_scoring.py`), so `tests/` and `partwise-tests/` have to be run as separate pytest commands.
 - The dense mix (0.5 first stage, 0.5 e5) and the net score weights are hand-picked for now; learning-to-rank should set them.
+
+## Future prospects
+
+What we couldn't finish in the hackathon, and where the project could go next.
+
+### Evaluation
+- Judge the rest of the pool (43% is unjudged), so absolute scores aren't pulled down and smaller differences, like light stemming's gain on the first 16 needs, can be confirmed or ruled out.
+- More needs (the plan aimed at 30 or more), written by people outside the team so they aren't shaped by what the system already does well.
+- Measure agreement between judges by having two people judge the same needs (Cohen's kappa).
+
+### Ranking
+- Replace the hand-tuned net score with the learned weights in the app by default, since learning to rank beat it significantly.
+- Pairwise or listwise learning to rank (ranking SVM, LambdaMART) once there are more judgments, instead of pointwise logistic regression.
+- A fine-tuned dense model for Hindi and Hinglish news, used as a retriever rather than only a re-ranker, with a vector index.
+- Tune the dense mix, the MMR lambda and the Rocchio settings on the judgments instead of choosing them by hand.
+
+### Query side
+- Fix the remaining spelling misses ("delhi" → दिल्ली, "iyer" → अय्यर) by weighting common corpus spellings more than spelling distance.
+- Grow the translation dictionary: clean the learned pairs from Jagran's headlines (drop single-story mistakes like students → वृंदावन) and learn from other bilingual sources.
+- Spelling suggestions ("did you mean") from the k-gram index, and autocomplete.
+
+### Corpus
+- Clean the crawl at the source: strip HTML from bodies and skip listing and horoscope pages in the crawler, instead of pushing them down at ranking time.
+- A larger, continuously updated corpus with adaptive recrawling, so recency tiers and date-aware kal have older news to work with.
+- More languages next to Hindi (Punjabi, Bengali, Marathi), reusing the same pipeline.
+
+### App
+- An evaluation tab in the app showing the metrics and graphs live.
+- Facet counts next to the filters, e.g. "Jagran (12)".
+- Explanations in plain language for why a result ranked where it did, built from the score breakdown.
+
