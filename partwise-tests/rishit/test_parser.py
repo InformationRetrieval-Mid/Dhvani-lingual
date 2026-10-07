@@ -94,3 +94,16 @@ def test_works_with_filters_and_sample_index():
     assert results and all(idx.meta[d]["state"] == "delhi" for d, _, _ in results)
     assert results[0][0] == "jagran_1001"          # has the exact phrase in its headline
     assert results[0][2]["stage"] == "phrase"
+
+
+def test_feedback_tokens_do_not_tighten_the_and_stage():
+    idx = tiny_index()
+    q = exact_query("दिल्ली बारिश")
+    q["tokens"].append({"surface": "अलर्ट", "script": "devanagari",
+                        "lang": {"hi": 1.0, "hinglish": 0.0, "en": 0.0},
+                        "expansions": [("अलर्ट", 0.3, "prf")]})
+    stages = dict(stage_matches(idx, q))
+    # Both a and b have दिल्ली and बारिश; only a has अलर्ट. The feedback word
+    # mustn't knock b out of "all words".
+    assert stages["all words"] == {"a", "b"}
+    assert "a" in stages["any word"]

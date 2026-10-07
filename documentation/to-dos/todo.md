@@ -34,6 +34,7 @@ Last updated: 7 Oct
 - [x] Metrics: P@k, R@k, MAP, nDCG and 11-point PR, checked against the lecture examples
 - [x] Experiment runner: every stemming mode x every ranker x every query, run files, tables, stemming comparison, translation off vs on
 - [x] Stop words and idf on the Hindi corpus: top-idf table, stop words from the data, Zipf fit, no idf vs idf vs removed
+- [x] Feedback (Rocchio `prf`) match type shown in the app, and kept out of the parser's strict stages
 ## In progress
 
 ### Rishit

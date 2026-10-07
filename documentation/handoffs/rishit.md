@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after adding the stop words and idf analysis
+Last updated: 7 Oct, after adding the feedback match type
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -28,7 +28,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `69faf76` translation switch in the app and cli | `app/streamlit_app.py`, `app/cli.py` |
 | `561d129` metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
 | `a39e4fa` experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
-| stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
+| `ae172cd` stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
+| feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
 
 ## How to use it
 
@@ -78,13 +79,13 @@ rank(q, idx, k=10, doc_filter=f)     # same for search() and search_bm25()
 `idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. The real system will read this from the article file.
 
 **The app** (`app/streamlit_app.py`)
-Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched, an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has a "Smart query parsing" switch and a "Translate English words" switch, both on by default. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
+Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched (exact, phonetic, translated, or feedback for Rocchio terms), an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has a "Smart query parsing" switch and a "Translate English words" switch, both on by default. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
 ```bash
 .venv/bin/streamlit run app/streamlit_app.py
 ```
 
 **Query parser** (`dhvani/rank/parser.py`)
-Turns one query into stricter-to-looser searches: exact phrase, part of the phrase (two neighbouring words), all words, all words with variants, then any word. It stops once it has k results. Articles found at a stricter stage rank above looser ones, and within a stage the chosen ranker decides. Each result's explain dict gets `stage` and `stages_run`, and its word scores are always under `terms`.
+Turns one query into stricter-to-looser searches: exact phrase, part of the phrase (two neighbouring words), all words, all words with variants, then any word. It stops once it has k results. Articles found at a stricter stage rank above looser ones, and within a stage the chosen ranker decides. Each result's explain dict gets `stage` and `stages_run`, and its word scores are always under `terms`. Feedback tokens from Rocchio (all expansions tagged `prf`) don't take part in the phrase and AND stages; they only count in "any word" and in the score.
 ```python
 from dhvani.rank.parser import parse_and_rank
 parse_and_rank(q, idx, k=10, ranker="net", doc_filter=None)   # ranker: net, lnc or bm25
@@ -126,7 +127,7 @@ df, collection frequency and idf for every term, the most frequent terms (Hindi 
 ```
 
 ## Tests
-86 tests in `partwise-tests/rishit/`, all passing.
+87 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

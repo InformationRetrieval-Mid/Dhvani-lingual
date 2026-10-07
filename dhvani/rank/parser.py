@@ -96,9 +96,20 @@ def and_docs(index, token_alts):
     return result
 
 
+def _is_feedback(token):
+    """Tokens added by pseudo-relevance feedback (Rocchio), not typed by the user."""
+    return bool(token["expansions"]) and all(s == "prf" for _t, _w, s in token["expansions"])
+
+
 def stage_matches(index, query):
-    """Run every stage and return [(stage, set_of_doc_ids)] in order."""
-    tokens = query["tokens"]
+    """Run every stage and return [(stage, set_of_doc_ids)] in order.
+
+    Feedback tokens from Rocchio aren't words the user typed, so they don't
+    take part in the phrase and AND stages. They still count in "any word"
+    and in the ranker's score.
+    """
+    all_tokens = query["tokens"]
+    tokens = [t for t in all_tokens if not _is_feedback(t)] or all_tokens
     exact = [_alternatives(t, variants=False) for t in tokens]
     loose = [_alternatives(t, variants=True) for t in tokens]
 
@@ -113,7 +124,7 @@ def stage_matches(index, query):
     out.append(("all words", and_docs(index, exact)))
     out.append(("all words, with variants", and_docs(index, loose)))
     any_word = set()
-    for alts in loose:
+    for alts in loose + [_alternatives(t, variants=True) for t in all_tokens if _is_feedback(t)]:
         for term in alts:
             for zone in ZONES:
                 any_word.update(d for d, _tf, _pos in index.postings(term, zone))

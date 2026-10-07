@@ -44,7 +44,7 @@ RANKER_NOTES = {
 
 SUGGESTIONS = ["दिल्ली बारिश", "कोहली शतक", "बिहार चुनाव", "शेयर बाजार"]
 
-MATCH_LABELS = {"exact": "Exact", "phonetic": "Phonetic", "xling": "Translated"}
+MATCH_LABELS = {"exact": "Exact", "phonetic": "Phonetic", "xling": "Translated", "prf": "Feedback"}
 
 SENTENCE_END = regex.compile(r"(?<=[।.!?])\s+")
 
@@ -65,6 +65,7 @@ STYLE = """
   --dv-exact: rgba(52, 199, 89, 0.22);
   --dv-phonetic: rgba(0, 122, 255, 0.18);
   --dv-xling: rgba(255, 149, 0, 0.24);
+  --dv-prf: rgba(175, 82, 222, 0.2);
   --dv-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
              "Kohinoor Devanagari", "Noto Sans Devanagari", "Segoe UI", system-ui, sans-serif;
 }
@@ -222,11 +223,13 @@ div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(2
 .dv-row mark.exact { background: var(--dv-exact); }
 .dv-row mark.phonetic { background: var(--dv-phonetic); }
 .dv-row mark.xling { background: var(--dv-xling); }
+.dv-row mark.prf { background: var(--dv-prf); }
 .dv-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.55rem; }
 .dv-chip { font-size: 0.7rem; font-weight: 500; padding: 0.12rem 0.55rem; border-radius: 999px; color: var(--dv-text); }
 .dv-chip.exact { background: var(--dv-exact); }
 .dv-chip.phonetic { background: var(--dv-phonetic); }
 .dv-chip.xling { background: var(--dv-xling); }
+.dv-chip.prf { background: var(--dv-prf); }
 .dv-stage {
   font-size: 0.66rem; font-weight: 500; color: var(--dv-secondary); background: var(--dv-fill);
   border-radius: 999px; padding: 0.05rem 0.45rem;
@@ -338,7 +341,7 @@ def result_row(doc_id, score, explain, index, sources, only_here):
     stage = explain.get("stage")
     stage_tag = f'<span class="dv-stage">{STAGE_LABELS[stage]}</span>' if stage else ""
     chips = "".join(
-        f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS[sources.get(t, "exact")]}</span>'
+        f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS.get(sources.get(t, "exact"), "Match")}</span>'
         for t in terms
     )
     return f"""
