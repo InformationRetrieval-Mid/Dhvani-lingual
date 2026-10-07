@@ -14,12 +14,20 @@ venv/
 ENV/
 
 # Project data: crawled articles, indexes, downloads and eval output stay local.
-# Only the placeholder and Riya's stats reports are kept in git.
+# Only the placeholder, sample, and result documentation are kept in git.
 /data/*
 !/data/.gitkeep
 !/data/auto_candidates.tsv
 !/data/result-documentation/
+!/data/news_sample_300.jsonl
 /data/result-documentation/*.jsonl
+data/*.jsonl
+data/*.json
+data/sitemaps/
+data/cache/
+data/*.txt
+data/*.zip
+*.zip
 
 # Built indexes
 indexes/
