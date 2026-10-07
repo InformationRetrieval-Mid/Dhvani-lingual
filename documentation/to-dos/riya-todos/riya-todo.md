@@ -76,11 +76,11 @@
 
 ## Task 7: Adaptive Recrawling & Event Prioritization
 ### 9. Adaptive Recrawling & Event Prioritization (`recrawl.py`)
-- [ ] Implement sitemap check timestamp tracking per source
-- [ ] Implement active period vs idle period check interval scaling (30m to 6h)
-- [ ] Add HTTP conditional headers (`If-Modified-Since`, `If-None-Match`/ETag)
-- [ ] Implement rolling 60-minute section volume tracking
-- [ ] Implement burst surge detection to route breaking URLs into Front Queue Q0
+- [x] Implement sitemap check timestamp tracking per source
+- [x] Implement active period vs idle period check interval scaling (30m to 6h)
+- [x] Add HTTP conditional headers (`If-Modified-Since`, `If-None-Match`/ETag)
+- [x] Implement rolling 60-minute section volume tracking
+- [x] Implement burst surge detection to route breaking URLs into Front Queue Q0
 
 ## Task 8: Shared Evaluation Tooling
 ### 10. Shared Tooling & Downstream Support (`eval/pool.py`, handoffs)
@@ -97,7 +97,7 @@
 - [x] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [x] `test_crawler.py`: Validate crawl loops, 429 backoff, 403/CAPTCHA disabling, and link harvesting
 - [x] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
-- [ ] `test_format_compliance.py`: Validate schema compliance with `formats.md`
+- [x] `test_format_compliance.py`: Validate schema compliance with `formats.md`
 
 ### 12. Evaluation & Submission Deliverables
 - [ ] Generate deduplication threshold precision/recall table

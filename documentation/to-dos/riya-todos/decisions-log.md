@@ -167,18 +167,66 @@
 ---
 
 ## Task 7: Adaptive Recrawling & Event Prioritization
-- **Adaptive Recrawling & Freshness (EWMA):**
-  - Track source change rate using EWMA: $\lambda_s^{(t)} = \alpha \cdot \frac{\Delta N}{\Delta t} + (1 - \alpha) \cdot \lambda_s^{(t-1)}$ with $\alpha = 0.3$.
-  - Grounded in Cho & Garcia-Molina change-rate model and RFC 6298 network smoothing standards.
-  - Dynamic polling interval $\tau_s \in [30\text{ minutes}, 6\text{ hours}]$, reflecting newsroom publishing cycles.
-  - Use conditional HTTP headers (`If-Modified-Since`, `ETag`) to terminate early on unchanged feeds (`304 Not Modified`).
+- **Adaptive Recrawling & Freshness Engine (`recrawl.py`):**
+  - Implemented `AdaptiveRecrawler` tracking individual publication velocity per news source.
+  - **Velocity Unit Conversion & EWMA Smoothing:**
+    - To accurately match the publication rate unit ($\text{URLs/hour}$) with second-based epoch timestamps, $\Delta t$ is strictly converted:
+      $$\Delta t_{\text{hours}} = \frac{\Delta t_{\text{seconds}}}{3600.0}$$
+    - Observed arrival rate: $\text{observed\_rate} = \frac{\Delta N}{\Delta t_{\text{hours}}}$.
+    - Exponentially Weighted Moving Average (EWMA) smoothing with $\alpha = 0.3$:
+      $$\lambda_s^{(t)} = 0.3 \cdot \text{observed\_rate} + 0.7 \cdot \lambda_s^{(t-1)}$$
+      grounded in the Cho & Garcia-Molina Poisson change-rate model and RFC 6298 smoothing standards.
+  - **Dynamic Polling Interval Scaling ($K = 1800\text{s}$):**
+    - Evaluated interval formula:
+      $$\tau_s = \max\left(\tau_{\min},\; \min\left(\tau_{\max},\; \frac{K}{\max(\lambda_s, 0.0833)}\right)\right)$$
+    - Using $K = \text{MIN\_POLL\_INTERVAL\_SECONDS} = 1800\text{s}$ strictly bounds nominal crawling ($\lambda_s = 1.0\text{ URL/hour}$) to $1800\text{s}$ ($30\text{ minutes}$), scaling up to $21600\text{s}$ ($6\text{ hours}$) during idle periods ($\lambda_s \le 0.0833\text{ URL/hour}$, i.e. 1 URL per 12 hours). High-velocity periods ($\lambda_s > 1.0$) clamp safely at $\tau_{\min} = 1800\text{s}$.
+  - **HTTP 304 Conditional Bandwidth Optimization & Scheduling Anchor:**
+    - Sitemap responses cache `ETag` and `Last-Modified` headers, injected conditionally as `If-None-Match` and `If-Modified-Since`.
+    - On `304 Not Modified`, the crawler records $\Delta N = 0$ URLs without redownloading or re-parsing XML. The standard EWMA formula smoothly decays $\lambda_s$, naturally extending the re-poll interval without requiring arbitrary penalty multipliers.
+    - **Anchor Timestamp Invariant:** Upon receiving 304, `self.last_checked[source_slug] = now` is updated to the timestamp of the 304 check. Subsequent evaluations of `should_poll(src, now)` evaluate $(\text{now} - \text{last\_checked}) \ge \tau_s$ using the newly stretched EWMA interval, ensuring the next poll is scheduled strictly starting from this 304 check.
+  - **Velocity Measured by Newly Observed URLs ($\Delta N$) vs Raw Feed Size:**
+    - When a sitemap returns 200 OK, candidate URLs already encountered in the crawler's seen set (`frontier.seen_urls`) are filtered out.
+    - Arrival rate estimation $\Delta N / \Delta t$ uses only the count of **newly observed/published URLs** ($\Delta N = \text{len(new\_cands)}$), rather than simply the total number of entries in the sitemap XML response. This prevents historical XML archives from falsely inflating runtime publication velocity.
+  - **Bootstrap Seeding Baseline Decoupling:**
+    - During initial bootstrap, sitemaps establish header caches and seed the frontier, but set `change_rates[source] = 1.0` and `last_checked[source] = now`, establishing a clean nominal baseline before runtime velocity is tracked.
 
-- **Event / Burst-Aware Prioritization:**
-  - Detect breaking news surges using a rolling 60-minute window against a 6-hour baseline: $\text{BurstScore} = \frac{\text{Count}_{1\text{h}}}{\text{MovingAvg}_{6\text{h}} + 1} > 2.0$.
-  - Biased random sampling across Front Queues: $P(Q_0)=0.60, P(Q_1)=0.25, P(Q_2)=0.10, P(Q_3)=0.05$.
-  - Following Mercator (Heydon & Najork, 1999), biased sampling ensures starvation-free prioritization without blocking routine sitemaps during bursts.
-  - Politeness strictly enforced per-host at back queues and min-heap (8.0s per host).
-  - Burst threshold ($2.0$) and queue weights ($60\%$) will be calibrated via sensitivity tests once live data is flowing.
+- **Burst-Aware Event Prioritization Engine:**
+  - **Topical Surge Detection:** Decoupled from source velocity; publication volume is tracked per topical category across all news portals using rolling deques.
+  - **Dual Rolling Windows:**
+    - Acute window: $W_{\text{acute}} = 3600\text{s}$ ($1\text{ hour}$).
+    - Baseline moving window: $W_{\text{baseline}} = 21600\text{s}$ ($6\text{ hours}$).
+    - Moving hourly baseline: $\text{MovingAvg}_{6\text{h}} = \frac{\text{Count}_{6\text{h}}}{6.0}$.
+    - Surge formula:
+      $$\text{BurstScore} = \frac{\text{Count}_{1\text{h}}}{\text{MovingAvg}_{6\text{h}} + 1.0}$$
+    - When $\text{BurstScore} > 2.0$, the category enters `BURST` state.
+  - **Conservative Category Routing:**
+    - Only candidate URLs with a verified category currently undergoing an active burst ($\text{BurstScore} > 2.0$) route into **Front Queue $Q_0$** (60% biased sampling weight).
+    - Unverified, unknown, or non-bursting categories default strictly to routine sitemap queue $Q_1$ (25% weight).
+  - **Automatic Event Decay:**
+    - As breaking events subside and publication counts fall outside the acute 1-hour window, $\text{BurstScore}$ drops $\le 2.0$ and priority automatically normalizes back to $Q_1$.
+    - Stale timestamps older than 6 hours are automatically pruned from memory.
+
+- **Non-Preemptive FIFO Invariant in Mercator Frontier:**
+  - Per-host back queues in `MercatorFrontier` are strictly FIFO.
+  - Biased selection ($Q_0$) prioritizes which URL is selected to refill empty host back queue slots, but **never preempts or reorders URLs already inside a host's back queue**.
+  - All outgoing requests remain strictly gated by the min-heap at $\ge 8.0\text{s}$ per host, ensuring politeness is never compromised during breaking news bursts.
+
+- **Empirical Test Result & Verification:**
+  - Validated in [`test_recrawl.py`](../../../partwise-tests/riya/test_recrawl.py) (11/11 tests passing):
+    1. EWMA rate smoothing: Verified $\Delta t$ hour conversion and $\alpha = 0.3$ smoothing across varying intervals.
+    2. Polling interval bounds: Verified $K=1800\text{s}$ formula and clamping to $[1800\text{s}, 21600\text{s}]$ across rates from $0.0$ to $5.0$.
+    3. Conditional headers: Verified case-insensitive `ETag`/`Last-Modified` extraction and `If-None-Match`/`If-Modified-Since` generation.
+    4. HTTP 304 handling: Verified $\Delta N = 0$ rate decay, `last_checked` update to 304 timestamp, and `should_poll` scheduling.
+    5. Burst score calculation: Verified acute 1h vs baseline 6h ratio on steady-state ($0.5$) vs surge ($3.0$).
+    6. Surge detection & routing: Verified $Q_0$ assignment for active burst categories and URL paths.
+    7. Conservative routing: Verified fallback to $Q_1$ for unverified/unknown categories.
+    8. Burst decay: Verified automatic reversion to $Q_1$ after 1 hour and deque pruning after 6 hours.
+    9. Non-preemptive FIFO invariant: Verified $Q_0$ appends to the tail of host back queue without preempting existing items.
+    10. NewsCrawler integration: Verified mock crawl loop triggers conditional sitemap polling and processes 304 responses.
+    11. Newly observed URLs velocity tracking: Verified that newly observed URLs count ($\Delta N$) updates velocity rather than total sitemap response count.
+  - Validated in [`test_format_compliance.py`](../../../partwise-tests/riya/test_format_compliance.py) (2/2 tests passing):
+    - 100% pass across all 300 records in `data/news_sample_300.jsonl` verifying all 12 required fields, IST dates, zero author names, and geographic invariants.
+  - Overall test suite: 72/72 passing tests across all modules.
 
 ---
 

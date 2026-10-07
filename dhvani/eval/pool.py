@@ -1,6 +1,7 @@
 """TREC Run Pooling Tool (Format 5 in formats.md)."""
 
 import argparse
+from pathlib import Path
 from typing import Dict, List, Set
 
 
@@ -25,6 +26,21 @@ def main():
     parser.add_argument("--out", type=str, default="data/judgments_pool.txt", help="Output judgment file")
     args = parser.parse_args()
 
+    pools = pool_runs(args.runs, top_k=args.top_k)
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    total_pairs = 0
+    with open(out_path, "w", encoding="utf-8") as f:
+        for qid in sorted(pools.keys()):
+            for doc_id in sorted(pools[qid]):
+                f.write(f"{qid} 0 {doc_id} 0\n")
+                total_pairs += 1
+
+    print(f"Pooled {total_pairs} query-doc pairs across {len(pools)} topics into {args.out}")
+
 
 if __name__ == "__main__":
     main()
+
+
