@@ -58,6 +58,7 @@ Last updated: 7 Oct, around 16:10 (teammates' status read from their branches on
 ## Next
 
 ### Rishit: required
+- [x] ~~Results file started (`documentation/results/rishit-results.md`), with early speed-ups numbers on the 300 articles~~
 - [ ] Run every experiment on the frozen corpus: lnc.ltc vs BM25, translation off vs on, stemming modes, speed-ups, wins and losses, and the plots
 - [ ] Judging the pooled results with the team
 - [ ] Learning-to-rank (after judging)
