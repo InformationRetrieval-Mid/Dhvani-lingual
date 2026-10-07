@@ -13,15 +13,23 @@ env/
 venv/
 ENV/
 
-# Project Data (Crawled articles stay local, per policy)
+# Project data: crawled articles, indexes, downloads and eval output stay local.
+# Only the placeholder, sample, and result documentation are kept in git.
+/data/*
+!/data/.gitkeep
+!/data/auto_candidates.tsv
+!/data/news_sample_300.jsonl
 data/*.jsonl
-data/result-documentation/*.jsonl
 data/*.json
 data/sitemaps/
 data/cache/
 data/*.txt
-!data/.gitkeep
-!data/news_sample_300.jsonl
+data/*.zip
+*.zip
+
+# Built indexes
+indexes/
+*.pkl
 
 # IDE & OS
 .vscode/
