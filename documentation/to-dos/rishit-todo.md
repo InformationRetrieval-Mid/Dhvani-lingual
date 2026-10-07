@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 14:35 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -47,7 +47,7 @@ Last updated: 7 Oct, around 14:35 (teammates' status read from their branches on
 ## In progress
 
 ### Rishit: next up
-- [ ] Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored
+- [x] ~~Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored~~
 - [ ] Speed-ups results table in the experiment runner: overlap with full search and articles scored
 - [ ] My 8 information needs, picked from stories in Riya's crawl
 - [ ] Merge `rishit` into `main` again after those three

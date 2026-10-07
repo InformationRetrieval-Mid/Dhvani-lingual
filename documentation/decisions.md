@@ -129,3 +129,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Ask for 3k results before collapsing.** Collapsing can remove results, so the ranker returns three times as many and the list is cut to k afterwards. That way the top k still has k different stories.
 
 **Extra explain info stays out of the term scores.** lnc.ltc and BM25 return a plain dictionary of term scores. When kal or collapsing add their own info, the term scores move under "terms" so the app doesn't mistake "also in" for a query word.
+
+**Speed-ups run on lnc.ltc in the app and CLI.** They're shortcuts for cosine scoring, so they're compared against plain lnc.ltc. The app keeps them off by default and shows how many articles were scored, so the saving is visible next to the results.
+
+**Champion list size grows with the corpus.** r is N / 20 with a minimum of 5, so the lists stay useful on the 300-article sample and on the full crawl without retuning.

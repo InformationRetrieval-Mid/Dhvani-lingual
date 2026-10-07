@@ -71,3 +71,9 @@ def test_authority_breakdown_in_explain():
 def test_no_authority_uses_plain_recency():
     text = cli.run(["रेल लाइन उद्घाटन", "--k", "1", "--explain", "--no-authority"])
     assert "x recency" in text and "PageRank" not in text
+
+
+def test_speedups_report_how_many_were_scored():
+    for name in ("elim", "champions", "tiers"):
+        text = cli.run(["दिल्ली बारिश", "--k", "3", "--speedup", name])
+        assert "Scored" in text and "articles that share a query word" in text
