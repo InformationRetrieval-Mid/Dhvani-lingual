@@ -20,6 +20,8 @@ data/*.json
 data/sitemaps/
 data/cache/
 data/*.txt
+data/*.zip
+*.zip
 !data/.gitkeep
 !data/news_sample_300.jsonl
 

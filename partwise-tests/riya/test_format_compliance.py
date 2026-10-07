@@ -132,3 +132,35 @@ def test_sample_300_file_compliance():
             check_record_compliance(record)
         except AssertionError as e:
             pytest.fail(f"Record #{i} (doc_id={record.get('doc_id')}) failed compliance: {e}")
+
+
+def test_full_corpus_dedup_file_compliance():
+    """Validate that every single record in data/news_dedup.jsonl passes all compliance checks and graph invariants."""
+    dedup_path = PROJECT_ROOT / "data" / "news_dedup.jsonl"
+    if not dedup_path.exists():
+        pytest.skip(f"Deduplicated corpus file not found at {dedup_path}")
+
+    articles = []
+    with open(dedup_path, "r", encoding="utf-8") as f:
+        for idx, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            rec = json.loads(line)
+            try:
+                check_record_compliance(rec)
+            except AssertionError as e:
+                pytest.fail(f"Record #{idx} ({rec.get('doc_id')}) failed compliance: {e}")
+            articles.append(rec)
+
+    assert len(articles) >= 5000, f"Expected >= 5000 articles, got {len(articles)}"
+
+    # Invariant checks across full corpus
+    doc_ids = {a["doc_id"] for a in articles}
+    for idx, rec in enumerate(articles, 1):
+        if rec["dup_of"] is not None:
+            assert rec["dup_of"] in doc_ids, f"Record #{idx} ({rec['doc_id']}) dup_of pointer not in corpus"
+            assert rec["dup_of"] != rec["doc_id"], f"Record #{idx} ({rec['doc_id']}) dup_of points to itself"
+        for link_target in rec.get("links", []):
+            assert link_target in doc_ids, f"Record #{idx} ({rec['doc_id']}) dangling link {link_target}"
+
