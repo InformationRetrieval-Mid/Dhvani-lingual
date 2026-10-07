@@ -11,6 +11,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Stop words, idf and Zipf | Frozen corpus (5,000 articles) |
 | Dense re-ranking vs sparse only | Waiting for judgments |
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
+| Sanity check without judgments | Frozen corpus (5,000 articles) |
 | Query difficulty hint | Frozen corpus (5,000 articles) |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
@@ -108,3 +109,45 @@ The 15 most widespread words, by document frequency (df), with collection freque
 - **Specificity separates them cleanly.** Every needs query has a word with idf above 1.2; every vague query stays below 1.0. The threshold sits at 1.0.
 - **Clarity doesn't work here.** It stays in a narrow band for real queries, and "news" scores highest of all because its top results are near-identical listing pages. It's kept as a reported number only.
 - **11 of the 64 needs queries are flagged**, all because only the "any word" stage matched: 10 Hinglish or messy forms of Viraja's needs and the messy form of R01. Those are the forms where the phonetic layer didn't find every word, so the flag points at real weak spots.
+
+## Sanity check without judgments
+
+> **Frozen corpus, no judgments needed.** These come straight from the run files: 64 queries (R01 to R08, V01 to V08, four forms each), 4 stemming modes x 4 rankers, top 10.
+
+- **How to rerun:** `python -m dhvani.eval.experiments --out data/eval/full`, then `python -m dhvani.eval.sanity`
+
+### Do the four forms of a need find the same articles?
+Share of the Hindi form's top 10 that each other form also returns, averaged over the 16 needs.
+
+| Run | Hinglish | Messy | English |
+|---|---|---|---|
+| none, lnc.ltc | 0.24 | 0.26 | 0.21 |
+| none, BM25 | 0.34 | 0.33 | 0.28 |
+| none, net score | 0.31 | 0.24 | 0.22 |
+| none, fusion | 0.34 | 0.29 | 0.19 |
+| light, BM25 | **0.38** | **0.33** | **0.32** |
+| light, net score | 0.29 | 0.22 | 0.22 |
+| auto, net score | 0.31 | 0.24 | 0.21 |
+| aggr, BM25 | 0.34 | 0.31 | 0.27 |
+
+English form with translation off vs on (no stemming, net score): **0.17 → 0.22**.
+
+### Do the systems agree with each other?
+Share of the same top 10 (overlap) and Kendall's tau on the order of the articles both returned.
+
+| Pair | Overlap | Tau |
+|---|---|---|
+| lnc.ltc vs BM25 | 0.78 | 0.70 |
+| lnc.ltc vs fusion | 0.81 | 0.60 |
+| BM25 vs net score | 0.49 | 0.42 |
+| lnc.ltc vs net score | 0.52 | 0.50 |
+| no stemming vs light (net) | 0.83 | 0.85 |
+| no stemming vs aggressive (net) | 0.87 | 0.87 |
+| no stemming vs auto (net) | 0.99 | 0.99 |
+
+**What it shows**
+- **The forms agree much less than the demo queries suggest.** Only a quarter to a third of the Hindi form's top 10 comes back for the Hinglish, messy and English forms. Hinglish and English words that don't map to the right Hindi word (देल्ही for delhi, missing dictionary words) send the search elsewhere. This is the main limitation to report.
+- **Translation helps English queries.** Agreement with the Hindi form goes from 0.17 to 0.22 with the dictionary on.
+- **BM25 with light stemming agrees best across forms**, so it's the most robust to how the query is written.
+- **lnc.ltc and BM25 mostly agree; the net score differs most**, because zones, proximity and authority reorder a lot. Judgments will say whether that's better or worse.
+- **Auto stemming is almost the same as no stemming** on the frozen corpus (0.99), because its candidates were learned on the 300-article sample and few of them apply to 5,000 articles.
