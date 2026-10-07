@@ -32,16 +32,16 @@ Last updated: 7 Oct
 - [x] Cross-lingual layer: English words become weighted Hindi terms (news dictionary in the repo, MUSE optional)
 - [x] Translation switch in the app's Filters popover and `--no-xling` in the CLI
 - [x] Metrics: P@k, R@k, MAP, nDCG and 11-point PR, checked against the lecture examples
+- [x] Experiment runner: every stemming mode x every ranker x every query, run files, tables, stemming comparison, translation off vs on
 ## In progress
 
 ### Rishit
-- Next up: the experiment runner.
+- Next up: stop words and idf on the Hindi corpus.
 
 ## Next
 
 ### Rishit: required
 - [ ] Stop words and idf on the Hindi corpus: top-idf table, Zipf plot, stop words kept vs removed vs idf only
-- [ ] Experiment runner: every stemming mode x every ranker x every query, run files, tables and PR curves, including the stemming comparison
 - [ ] Speed-ups: index elimination, champion lists, recent-news tier
 - [ ] Date-aware "kal"
 - [ ] Collapsing duplicate wire stories ("also in: ...")

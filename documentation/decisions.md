@@ -81,3 +81,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Only top-level data/ is ignored.** The old `.gitignore` rule ignored every folder called data, which would have kept the dictionary out of git. It now only ignores the top-level `data/` folder where crawled articles and downloads live.
 
 **Metrics checked against the lecture.** The tests use the lecture's own worked examples: AP of 0.62 and 0.44 giving MAP 0.53, P@5 of 0.6 and R@5 of 0.5. If those numbers match, we can trust the tables built on top of them.
+
+**Judgments per information need.** Each need is written several ways (Hindi, Hinglish, English) and judged once. Every form is scored against the same judged articles, so we can compare how well each form does on equal terms.
+
+**The runner skips what isn't built yet.** Stemming modes that don't exist yet are skipped with a note instead of crashing, so the runner works from day one and fills in as the indexes arrive.

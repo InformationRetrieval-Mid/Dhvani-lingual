@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after adding the metrics
+Last updated: 7 Oct, after adding the experiment runner
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -26,7 +26,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `6063301` parser stages shown in the app and the cli | `app/streamlit_app.py`, `app/cli.py` |
 | `8cc6b07` cross-lingual layer for english queries | `dhvani/rank/xling.py` and the English to Hindi news dictionary |
 | `69faf76` translation switch in the app and cli | `app/streamlit_app.py`, `app/cli.py` |
-| metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
+| `561d129` metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
+| experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
 
 ## How to use it
 
@@ -110,8 +111,15 @@ from dhvani.eval.metrics import evaluate, read_qrels, read_run
 per_query, means = evaluate(rankings, qrels_by_query, k=10)   # means: P@10, R@10, MAP, nDCG@10
 ```
 
+**Experiment runner** (`dhvani/eval/experiments.py`)
+Runs every stemming mode x every ranker x every query, writes TREC run files to `data/eval/runs/`, and prints the full results table (overall and per query form), the stemming comparison, per-query wins and losses against no stemming, and English queries with translation off vs on. Modes that aren't built yet are skipped. `dhvani/eval/sample/` has made-up queries and judgments for the sample index so it runs today.
+```bash
+.venv/bin/python -m dhvani.eval.experiments
+.venv/bin/python -m dhvani.eval.experiments --queries eval/queries.tsv --qrels eval/qrels_news.txt
+```
+
 ## Tests
-76 tests in `partwise-tests/rishit/`, all passing.
+81 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -122,4 +130,4 @@ per_query, means = evaluate(rankings, qrels_by_query, k=10)   # means: P@10, R@1
 - **Riya:** `links` and `dup_of` in the article file, for PageRank and duplicate collapsing.
 
 ## Next
-The experiment runner, the stop words and idf analysis, then speed-ups, PageRank and authority.
+The stop words and idf analysis, then speed-ups, PageRank and authority.
