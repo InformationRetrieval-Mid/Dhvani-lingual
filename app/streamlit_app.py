@@ -131,6 +131,9 @@ html, body, [class*="st-"], .stMarkdown, input, textarea, button, select {
 }
 .dv-wordmark { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; color: var(--dv-text); }
 .dv-bar-meta { font-size: 0.78rem; color: var(--dv-tertiary); }
+.dv-bar-right { display: flex; align-items: center; gap: 1.1rem; }
+.dv-bar-link { font-size: 0.82rem; color: var(--dv-accent, #0071e3) !important; text-decoration: none !important; }
+.dv-bar-link:hover { text-decoration: underline !important; }
 
 /* Hero: big type with tight leading and negative tracking, centred. */
 .dv-hero { text-align: center; margin: 0 auto 2rem; max-width: 760px; }
@@ -478,7 +481,8 @@ def main():
         f"""
         <div class="dv-bar"><div class="dv-bar-inner">
           <span class="dv-wordmark">Dhvani</span>
-          <span class="dv-bar-meta">{base_index.N} articles indexed</span>
+          <span class="dv-bar-right"><span class="dv-bar-meta">{base_index.N} articles indexed</span>
+          <a class="dv-bar-link" href="/judge" target="_self">Judging</a></span>
         </div></div>
         <div class="dv-hero">
           <div class="dv-eyebrow">Hindi news search</div>

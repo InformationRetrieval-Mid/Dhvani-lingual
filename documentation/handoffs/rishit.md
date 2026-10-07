@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after the corpus was frozen
+Last updated: 7 Oct, after adding the sanity check and the judging page
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -93,7 +93,9 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `ca8c138` mmr diversification so the top results cover more stories | `dhvani/rank/diversify.py`, `app/streamlit_app.py`, `app/cli.py` |
 | `4c254e4` query difficulty hint: low confidence when every word is common or nothing has all the words | `dhvani/rank/difficulty.py`, `app/streamlit_app.py`, `app/cli.py` |
 | `b241c0d` k-gram index built with document frequencies (from_index) | `dhvani/rank/real_index.py` |
-| frozen corpus noted in the to-do, handoff and results | `documentation/` |
+| `349e81e` frozen corpus noted in the to-do, handoff and results | `documentation/` |
+| sanity check without judgments: agreement between query forms and between systems | `dhvani/eval/sanity.py` |
+| judging page and per-need pool, judgments kept in the repo | `dhvani/eval/judge.py`, `app/pages/judge.py`, `judgments/` |
 
 ## How to use it
 
@@ -273,17 +275,31 @@ from dhvani.rank.difficulty import predict
 hint = predict(q, parse_and_rank(q, idx, k=10), idx)   # hint["low_confidence"], hint["reasons"]
 ```
 
+**Sanity check** (`dhvani/eval/sanity.py`)
+Evaluation that needs no judgments, from the run files. Cross-form agreement: for each need, how much of the Hindi form's top 10 its Hinglish, messy and English forms also return, plus the English form with translation off. System agreement: top-10 overlap and Kendall's tau between every pair of rankers and of stemming modes. Numbers are in the results file.
+```bash
+.venv/bin/python -m dhvani.eval.sanity --runs data/eval/full/runs
+```
+
+**Judging** (`dhvani/eval/judge.py`, `app/pages/judge.py`, `judgments/`)
+`python -m dhvani.eval.judge` pools the top 10 of every run for every form of a need into one list per need (`judgments/pool.tsv`, 804 articles for the 16 needs, about 50 each), so each article is judged once per need, as `formats.md` says. The "judge" page in the app's sidebar shows the need, then each pooled article (paper, date, headline and the start of the body, with the Hindi query words highlighted), with buttons for 0 not relevant, 1 partly, 2 fully, and Skip. It picks your needs by name (R for Rishit, V for Viraja), shows progress, and saves after every click to `judgments/qrels_<person>.txt` in the `formats.md` judgment format. One file per person, all in git (ids and grades only, no article text), so four people can judge at once without conflicts. `all_judgments()` merges the files, keeping the higher grade if two people judged the same pair, and the experiment runner uses them by default.
+```bash
+.venv/bin/python -m dhvani.eval.judge --runs data/eval/full/runs   # rebuild the pool
+.venv/bin/streamlit run app/streamlit_app.py                         # then open "judge" in the sidebar
+.venv/bin/python -m dhvani.eval.experiments --out data/eval/full     # metrics once there are judgments
+```
+
 ## Tests
-184 tests in `partwise-tests/rishit/`, all passing.
+196 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
 
 ## What I need from others
-- **Riya:** pool by need rather than by query form (her script works on my run files, but pools R01_hi, R01_en and so on separately), and her 8 information needs.
-- **Dhrithi:** her 8 information needs.
+- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them). Pooling per need is now done in `dhvani/eval/judge.py`.
+- **Dhrithi:** her 8 information needs (need ids starting with D). Also: auto stemming is 99% the same as no stemming on the frozen corpus, because its candidates came from the 300-article sample; rebuilding them on the 5,000 would make the third column count.
 - **Viraja:** rare spellings still beat common ones on the frozen corpus ("bhukamp" → भूकम्प in 1 article instead of भूकंप in 35, "delhi" → देल्ही instead of दिल्ली, "iyer" → एयर instead of अय्यर); the document frequency should count for more than the spelling distance.
-- **Everyone:** judgments, once the runs are pooled.
+- **Everyone:** judge your own 8 needs on the judging page and push your `judgments/qrels_<name>.txt`.
 
 ## Next
-Evaluation that works without judgments (agreement between systems and between query forms), learning translations from Jagran's bilingual headlines, significance tests and learning-to-rank features, while waiting for the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.
+Judging my 8 needs, then learning translations from Jagran's bilingual headlines, significance tests and learning-to-rank features, while waiting for the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.

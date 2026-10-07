@@ -282,7 +282,8 @@ def main(argv=None):
     parser.add_argument("--queries", default=None,
                         help="queries tsv; default: every need in documentation/needs/ with the real index, "
                              "the made-up sample queries with the sample index")
-    parser.add_argument("--qrels", default=None, help="judgments file; default: none with the real index")
+    parser.add_argument("--qrels", default=None,
+                        help="judgments file; default: everyone's files in judgments/ with the real index")
     parser.add_argument("--out", default=OUT_DIR)
     parser.add_argument("--ranker", default="net", help="ranker for the stemming comparison table")
     args = parser.parse_args(argv)
@@ -295,7 +296,8 @@ def main(argv=None):
     if args.qrels:
         qrels = read_qrels(args.qrels)
     else:
-        qrels = {} if real else read_qrels(SAMPLE_DIR / "qrels.txt")
+        from dhvani.eval.judge import all_judgments
+        qrels = all_judgments() if real else read_qrels(SAMPLE_DIR / "qrels.txt")
     print(f"Index: {'real' if real else 'sample'}")
     results, per_query_ap, skipped = run_experiments(queries, qrels, out_dir=args.out)
 
