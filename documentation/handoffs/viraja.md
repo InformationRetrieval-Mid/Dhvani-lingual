@@ -173,6 +173,24 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
     Devanagari term that romanises to the query (कल for "kal") is **not** treated
     as a self-match — it's a real phonetic hit and kept.
 
+15. **Real-corpus audit (83k-term vocab) — four fixes.** Stress-testing against
+    the full 5k-article index surfaced issues the 20-doc sample never did:
+    - **Speed:** candidate generation now counts shared k-grams first and scores
+      Jaccard only on the top overlappers (a common bigram sits in thousands of
+      terms). Per-word latency dropped from ~300–2800 ms to ~30–170 ms.
+    - **Devanagari-only expansions:** a phonetic variant must be a Devanagari
+      term, killing the Roman noise the real vocab is full of (laxmi→laxman,
+      iyer→year, kal→kl).
+    - **Corpus frequency (df):** `KGramIndex` takes a `df` map; among homophones
+      the common corpus word wins (modi→**मोदी** not मॉड, kohli→**कोहली**).
+    - **Tiered quality gate:** English-reading words need a *tight*
+      transliteration to expand, so weather/earthquake/farmers expand to nothing
+      while cricket→क्रिकेट, market→मार्केट and names still work; the gate applies
+      to same-code candidates too (earlier they bypassed it).
+    **Rishit:** build the k-gram index with `KGramIndex.from_index(load_index("none"))`
+    (one line in `dhvani/rank/real_index.py:_phonetic_tools`) so df is carried —
+    otherwise homophone ranking falls back to spelling-distance only.
+
 14. **English words are detected properly and not phonetically expanded.** The
     old 40-word English seed meant real English words (farmers, snow, earthquake,
     worried) fell through to "Hinglish" and got phonetic junk (farmers → हामॉन्स).
