@@ -11,6 +11,7 @@ score breakdown for each result.
 """
 
 import argparse
+import html
 import math
 import sys
 from collections import defaultdict
@@ -156,7 +157,7 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
     stage = explain.get("stage")
     out.append(f"#{i}  {doc_id}  score {score:.4f}" + (f"  [{STAGE_LABELS[stage]}]" if stage else ""))
     if article:
-        out.append(f"    {article['headline']}")
+        out.append(f"    {html.unescape(article.get('headline', ''))}")
     out.append(f"    {meta.get('source')} · {meta.get('section')} · {(meta.get('date') or '')[:10]}")
     terms = explain.get("terms", explain)
     if ranker == "rrf" and explain.get("rrf"):
@@ -314,7 +315,7 @@ def run(argv=None):
             explain_result(out, i, doc_id, score, explain, index,
                            "lnc" if args.speedup else args.ranker, parts.get(doc_id))
         else:
-            headline = getattr(index, "articles", {}).get(doc_id, {}).get("headline", "")
+            headline = html.unescape(getattr(index, "articles", {}).get(doc_id, {}).get("headline", ""))
             stage = explain.get("stage")
             tag = f"  [{STAGE_LABELS[stage]}]" if stage else ""
             kal = explain.get("kal")

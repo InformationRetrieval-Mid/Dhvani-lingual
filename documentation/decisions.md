@@ -236,3 +236,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Randomization test as the main significance test.** It makes no assumption about how AP is distributed, which matters with a few dozen queries; the t-test is shown next to it for comparison.
 
 **Logistic regression for learning to rank, tested leave-one-need-out.** With a few hundred judged pairs a handful of weights is all the data supports. Holding out whole needs (not single queries) stops the four forms of a need from leaking into each other's training data.
+
+**One script for the whole part.** `scripts/rishit_results.py` runs the tests, every evaluation and a demo of the queries that show the system best (the same need in Hindi, Hinglish and English, the assignment's "kal ka mausam", date-aware kal, fusion, a low-confidence warning and one --explain run), so the results and the demo can be regenerated in one go before the report and video.

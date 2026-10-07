@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding significance tests and learning-to-rank
+Last updated: 7 Oct, after adding the run-everything script
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -17,6 +17,11 @@ Last updated: 7 Oct, after adding significance tests and learning-to-rank
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
 Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to rank fusion.
+
+**Run everything in my part at once** (tests, every evaluation, then a demo of the best queries; about 3 minutes):
+```bash
+.venv/bin/python scripts/rishit_results.py            # add --quick for just the tests and the demo
+```
 
 **Setup.**
 ```bash
@@ -105,8 +110,9 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `8ce491a` listing pages and horoscopes pushed below real articles | `dhvani/rank/quality.py`, `dhvani/rank/data/page_types.tsv`, `app/streamlit_app.py`, `app/cli.py` |
 | `81f5271` judging pool rebuilt from the current runs (641 articles) | `judgments/pool.tsv`, `documentation/` |
 | `726bce6` decode html entities in headlines before showing them | `app/streamlit_app.py` |
-| evaluation runs push listing pages down, pool extended (802 articles) | `dhvani/eval/experiments.py`, `dhvani/eval/judge.py`, `judgments/pool.tsv` |
-| significance tests and learning-to-rank | `dhvani/eval/significance.py`, `dhvani/eval/ltr.py`, `dhvani/eval/experiments.py` |
+| `06800e3` evaluation runs push listing pages down, pool extended (802 articles) | `dhvani/eval/experiments.py`, `dhvani/eval/judge.py`, `judgments/pool.tsv` |
+| `b798dc3` significance tests and learning-to-rank | `dhvani/eval/significance.py`, `dhvani/eval/ltr.py`, `dhvani/eval/experiments.py` |
+| one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
 
 ## How to use it
 
