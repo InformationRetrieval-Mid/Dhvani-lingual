@@ -171,3 +171,65 @@ def search_champions(query, index, champions, k=10, doc_filter=None):
         "fell_back": fell_back,
     }
     return _top(scores, contributions, k), stats
+
+
+# --- Recent-news tiers ------------------------------------------------------
+#
+# Lecture 7's tiered index: split articles into tiers of decreasing
+# importance and search the top tier first, dropping to the next tier only
+# if it doesn't yield k results. For news, importance is freshness: the
+# newest articles are tier 0. "Now" is the newest article in the index, the
+# same as the recency score, so results don't depend on the real clock.
+
+from datetime import datetime  # noqa: E402
+
+DEFAULT_TIER_DAYS = (2, 7, None)   # last 2 days, last week, everything older
+
+
+def _newest(index):
+    dates = [m["date"] for m in index.meta.values() if m.get("date")]
+    return max(datetime.fromisoformat(d) for d in dates) if dates else None
+
+
+class RecencyTiers:
+    def __init__(self, index, tier_days=DEFAULT_TIER_DAYS, now=None):
+        self.tier_days = tier_days
+        now = now or _newest(index)
+        self.tier_of = {}
+        for doc_id, meta in index.meta.items():
+            if not meta.get("date") or now is None:
+                self.tier_of[doc_id] = len(tier_days) - 1
+                continue
+            age = (now - datetime.fromisoformat(meta["date"])).total_seconds() / 86400
+            for i, limit in enumerate(tier_days):
+                if limit is None or age <= limit:
+                    self.tier_of[doc_id] = i
+                    break
+
+    def size(self, tier):
+        return sum(1 for t in self.tier_of.values() if t == tier)
+
+
+def search_tiered(query, index, tiers, k=10, doc_filter=None):
+    """Search tier 0 first; add the next tier only if there are fewer than k results."""
+    qvec = query_vector(query, index)
+    all_candidates = set()
+    for term in qvec:
+        all_candidates.update(_doc_tf(index, term))
+
+    results, stats_tiers, candidates = [], [], set()
+    for tier in range(len(tiers.tier_days)):
+        candidates |= {d for d in all_candidates if tiers.tier_of.get(d) == tier}
+        scores, contributions = _score(qvec, index, candidates, doc_filter)
+        results = _top(scores, contributions, k)
+        stats_tiers.append(tier)
+        if len(results) >= k:
+            break
+
+    stats = {
+        "method": "recent-news tiers",
+        "tiers_used": stats_tiers,
+        "scored": len(candidates),
+        "full_candidates": len(all_candidates),
+    }
+    return results, stats

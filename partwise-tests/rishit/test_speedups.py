@@ -125,3 +125,44 @@ def test_static_scores_pull_an_article_into_the_list():
     loser = next(d for d, _, _ in idx.postings("बारिश", "body") if d not in plain)
     boosted = ChampionLists(idx, r=1, static_scores={loser: 10.0}).champions("बारिश")
     assert boosted == [loser]
+
+
+# --- recent-news tiers -------------------------------------------------------
+
+from dhvani.rank.speedups import RecencyTiers, search_tiered  # noqa: E402
+
+
+def test_newest_articles_land_in_tier_0():
+    idx = SampleIndex.load()
+    tiers = RecencyTiers(idx, tier_days=(1, 2, None))
+    # Newest article is 5 Oct 21:30; jagran_1001 (5 Oct 08:10) is under a day old,
+    # livehindustan_4001 (3 Oct 07:45) is more than 2 days old.
+    assert tiers.tier_of["jagran_1001"] == 0
+    assert tiers.tier_of["livehindustan_4001"] == 2
+    assert sum(tiers.size(t) for t in range(3)) == idx.N
+
+
+def test_stops_at_the_first_tier_with_enough_results():
+    idx = SampleIndex.load()
+    tiers = RecencyTiers(idx, tier_days=(1, 2, None))
+    results, stats = search_tiered(exact_query("बारिश"), idx, tiers, k=1)
+    assert stats["tiers_used"] == [0]
+    assert stats["scored"] < stats["full_candidates"]
+    assert tiers.tier_of[results[0][0]] == 0
+
+
+def test_drops_to_older_tiers_when_needed():
+    idx = SampleIndex.load()
+    tiers = RecencyTiers(idx, tier_days=(1, 2, None))
+    results, stats = search_tiered(exact_query("बारिश"), idx, tiers, k=5)
+    assert stats["tiers_used"] == [0, 1, 2]
+    assert len(results) == 5
+
+
+def test_all_tiers_give_the_exact_ranking():
+    idx = SampleIndex.load()
+    q = exact_query("मौसम बारिश")
+    tiers = RecencyTiers(idx, tier_days=(1, 2, None))
+    fast, _ = search_tiered(q, idx, tiers, k=100)
+    exact = search(q, idx, k=100)
+    assert [d for d, _, _ in fast] == [d for d, _, _ in exact]

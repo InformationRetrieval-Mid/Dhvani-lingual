@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding champion lists
+Last updated: 7 Oct, after adding recent-news tiers
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -66,7 +66,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `ae172cd` stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
 | `fea28e2` feedback match type in the app and parser | `app/streamlit_app.py`, `dhvani/rank/parser.py` |
 | `60ac8d1` index elimination: skip low-idf words and score only real contenders | `dhvani/rank/speedups.py` |
-| champion lists: precompute each term's top articles and score only those | `dhvani/rank/speedups.py` |
+| `bedb0e8` champion lists: precompute each term's top articles and score only those | `dhvani/rank/speedups.py` |
+| recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
 
 ## How to use it
 
@@ -173,8 +174,11 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Champion lists** (`dhvani/rank/speedups.py`)
 `ChampionLists(index, r=50, static_scores=None)` keeps each term's r highest-weight articles; with `static_scores` (g(d)) they're ordered by weight + g(d), as in Lecture 7. `search_champions(q, idx, champions, k)` scores only those articles and falls back to the full postings if there are fewer than k. Returns `(results, stats)` like index elimination.
 
+**Recent-news tiers** (`dhvani/rank/speedups.py`)
+`RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
+
 ## Tests
-101 tests in `partwise-tests/rishit/`, all passing.
+105 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

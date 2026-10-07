@@ -100,3 +100,5 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **Champion lists fall back instead of coming up short.** r is fixed when the lists are built, so a query can end up with fewer than k contenders. Instead of returning a short page, the search then scores the full postings, which is Lecture 7's high list then low list. Ordering by weight + g(d) is built in so recency and PageRank can shape the lists later.
 
+**Fresh news first, even over a slightly better older match.** The tiered search stops at the newest tier once it has k results, so an older article with a higher cosine can be left out. For news that's usually what a reader wants, and it means only a fraction of the articles get scored. Searching all tiers gives back the exact ranking when freshness doesn't matter.
+

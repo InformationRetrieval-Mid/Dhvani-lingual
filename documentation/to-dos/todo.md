@@ -36,6 +36,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Feedback (Rocchio `prf`) match type shown in the app, and kept out of the parser's strict stages
 - [x] Index elimination: skip low-idf query words and only score articles matching most of the query
 - [x] Champion lists, with the high/low fallback and optional g(d) ordering
+- [x] Recent-news tiers: newest articles first, older tiers only if needed
 
 ## In progress
 
@@ -44,7 +45,6 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [ ] Ranker works out `doc_norm` from the postings when an index leaves it empty (`dhvani/rank/vsm.py` + `partwise-tests/rishit/test_doc_norm.py`). Held back on purpose to give Dhrithi time to fill `doc_norm` in her index; commit it only if she doesn't.
 
 ### Rishit: next up
-- [ ] Speed-ups: recent-news tier (index elimination and champion lists done)
 - [ ] Plug the real pieces in once branches are merged: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text read from Riya's article file
 
 ## Next
