@@ -248,3 +248,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **The 32-need evaluation is reported as provisional.** Only 57% of the pool is judged, and unjudged articles count as not relevant, so the ranker and stemming numbers are pulled down and blurred. They're kept in a separate provisional section; the 16-need section, judged in full at the time, stays as the complete one until the rest of the pool is judged.
 
 **Judgments count only for pooled articles.** Judgments for articles none of our systems retrieves (129 of Dhrithi's 249) don't affect any metric, since metrics only look at what systems return; they're kept in the file but don't reduce the work left.
+
+**Judging stops at 57% of the pool.** The team decided not to judge further. The 32-need evaluation is reported as final with that limitation stated: absolute scores are lower than with full judging, but every system is scored against the same judgments, so comparisons between them are fair.
+
+**Stop words are kept.** Removing the 15 most common words changed nothing once idf was on, so they stay in the index and phrase queries keep working.
