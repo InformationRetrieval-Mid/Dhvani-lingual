@@ -207,3 +207,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **A word's idf comes from its most common strong spelling.** Roman spellings like "kya" are rare in a Devanagari corpus even when the word (क्या) is everywhere, so taking the exact spelling's idf made Hinglish filler look specific.
 
 **The k-gram index knows document frequencies.** Viraja's `KGramIndex.from_index` carries each word's df, so among sound-alike spellings the common word wins ("modi" now goes to मोदी, not मोड़). On the full crawl rare spellings can still win when they're a closer letter match (भूकम्प over भूकंप), which is on her side to tune.
+
+**The frozen corpus is the 5,000-article crawl as it is.** The team froze Riya's full crawl with only its one repeated article removed. HTML leftovers, astrology pages and section pages stay in and are reported as limitations, so every number in the report is on the same fixed set of articles.

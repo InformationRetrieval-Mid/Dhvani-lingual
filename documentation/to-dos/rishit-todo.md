@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 18:50
+Last updated: 7 Oct, around 19:00
 
 ## My novelty
 
@@ -18,7 +18,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | BM25 | Second ranking model next to lnc.ltc and the net score | ~~Done~~ |
 | Dense re-ranking | Multilingual e5 re-scores the top 50, with Viraja's Devanagari spellings added to Hinglish queries so e5 understands them | ~~Done~~ |
 | Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | ~~Done~~ |
-| Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
+| Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the frozen corpus~~ |
 | MMR diversification | Re-orders results so the top 10 covers more different stories | ~~Done~~ |
 | Query difficulty hint | Flags "low confidence" queries from idf, scope, clarity and the parser stage, without judgments | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
@@ -78,10 +78,11 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [ ] Evaluation tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
 - [ ] Autocomplete with prefix search over the term dictionary
 
-### Once the corpus is frozen
-- [ ] Rebuild the four indexes from Riya's cleaned file instead of my local copy
-- [ ] Rerun the speed-ups table, stop words, idf and Zipf on the frozen corpus
-- [ ] Run all 120 queries through every system and write the TREC run files for pooling (works now for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
+### On the frozen corpus
+- [x] ~~Corpus frozen: Riya's full crawl minus its one repeated article, `data/news.jsonl`, 5,000 articles (not in git)~~
+- [x] ~~Four indexes built from it, dense vectors embedded~~
+- [x] ~~Speed-ups table, stop words, idf and Zipf on it~~
+- [ ] Run all 120 queries through every system and write the TREC run files for pooling (done for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
 
 ### Once there are judgments
 - [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
@@ -95,12 +96,12 @@ What my part adds beyond the lecture basics, and where each one stands.
 ## What my code is waiting on
 | From | What | Why it matters for my part |
 |---|---|---|
-| Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
 | Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
 | Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
 | Viraja | Rare spellings still beat common ones: on the full crawl "bhukamp" goes to भूकम्प (1 article) instead of भूकंप (35), "delhi" to देल्ही (1) instead of दिल्ली (977), "iyer" to एयर instead of अय्यर (74). This is the bigger vocabulary, not her latest change, which fixed "modi" → मोदी | Hinglish queries with these words miss their articles (English ones still work through translation) |
 | Everyone | Judgments | All quality numbers and learning-to-rank |
 
 ## Known issues in my part
+- The frozen corpus wasn't cleaned beyond the one repeated article: 249 bodies have HTML tags, there are 106 astrology pages and about 50 section and live-blog pages saved as articles. The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker. These go in the report as limitations.
 - Two test files share a name with Dhrithi's (`test_build.py`, `test_scoring.py`), so `tests/` and `partwise-tests/` have to be run as separate pytest commands.
 - The dense mix (0.5 first stage, 0.5 e5) and the net score weights are hand-picked for now; learning-to-rank should set them.
