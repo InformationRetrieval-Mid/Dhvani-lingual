@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the speed-ups results table
+Last updated: 7 Oct, after writing my 8 information needs
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -76,7 +76,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `26f980d` duplicate collapsing: one result per wire story, with the other papers listed | `dhvani/rank/collapse.py`, `app/streamlit_app.py`, `app/cli.py`, a fix in `kal.py` |
 | `e545370` renamed the to-do to rishit-todo and crossed out what's done | `documentation/to-dos/rishit-todo.md` |
 | `24b3804` speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
-| speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
+| `5feba40` speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
+| my 8 information needs from stories in riya's crawl | `documentation/needs/rishit-needs.md` |
 
 ## How to use it
 
@@ -223,4 +224,4 @@ results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
 
 ## Next
-My 8 information needs, then merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.
+Merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.

@@ -135,3 +135,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Champion list size grows with the corpus.** r is N / 20 with a minimum of 5, so the lists stay useful on the 300-article sample and on the full crawl without retuning.
 
 **Speed-ups are judged by overlap with full search.** For each speed-up the table shows how much of the exact top k it keeps and what share of articles it scored. That's the trade-off Lecture 7 describes, and it doesn't need relevance judgments, so it can be run as soon as the corpus is frozen.
+
+**My information needs come from the real crawl.** Each of R01 to R08 is a story with at least two articles in Riya's 300-article sample, so every need has something to find. Several are the same story in many papers (the earthquake, Char Dham, Shreyas Iyer), which also tests duplicate collapsing, and the English forms test the translation step. Only the queries are in git, not the article text.

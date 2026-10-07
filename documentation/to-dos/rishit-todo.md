@@ -49,7 +49,7 @@ Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on
 ### Rishit: next up
 - [x] ~~Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored~~
 - [x] ~~Speed-ups results table in the experiment runner: overlap with full search and articles scored~~
-- [ ] My 8 information needs, picked from stories in Riya's crawl
+- [x] ~~My 8 information needs, picked from stories in Riya's crawl (R01 to R08)~~
 - [ ] Merge `rishit` into `main` again after those three
 - [ ] Plug the real pieces in on `main`: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text from `idx.text`
 - [ ] End-to-end check with Viraja: Hindi, Hinglish and English forms of a need all find the right articles (H12)
@@ -84,7 +84,7 @@ Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on
 | Viraja | Agree the split with the cross-lingual layer for English words and names | Asked |
 | Riya | Article file with `links`, `dup_of`, `date`, `source`, `section`, `state` | 300-article sample done with every field; full crawl not done |
 | Riya | Pooling script | Started (`dhvani/eval/pool.py`); CLI not finished |
-| Everyone | 8 information needs each, then judgments | Viraja's 8 done; the rest not yet |
+| Everyone | 8 information needs each, then judgments | Viraja's and Rishit's 8 done; Riya's and Dhrithi's not yet |
 
 ### Riya (from branch `riya`)
 - [x] ~~robots.txt checker (RFC 9309, wildcards, longest match) with tests against the real sites' files~~
