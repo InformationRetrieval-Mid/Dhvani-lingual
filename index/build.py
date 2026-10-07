@@ -118,19 +118,46 @@ def build_index(
 
     index = Index(mode)
 
+    seen_doc_ids = set()
+    duplicate_count = 0
+
     for article in iter_articles(
         input_path
     ):
+        doc_id = article["doc_id"]
+
+        # Keep the first occurrence of a document ID.
+        # Duplicate IDs are skipped rather than silently
+        # overwriting the original document.
+        if doc_id in seen_doc_ids:
+            duplicate_count += 1
+
+            print(
+                f"Warning: duplicate doc_id "
+                f"'{doc_id}' found. "
+                f"Skipping duplicate article."
+            )
+
+            continue
+
+        seen_doc_ids.add(doc_id)
+
         metadata = {
             field: article.get(field)
             for field in METADATA_FIELDS
         }
 
         index.add_document(
-            doc_id=article["doc_id"],
+            doc_id=doc_id,
             headline=article["headline"],
             body=article["body"],
             metadata=metadata,
+        )
+
+    if duplicate_count:
+        print(
+            f"Skipped {duplicate_count} "
+            f"duplicate document(s)."
         )
 
     if output_path is None:

@@ -76,17 +76,18 @@ is done (`python -m dhvani.query.experiment`).
 | Query form | P@10 exact | P@10 expanded | nDCG@10 exact | nDCG@10 expanded |
 |---|---|---|---|---|
 | hindi | 0.240 | 0.240 | 0.985 | 0.985 |
-| **hinglish** | 0.000 | **0.233** | 0.000 | **0.879** |
-| english | 0.000 | 0.150 | 0.000 | 0.178 |
+| **hinglish** | 0.000 | **0.233** | 0.000 | **0.954** |
+| english | 0.000 | 0.000 | 0.000 | 0.000 |
 
 **Takeaway — this is the whole point of the Hinglish layer.** Devanagari queries
 already work and expansion leaves them untouched (nDCG 0.985). Hinglish queries
 match **nothing** on exact lookup (Roman text vs a Devanagari index) and phonetic
-expansion lifts them to **0.879 nDCG** — the romanised query now reaches the
-Hindi articles. English gains a little from incidental overlap; real English
-needs Rishit's cross-lingual layer, not mine. (P@10 looks low across the board
-because each need has only 1–2 relevant docs in the 20-doc sample, so nDCG is the
-meaningful metric here.)
+expansion lifts them to **0.954 nDCG** — the romanised query now reaches the
+Hindi articles. English stays at 0 on purpose: the phonetic layer deliberately
+does **not** touch English words (they have no Hindi homophone, so expanding them
+only adds junk); English is the cross-lingual layer's job, not mine. (P@10 looks
+low because each need has only 1–2 relevant docs in the 20-doc sample, so nDCG is
+the meaningful metric here.)
 
 ## 5. Pending
 - With vs without **Rocchio** query expansion (needs a first retrieval over the

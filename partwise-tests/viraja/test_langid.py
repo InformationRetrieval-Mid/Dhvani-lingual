@@ -32,6 +32,21 @@ def test_ambiguous_words_keep_both_readings():
         assert lang["en"] == 0.5
 
 
+def test_real_english_words_are_detected_not_just_the_seed():
+    # These are plain English, not in any hand-written seed, but must read English
+    # (the bundled wordlist) so they don't get phonetic junk.
+    for word in ("farmers", "snow", "earthquake", "worried", "flooded"):
+        lang = langid.classify(word)
+        assert lang["en"] == 0.9, f"{word} should read English"
+
+
+def test_common_hindi_words_are_protected_from_the_english_list():
+    # "kal", "ka", "hai" are English words too, but as Hindi they must stay Hinglish.
+    for word in ("kal", "ka", "hai", "mausam", "chai"):
+        lang = langid.classify(word)
+        assert lang["hinglish"] == 0.9, f"{word} should stay Hinglish"
+
+
 def test_weights_sum_to_one():
     for word in ("मौसम", "mausam", "weather", "main"):
         assert abs(sum(langid.classify(word).values()) - 1.0) < 1e-9
