@@ -217,3 +217,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Judgments in git, one file per person.** Judgments are only ids and grades, so they're safe in a public repo. A file per person means four people judging at the same time never conflict, and `all_judgments()` merges them, keeping the higher grade on a disagreement.
 
 **Judging page inside the app.** It's a second Streamlit page, so it uses the same index and setup as search, and nobody has to install anything else.
+
+**Judgment-free numbers rerun when the query side changes.** Viraja's rare-spelling fix changed which Hindi words Hinglish queries reach, so the sanity check, speed-ups and difficulty numbers were rerun on the same frozen corpus. The results file notes the before and after for agreement.
