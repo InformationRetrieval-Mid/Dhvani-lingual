@@ -22,6 +22,7 @@ import math
 from dhvani.query.editdist import distance as learned_distance
 from dhvani.query.editdist import levenshtein
 from dhvani.query.kgram import _canonical
+from dhvani.query.langid import script
 from dhvani.query.phonetics import dhvani_code, soundex
 
 MATCHERS = ("levenshtein", "soundex", "dhvani", "learned")
@@ -104,9 +105,18 @@ def weighted_variants(word, index, costs, k=5, pool=50, temperature=1.0, code_bo
     qcode = dhvani_code(qr)
     variants = []
     for term, dist in _ranked(word, index, "learned", costs=costs, pool=pool):
-        if _canonical(term) == qr:
-            continue  # the exact self-match is the "exact" expansion already
-        same_code = bool(qcode) and dhvani_code(_canonical(term)) == qcode
+        cr = _canonical(term)
+        # Exclude only the *Roman* self-match (the query word is itself in the
+        # index as English, e.g. "iyer"). A Devanagari term that romanises to the
+        # same string (कल for "kal") is a real match and must be kept.
+        if cr == qr and script(term) == "roman":
+            continue
+        same_code = bool(qcode) and dhvani_code(cr) == qcode
+        # Quality gate: a variant must actually be close. Same Dhvani-code counts;
+        # otherwise it must be within half its length in edits. This stops junk
+        # expansions when there is no genuine phonetic match.
+        if not same_code and levenshtein(qr, cr) > 0.5 * max(len(qr), len(cr)):
+            continue
         variants.append((term, dist - (code_bonus if same_code else 0.0)))
 
     variants.sort(key=lambda item: (item[1], item[0]))
