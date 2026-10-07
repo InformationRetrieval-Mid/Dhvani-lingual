@@ -1,3 +1,4 @@
+import math
 import pickle
 from collections import defaultdict
 from pathlib import Path
@@ -24,20 +25,93 @@ class Index:
 
         self.mode = mode
         self._postings = defaultdict(_zone_postings)
+
+        # Document metadata
         self.meta = {}
+
+        # Original article text for snippets/highlighting
+        self.text = {}
+
+        # Number of documents
         self.N = 0
+
+        # Vocabulary
         self.vocab = set()
+
+        # VSM document normalization
         self.doc_norm = {}
+
+        # Document length
+        self.doc_len = {}
 
     def add_document(self, doc_id, headline, body, metadata):
         if doc_id in self.meta:
             raise ValueError(f"Document already exists: {doc_id}")
 
         self.meta[doc_id] = metadata
+
+        # Keep original article text for result snippets.
+        self.text[doc_id] = {
+            "headline": headline,
+            "body": body,
+        }
+
         self.N += 1
 
-        self._add_zone(doc_id, headline, "headline")
-        self._add_zone(doc_id, body, "body")
+        headline_terms = self._add_zone(
+            doc_id,
+            headline,
+            "headline",
+        )
+
+        body_terms = self._add_zone(
+            doc_id,
+            body,
+            "body",
+        )
+
+        # ---------------------------------------------------------
+        # Document length
+        # ---------------------------------------------------------
+        #
+        # Count analyzed tokens across headline + body.
+        #
+        self.doc_len[doc_id] = (
+            sum(len(positions) for positions in headline_terms.values())
+            + sum(len(positions) for positions in body_terms.values())
+        )
+
+        # ---------------------------------------------------------
+        # Document normalization for lnc.ltc
+        # ---------------------------------------------------------
+        #
+        # lnc document weighting:
+        #
+        #     w(t,d) = 1 + log10(tf)
+        #
+        # No IDF is applied to the document side.
+        #
+        # The cosine normalization factor is:
+        #
+        #     sqrt(sum(w(t,d)^2))
+        #
+        # Term frequency is aggregated across headline + body.
+        #
+        term_frequencies = defaultdict(int)
+
+        for term, positions in headline_terms.items():
+            term_frequencies[term] += len(positions)
+
+        for term, positions in body_terms.items():
+            term_frequencies[term] += len(positions)
+
+        norm_squared = 0.0
+
+        for tf in term_frequencies.values():
+            weight = 1.0 + math.log10(tf)
+            norm_squared += weight * weight
+
+        self.doc_norm[doc_id] = math.sqrt(norm_squared)
 
     def _add_zone(self, doc_id, text, zone):
         if zone not in {"headline", "body"}:
@@ -54,7 +128,10 @@ class Index:
             self._postings[term][zone].append(
                 (doc_id, len(positions), positions)
             )
+
             self.vocab.add(term)
+
+        return term_positions
 
     def postings_for(self, term, zone):
         return self.postings(term, zone)
