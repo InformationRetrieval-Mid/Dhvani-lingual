@@ -77,3 +77,12 @@ def test_date_alone_cannot_lift_an_unrelated_article():
     reranked = apply_kal(search(q, idx, k=5), q, idx)
     assert reranked[0][0] != "aajtak_5003"
     assert next(e for d, _, e in reranked if d == "aajtak_5003")["kal"]["boost"] == 1.0
+
+
+def test_kal_keeps_the_parser_stage_order():
+    from dhvani.rank.parser import STAGES, parse_and_rank
+    idx = SampleIndex.load()
+    q = exact_query("कल बारिश")
+    reranked = apply_kal(parse_and_rank(q, idx, k=5), q, idx)
+    ranks = [STAGES.index(e["stage"]) for _, _, e in reranked]
+    assert ranks == sorted(ranks)

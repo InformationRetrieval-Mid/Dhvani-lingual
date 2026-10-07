@@ -39,6 +39,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Recent-news tiers: newest articles first, older tiers only if needed
 - [x] `requirements.txt` for the whole team
 - [x] Date-aware kal: tell yesterday from tomorrow from the query, boost articles about the right day
+- [x] Date-aware kal shown in the app (switch, tag, boost in Score details) and the CLI (`--explain` step 4c, `--no-kal`)
 
 ## In progress
 
@@ -48,7 +49,6 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 ## Next
 
 ### Rishit: required
-- [ ] Show date-aware kal in the app and `--explain`
 - [ ] Collapsing duplicate wire stories ("also in: ...")
 - [ ] PageRank and "first to publish" authority in g(d)
 - [ ] Learning-to-rank (after judging)

@@ -110,3 +110,5 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **The kal boost multiplies the score instead of adding to it.** A flat bonus let an unrelated article jump to the top just because it was published on the right day. Multiplying keeps the boost proportional to how relevant the article already is.
 
+**kal only reorders within a parser stage.** The query parser puts exact-phrase matches above looser ones on purpose. The kal boost respects that and only changes the order inside a stage, so a date boost can never push a stricter match below a looser one.
+

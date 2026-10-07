@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding date-aware kal
+Last updated: 7 Oct, after showing date-aware kal in the app and CLI
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -69,7 +69,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `bedb0e8` champion lists: precompute each term's top articles and score only those | `dhvani/rank/speedups.py` |
 | `1f6f519` recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
 | `a5b7682` added requirements.txt for the whole team | `requirements.txt` |
-| date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
+| `4354852` date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
+| date-aware kal in the app and cli, with the boost shown in explain | `app/streamlit_app.py`, `app/cli.py`, `dhvani/rank/kal.py` |
 
 ## How to use it
 
@@ -119,7 +120,7 @@ rank(q, idx, k=10, doc_filter=f)     # same for search() and search_bm25()
 `idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. The real system will read this from the article file.
 
 **The app** (`app/streamlit_app.py`)
-Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched (exact, phonetic, translated, or feedback for Rocchio terms), an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has a "Smart query parsing" switch and a "Translate English words" switch, both on by default. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
+Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched (exact, phonetic, translated, or feedback for Rocchio terms), an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has "Smart query parsing", "Date-aware kal" and "Translate English words" switches, all on by default. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
 ```bash
 .venv/bin/streamlit run app/streamlit_app.py
 ```
@@ -137,7 +138,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a step 4b showing how many articles each parser stage found and where it stopped. `--no-parser` turns the parser off and `--no-xling` turns translation off.
+With `--explain` there's also a step 4b showing how many articles each parser stage found and where it stopped. `--no-parser` turns the parser off, `--no-xling` turns translation off and `--no-kal` turns date-aware kal off.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -180,14 +181,14 @@ results, stats = search_index_elimination(q, idx, k=10)
 `RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
 
 **Date-aware kal** (`dhvani/rank/kal.py`)
-कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. Not wired into the app or CLI yet.
+कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. It only reorders within a query-parser stage, so a stricter match stays above a looser one. In the app it's the "Date-aware kal" switch (on by default), boosted results get a "कल · tomorrow" or "कल · yesterday" tag, and Score details shows the boost. In the CLI, results show `[kal: tomorrow]`, `--explain` adds a step 4c, and `--no-kal` turns it off.
 ```python
 from dhvani.rank.kal import apply_kal
 results = apply_kal(search(q, idx, k=10), q, idx)
 ```
 
 ## Tests
-116 tests in `partwise-tests/rishit/`, all passing.
+120 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

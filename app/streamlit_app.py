@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
+from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.xling import translate  # noqa: E402
@@ -327,6 +328,9 @@ def score_table(explain, terms):
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
         rows.append(f'<tr class="total"><td>Net score</td><td>{explain["net"]:.4f}</td></tr>')
+    kal = explain.get("kal")
+    if kal:
+        rows.append(f'<tr><td>कल boost ({kal["intent"]})</td><td>x {1 + kal["weight"] * kal["boost"]:.2f}</td></tr>')
     return f'<table class="dv-table">{"".join(rows)}</table>'
 
 
@@ -340,6 +344,9 @@ def result_row(doc_id, score, explain, index, sources, only_here):
     only = '<span class="dv-only">Only here</span>' if only_here else ""
     stage = explain.get("stage")
     stage_tag = f'<span class="dv-stage">{STAGE_LABELS[stage]}</span>' if stage else ""
+    kal = explain.get("kal")
+    if kal and kal["boost"]:
+        stage_tag += f'<span class="dv-stage">कल · {kal["intent"]}</span>'
     chips = "".join(
         f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS.get(sources.get(t, "exact"), "Match")}</span>'
         for t in terms
@@ -399,6 +406,8 @@ def main():
             k = st.slider("Results per column", 3, 20, 10)
             use_parser = st.toggle("Smart query parsing", value=True,
                                    help="Try the exact phrase first, then all the words, then any word.")
+            use_kal = st.toggle("Date-aware kal", value=True,
+                                help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
                                   help="English words also search for their Hindi translations.")
             use_dates = st.toggle("Limit to a date range")
@@ -428,6 +437,8 @@ def main():
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
         results[mode] = run_ranker(ranker, query, index, k, doc_filter, use_parser)
+        if use_kal:
+            results[mode] = apply_kal(results[mode], query, index)
 
     ids = {mode: {doc_id for doc_id, _, _ in res} for mode, res in results.items()}
     columns = st.columns(len(MODES), gap="medium")

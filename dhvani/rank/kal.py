@@ -26,6 +26,8 @@ can't jump ahead just because of its date. It's recorded under explain["kal"].
 
 from datetime import datetime
 
+from dhvani.rank.parser import STAGES
+
 KAL_WORDS = {"कल", "kal", "kl"}
 ENGLISH_DIRECTION = {"tomorrow": "tomorrow", "yesterday": "yesterday"}
 
@@ -112,5 +114,11 @@ def apply_kal(results, query, index, weight=0.5, texts=None, now=None):
         explain = dict(explain)
         explain["kal"] = {"intent": intent, "boost": boost, "weight": weight}
         reranked.append((doc_id, score * (1 + weight * boost), explain))
-    reranked.sort(key=lambda item: (-item[1], item[0]))
+    # Keep the query parser's order: a stricter stage (e.g. exact phrase)
+    # still ranks above a looser one; kal only reorders within a stage.
+    def stage_rank(explain):
+        stage = explain.get("stage")
+        return STAGES.index(stage) if stage in STAGES else 0
+
+    reranked.sort(key=lambda item: (stage_rank(item[2]), -item[1], item[0]))
     return reranked

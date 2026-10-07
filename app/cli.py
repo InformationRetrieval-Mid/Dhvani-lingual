@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
+from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.xling import translate  # noqa: E402
@@ -160,6 +161,9 @@ def explain_result(out, i, doc_id, score, explain, index, ranker):
         label = "BM25 contribution" if ranker == "bm25" else "cosine contribution"
         for term, part in terms.items():
             out.append(f"      {term:<14}  {part:.4f}  ({label})")
+    kal = explain.get("kal")
+    if kal:
+        out.append(f"    x kal boost ({kal['intent']}): x {1 + kal['weight'] * kal['boost']:.2f} = {score:.4f}")
 
 
 def run(argv=None):
@@ -169,6 +173,8 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
+    parser.add_argument("--no-kal", action="store_true",
+                        help="don't re-rank kal queries by date")
     parser.add_argument("--no-xling", action="store_true",
                         help="don't translate English words into Hindi")
     parser.add_argument("--no-parser", action="store_true",
@@ -198,6 +204,13 @@ def run(argv=None):
     else:
         results = search_bm25(query, index, k=args.k)
 
+    if not args.no_kal:
+        intent = kal_intent(query)
+        if args.explain and intent:
+            heading(out, "4c. Date-aware kal")
+            out.append(f"कल here means {intent}, so articles about that day get a boost: score x (1 + 0.5 x boost).")
+        results = apply_kal(results, query, index)
+
     heading(out, "5. Results" if args.explain else "Results")
     if not results:
         out.append("No matches.")
@@ -208,6 +221,9 @@ def run(argv=None):
             headline = getattr(index, "articles", {}).get(doc_id, {}).get("headline", "")
             stage = explain.get("stage")
             tag = f"  [{STAGE_LABELS[stage]}]" if stage else ""
+            kal = explain.get("kal")
+            if kal and kal["boost"]:
+                tag += f"  [kal: {kal['intent']}]"
             out.append(f"{i}. {score:.4f}  {doc_id}  {headline}{tag}")
 
     text = "\n".join(out)

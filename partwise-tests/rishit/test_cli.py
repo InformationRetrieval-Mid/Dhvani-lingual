@@ -34,3 +34,19 @@ def test_unknown_word_is_marked():
     text = cli.run(["xyz", "--explain"])
     assert "dropped, not in index" in text
     assert "No matches." in text
+
+
+def test_kal_query_shows_its_direction():
+    text = cli.run(["कल बारिश", "--k", "2"])
+    assert "[kal: tomorrow]" in text
+
+
+def test_kal_explain_has_its_own_step():
+    text = cli.run(["कल बारिश", "--k", "1", "--explain"])
+    assert "4c. Date-aware kal" in text
+    assert "x kal boost (tomorrow)" in text
+
+
+def test_no_kal_turns_it_off():
+    text = cli.run(["कल बारिश", "--k", "2", "--no-kal"])
+    assert "kal:" not in text
