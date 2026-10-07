@@ -29,6 +29,7 @@ from dhvani.crawl.config import (
     MAX_RETRIES,
     PER_HOST_DELAY,
     PRIMARY_SOURCES,
+    PROJECT_ROOT,
     SAMPLE_ARTICLES_FILE,
     USER_AGENT,
 )
@@ -154,7 +155,7 @@ class NewsCrawler:
         elif output_path and Path(output_path) not in (ARTICLES_FILE, SAMPLE_ARTICLES_FILE):
             self.stats_file = Path(output_path).parent / "crawl_stats.md"
         else:
-            self.stats_file = DATA_DIR / "result-documentation" / "crawl_stats.md"
+            self.stats_file = PROJECT_ROOT / "documentation" / "results" / "riya-corpus-results" / "crawl_stats.md"
 
         self.frontier = frontier or MercatorFrontier(per_host_delay=PER_HOST_DELAY)
         self.robots = robots_parser or RobotsParser(user_agent=USER_AGENT)
@@ -882,7 +883,7 @@ def main():
     parser.add_argument("--sources", type=str, default="", help="Comma-separated subset of sources to crawl")
     parser.add_argument("--output", type=str, default="", help="Custom output JSONL path")
     parser.add_argument("--log-file", type=str, default="", help="Custom log file path (default: data/crawler.log)")
-    parser.add_argument("--stats-file", type=str, default="", help="Custom markdown stats file (default: data/result-documentation/crawl_stats.md)")
+    parser.add_argument("--stats-file", type=str, default="", help="Custom markdown stats file (default: documentation/results/riya-corpus-results/crawl_stats.md)")
     args = parser.parse_args()
 
     if args.log_file:

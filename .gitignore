@@ -18,9 +18,7 @@ ENV/
 /data/*
 !/data/.gitkeep
 !/data/auto_candidates.tsv
-!/data/result-documentation/
 !/data/news_sample_300.jsonl
-/data/result-documentation/*.jsonl
 data/*.jsonl
 data/*.json
 data/sitemaps/
