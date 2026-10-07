@@ -9,58 +9,70 @@ def build_test_index():
 
     index.add_document(
         "doc1",
-        "दिल्ली बारिश",
-        "दिल्ली में बारिश हुई",
-        {},
+        "बारिश",
+        "बारिश मौसम",
+        {
+            "source": "test",
+            "date": None,
+            "state": None,
+            "section": None,
+            "dup_of": None,
+        },
     )
 
     index.add_document(
         "doc2",
-        "दिल्ली मौसम",
-        "दिल्ली में आज मौसम साफ है",
-        {},
+        "मौसम",
+        "मौसम अच्छा",
+        {
+            "source": "test",
+            "date": None,
+            "state": None,
+            "section": None,
+            "dup_of": None,
+        },
     )
 
     index.add_document(
         "doc3",
-        "बारिश खबर",
-        "मुंबई में बारिश हुई",
-        {},
+        "बारिश",
+        "बारिश तेज",
+        {
+            "source": "test",
+            "date": None,
+            "state": None,
+            "section": None,
+            "dup_of": None,
+        },
     )
 
     return index
 
 
-def test_idf_for_common_term():
+def test_idf_for_term_present_in_all_documents():
     index = build_test_index()
 
-    # "दिल्ली" occurs in 2 of 3 documents.
-    expected = math.log(3 / 2)
+    # मौसम appears in doc1 and doc2.
+    # N = 3, df = 2.
+    expected = math.log10(3 / 2)
 
-    assert math.isclose(
-        idf(index, "दिल्ली"),
-        expected,
-        rel_tol=1e-9,
-    )
+    assert math.isclose(idf(index, "मौसम"), expected)
 
 
-def test_idf_for_term_in_every_document():
+def test_idf_for_term_present_in_two_documents():
     index = build_test_index()
 
-    # "में" occurs in all three documents.
-    expected = math.log(3 / 3)
+    # बारिश appears in doc1 and doc3.
+    # N = 3, df = 2.
+    expected = math.log10(3 / 2)
 
-    assert math.isclose(
-        idf(index, "में"),
-        expected,
-        rel_tol=1e-9,
-    )
+    assert math.isclose(idf(index, "बारिश"), expected)
 
 
 def test_idf_for_missing_term():
     index = build_test_index()
 
-    assert idf(index, "अस्तित्वहीन") == 0.0
+    assert idf(index, "दिल्ली") == 0.0
 
 
 def test_idf_table():
@@ -68,22 +80,19 @@ def test_idf_table():
 
     result = idf_table(
         index,
-        ["दिल्ली", "बारिश", "मौसम"],
+        ["बारिश", "मौसम", "दिल्ली"],
     )
 
-    assert set(result.keys()) == {
-        "दिल्ली",
-        "बारिश",
-        "मौसम",
-    }
-
-    assert result["दिल्ली"] > 0
-    assert result["बारिश"] > 0
-    assert result["मौसम"] > 0
+    assert math.isclose(result["बारिश"], math.log10(3 / 2))
+    assert math.isclose(result["मौसम"], math.log10(3 / 2))
+    assert result["दिल्ली"] == 0.0
 
 
-def test_rare_terms_have_higher_idf():
+def test_idf_for_term_in_one_document():
     index = build_test_index()
 
-    # "मौसम" occurs once, while "दिल्ली" occurs twice.
-    assert idf(index, "मौसम") > idf(index, "दिल्ली")
+    # अच्छा appears only in doc2.
+    # N = 3, df = 1.
+    expected = math.log10(3)
+
+    assert math.isclose(idf(index, "अच्छा"), expected)
