@@ -82,3 +82,8 @@ def test_speedups_report_how_many_were_scored():
 def test_rrf_ranker_shows_ranks_in_each_list():
     text = cli.run(["दिल्ली बारिश", "--k", "2", "--ranker", "rrf", "--explain"])
     assert "ranks: lnc.ltc #" in text and "rrf = sum of 1 / (60 + rank)" in text
+
+
+def test_diversify_flag_adds_the_mmr_step():
+    text = cli.run(["दिल्ली बारिश", "--k", "3", "--diversify", "--explain"])
+    assert "Diversify (MMR)" in text and "mmr: relevance" in text

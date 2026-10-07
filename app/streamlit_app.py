@@ -28,6 +28,7 @@ from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.diversify import diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
@@ -407,6 +408,9 @@ def score_table(explain, terms, parts=None):
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
         rows.append(f'<tr class="total"><td>Net score</td><td>{explain["net"]:.4f}</td></tr>')
+    mmr = explain.get("mmr")
+    if mmr:
+        rows.append(f"<tr><td>MMR: similarity to earlier pick</td><td>{mmr['max_similarity']:.2f}</td></tr>")
     dense = explain.get("dense")
     if dense:
         rows.append(f"<tr><td>Dense (e5) cosine</td><td>{dense['cosine']:.4f}</td></tr>")
@@ -508,6 +512,8 @@ def main():
             use_dense = dense_available() and st.toggle(
                 "Dense re-ranking (e5)", value=False,
                 help="Re-rank the top 50 with a multilingual embedding model: half first stage, half meaning.")
+            use_mmr = st.toggle("Diversify results (MMR)", value=False,
+                                help="Re-order so the top results cover more different stories.")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -550,6 +556,8 @@ def main():
             results[mode] = dense_rerank(results[mode], queries[mode], load_dense(mode))
         if use_kal:
             results[mode] = apply_kal(results[mode], queries[mode], index)
+        if use_mmr:
+            results[mode] = diversify(results[mode], index)
         if use_collapse:
             results[mode] = collapse_duplicates(results[mode], index, k=k)
         else:

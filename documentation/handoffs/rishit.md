@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after pointing the experiments at the real index
+Last updated: 7 Oct, after adding MMR diversification
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -89,7 +89,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `1fd899d` dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
 | `2c5f883` speed-ups, stop words and zipf on riya's full crawl | `documentation/results/rishit-results.md`, two plots in `documentation/figures/` |
 | `a18d81e` rank fusion (rrf), and the to-do and handoff brought up to date | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
-| experiments and corpus stats run on the real index, run files for pooling | `dhvani/eval/experiments.py`, `dhvani/eval/corpus_stats.py` |
+| `1d0a6d3` experiments and corpus stats run on the real index, run files for pooling | `dhvani/eval/experiments.py`, `dhvani/eval/corpus_stats.py` |
+| mmr diversification so the top results cover more stories | `dhvani/rank/diversify.py`, `app/streamlit_app.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -157,7 +158,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
+With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -255,8 +256,15 @@ from dhvani.rank.fusion import search_rrf
 results = search_rrf(q, idx, k=10)
 ```
 
+**Diversification (MMR)** (`dhvani/rank/diversify.py`)
+`diversify(results, idx, k=None, lam=0.7)` re-orders any ranker's results with maximal marginal relevance: each next pick maximises 0.7 x relevance (the ranker's score scaled to [0, 1]) - 0.3 x its highest cosine with the articles already picked. Similarity uses log-tf, unit-length word vectors from each article's headline and body. It catches the same story told by several papers in different words, which duplicate collapsing (based on `dup_of`) misses. Like kal and dense it works within a parser stage. 0.05 s for 30 results on the full crawl. In the app it's the "Diversify results (MMR)" switch (off by default) and Score details shows the similarity to the closest earlier pick; in the CLI it's `--diversify`, with an explain step 4d.
+```python
+from dhvani.rank.diversify import diversify
+results = diversify(parse_and_rank(q, idx, k=30), idx, k=10)
+```
+
 ## Tests
-172 tests in `partwise-tests/rishit/`, all passing.
+178 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -268,4 +276,4 @@ results = search_rrf(q, idx, k=10)
 - **Everyone:** judgments, once the runs are pooled.
 
 ## Next
-Embed the full crawl for dense, then MMR and the other extras while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.
+The remaining extras (query difficulty hint, evaluation tab, facet counts, autocomplete) while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.

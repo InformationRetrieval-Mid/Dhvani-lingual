@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 17:50
+Last updated: 7 Oct, around 18:10
 
 ## My novelty
 
@@ -19,6 +19,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Dense re-ranking | Multilingual e5 re-scores the top 50, with Viraja's Devanagari spellings added to Hinglish queries so e5 understands them | ~~Done~~ |
 | Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | ~~Done~~ |
 | Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
+| MMR diversification | Re-orders results so the top 10 covers more different stories | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
@@ -34,6 +35,8 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Duplicate collapsing with "also in"~~
 - [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
 - [x] ~~Rank fusion (RRF) of lnc.ltc, BM25, the net score and dense~~
+- [x] ~~MMR diversification (lambda 0.7), within parser stages~~
+- [x] ~~Full crawl embedded for dense re-ranking (about 1 minute, cached locally)~~
 
 ### Query side
 - [x] ~~Cross-lingual layer with an English to Hindi news dictionary (about 180 entries)~~
@@ -69,8 +72,6 @@ What my part adds beyond the lecture basics, and where each one stands.
 ## Remaining
 
 ### Can do now
-- [ ] Embed the full crawl for dense re-ranking (one run of about 3 to 4 minutes, cached in `data/dense/`)
-- [ ] Result diversification (MMR) so the top 10 isn't one story told several ways
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
 - [ ] Query difficulty hint ("low confidence") for queries whose top scores are weak
 - [ ] Evaluation tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
@@ -95,7 +96,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
 | Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
 | Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
-| Viraja | Less phonetic expansion for English words ("farmers" gets हार्मोन्स, "snow" gets now) | Adds noise to English queries in the sparse rankers |
+| Viraja | "iyer" should reach अय्यर (the English-word fix is done and merged; "iyer" now gets इयर but not the spelling the articles use) | Names in Roman script miss their Devanagari spelling |
 | Everyone | Judgments | All quality numbers and learning-to-rank |
 
 ## Known issues in my part

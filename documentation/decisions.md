@@ -197,3 +197,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Queries come straight from the needs files.** Each person's needs file has a tsv block, and the runner reads those, so there's no separate query list to keep in sync.
 
 **No judgments, no metrics.** Without judgments the runner writes the run files for pooling and the speed-ups table and stops, instead of printing zeros. The stop word experiment likewise only runs with real judgments.
+
+**MMR with lambda 0.7.** Relevance still leads, and diversity only breaks near-ties between similar articles. Lower values started pulling weak matches into the top 10. It's off by default, since for most queries the plain ranking is what people want.
+
+**MMR similarity from word vectors, not e5.** Plain log-tf vectors from the article text need no model and work for everyone, and they're good enough to spot two papers telling the same story.
