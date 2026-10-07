@@ -11,10 +11,12 @@ feed the query object (format 4). The plan calls out that some words — "main",
 forcing a choice we keep both readings with weights and let the ranker sort it
 out downstream.
 
-Scope: this is a light, lexicon-based identifier, not a trained classifier. The
-word lists below are deliberately small seeds, kept in one place so they are
-easy to grow as we see more queries.
+Scope: a lexicon-based identifier. The real coverage comes from a large bundled
+English wordlist (``english_words.txt``); the small sets below handle the Hindi
+side and the genuinely ambiguous words.
 """
+
+import os
 
 # Devanagari block is U+0900..U+097F (plus extensions we do not need here).
 _DEVA_START, _DEVA_END = "ऀ", "ॿ"
@@ -34,15 +36,40 @@ AMBIGUOUS = {
     "or",    # English "or"        vs और "and" (often typed "or")
 }
 
-# A small seed of clearly-English words we expect in news queries. Not in
-# AMBIGUOUS, so these lean English.
-ENGLISH = {
-    "weather", "tomorrow", "today", "yesterday", "news", "election", "elections",
-    "cricket", "match", "rain", "price", "prices", "market", "stock", "result",
-    "results", "school", "schools", "holiday", "budget", "government", "minister",
-    "prime", "police", "flood", "monsoon", "temperature", "forecast", "and", "of",
-    "in", "on", "for", "with", "from", "what", "when", "where", "which", "latest",
+# Common romanised Hindi words that are *also* ordinary English words
+# (function words, time words, loanwords) and so leak into an English wordlist.
+# We force these to the Hinglish reading so "kal ka mausam" isn't read as English.
+HINDI_PROTECT = set("""
+ka ki ke ko se mein par pe ne wala wali hai hain ho hua hui tha thi ja jaa kar kiya karo karna raha rahe rahi gaya gayi
+tu tum aap hum wo vo ye yeh in un jo kya kaun kahan kab kaise kaisa kyun kyon kitna kitni
+aur ya bhi na nahi nahin mat phir ab abhi bas sab kuch koi
+kal aaj aj parso raat din subah shaam saal mahina hafta waqt samay
+bazaar bharat dilli sheher gaon naam kaam paani pani aag hawa ghar log aadmi raja rani dev mandir masjid roti chai dil jaan paisa khana mausam barish baarish chunav
+""".split())
+
+# A large English vocabulary, baked into dhvani/query/english_words.txt (common
+# words from wordfreq, minus AMBIGUOUS and HINDI_PROTECT). Loaded once, lazily.
+# If the file is missing we fall back to a tiny seed so language ID still runs.
+_ENGLISH_SEED = {
+    "weather", "tomorrow", "today", "news", "election", "elections", "cricket",
+    "match", "rain", "price", "prices", "market", "stock", "result", "school",
+    "holiday", "budget", "government", "minister", "police", "flood", "monsoon",
+    "forecast", "earthquake", "farmers", "snow", "worried",
 }
+_ENGLISH_PATH = os.path.join(os.path.dirname(__file__), "english_words.txt")
+_english = None
+
+
+def english_words():
+    """The English vocabulary set, loaded once from the bundled file."""
+    global _english
+    if _english is None:
+        try:
+            with open(_ENGLISH_PATH, encoding="utf-8") as fh:
+                _english = {line.strip() for line in fh if line.strip()}
+        except OSError:
+            _english = set(_ENGLISH_SEED)
+    return _english
 
 
 def script(word):
@@ -74,7 +101,10 @@ def classify(word):
     if word in AMBIGUOUS:
         return {"hi": 0.0, "hinglish": 0.5, "en": 0.5}
 
-    if word in ENGLISH:
+    if word in HINDI_PROTECT:
+        return {"hi": 0.0, "hinglish": 0.9, "en": 0.1}
+
+    if word in english_words():
         return {"hi": 0.0, "hinglish": 0.1, "en": 0.9}
 
     return {"hi": 0.0, "hinglish": 0.9, "en": 0.1}
