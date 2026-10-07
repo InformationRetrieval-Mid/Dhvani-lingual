@@ -13,7 +13,9 @@ only ids and grades, no article text):
   `need_id 0 doc_id rel` with rel 0 (not relevant), 1 (partly), 2 (fully).
   One file each means four people judging at once never edit the same file.
 
-Build the pool after the experiment runner has written its run files:
+Build the pool after the experiment runner has written its run files. By
+default new articles are added to the existing pool, so nothing already
+judged is dropped; --fresh starts over.
 
     python -m dhvani.eval.experiments --out data/eval/full
     python -m dhvani.eval.judge --runs data/eval/full/runs
@@ -61,6 +63,15 @@ def build_pool(runs, queries, k=10):
                     seen[need].add(doc_id)
                     pool[need].append(doc_id)
     return dict(pool)
+
+
+def merge_pools(old, new):
+    """Everything in the old pool, then anything new, per need. Nothing judged is ever dropped."""
+    merged = {need: list(docs) for need, docs in old.items()}
+    for need, docs in new.items():
+        have = set(merged.get(need, []))
+        merged.setdefault(need, []).extend(d for d in docs if d not in have)
+    return merged
 
 
 def write_pool(pool, path=JUDGMENTS_DIR / "pool.tsv"):
@@ -136,6 +147,7 @@ def main(argv=None):
     parser.add_argument("--runs", default="data/eval/full/runs")
     parser.add_argument("--k", type=int, default=10, help="top k of each run that goes into the pool")
     parser.add_argument("--out", default=JUDGMENTS_DIR / "pool.tsv")
+    parser.add_argument("--fresh", action="store_true", help="replace the pool instead of adding to it")
     args = parser.parse_args(argv)
 
     runs = {p.stem: read_run(p) for p in sorted(Path(args.runs).glob("*.txt"))}
@@ -143,8 +155,13 @@ def main(argv=None):
         print(f"No run files in {args.runs}")
         return
     pool = build_pool(runs, read_needs(), args.k)
+    old = {} if args.fresh else read_pool(args.out)
+    added = sum(len(set(v) - set(old.get(n, []))) for n, v in pool.items())
+    pool = merge_pools(old, pool)
     path = write_pool(pool, args.out)
     total = sum(len(v) for v in pool.values())
+    if old:
+        print(f"{added} new articles added to the existing pool")
     print(f"{len(runs)} runs, {len(pool)} needs, {total} articles to judge ({total / max(len(pool), 1):.0f} per need) -> {path}")
 
 
