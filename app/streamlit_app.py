@@ -36,8 +36,7 @@ from dhvani.rank.speedups import (  # noqa: E402
     search_tiered,
 )
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
-from dhvani.rank.query_stub import exact_query  # noqa: E402
-from dhvani.rank.xling import translate  # noqa: E402
+from dhvani.rank import real_index  # noqa: E402
 from dhvani.rank.sample_index import SampleIndex, tokenize  # noqa: E402
 from dhvani.rank.scoring import rank  # noqa: E402
 from dhvani.rank.vsm import search  # noqa: E402
@@ -52,7 +51,7 @@ RANKER_NOTES = {
     "bm25": "Okapi BM25 with term saturation and length normalisation.",
 }
 
-SUGGESTIONS = ["दिल्ली बारिश", "कोहली शतक", "बिहार चुनाव", "शेयर बाजार"]
+SUGGESTIONS = ["भूकंप के झटके", "shreyas iyer shatak", "smriti mandhana captain", "chardham yatra record"]
 
 MATCH_LABELS = {"exact": "Exact", "phonetic": "Phonetic", "xling": "Translated", "prf": "Feedback"}
 
@@ -284,8 +283,7 @@ div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(2
 
 @st.cache_resource
 def load_index(mode):
-    # Swap this for the real index once it's ready: Index.load(mode).
-    return SampleIndex.load(mode)
+    return real_index.load_index(mode)
 
 
 @st.cache_resource
@@ -487,10 +485,9 @@ def main():
         st.markdown('<div class="dv-empty">Type something to search.</div>', unsafe_allow_html=True)
         return
 
-    query = exact_query(raw)
-    if use_xling:
-        query = translate(query)
-    sources_map = term_sources(query)
+    queries = {mode: real_index.make_query(raw, mode, xling=use_xling) for mode, _label in MODES}
+    # Stemmed columns match stemmed terms; the unstemmed ones are still needed to highlight the text.
+    sources_map = {mode: {**term_sources(queries["none"]), **term_sources(queries[mode])} for mode, _label in MODES}
 
     results, speed_stats = {}, {}
     pool = collapse_pool(k) if use_collapse else k
@@ -499,11 +496,11 @@ def main():
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
         static = load_static(mode)[0] if use_authority else None
         if speedup != "Off":
-            results[mode], speed_stats[mode] = run_speedup(speedup, query, mode, pool, doc_filter)
+            results[mode], speed_stats[mode] = run_speedup(speedup, queries[mode], mode, pool, doc_filter)
         else:
-            results[mode] = run_ranker(ranker, query, index, pool, doc_filter, use_parser, static)
+            results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static)
         if use_kal:
-            results[mode] = apply_kal(results[mode], query, index)
+            results[mode] = apply_kal(results[mode], queries[mode], index)
         if use_collapse:
             results[mode] = collapse_duplicates(results[mode], index, k=k)
         else:
@@ -517,7 +514,7 @@ def main():
         parts = load_static(mode)[1] if use_authority else {}
         if results[mode]:
             rows = "".join(
-                result_row(doc_id, score, explain, load_index(mode), sources_map, doc_id not in others,
+                result_row(doc_id, score, explain, load_index(mode), sources_map[mode], doc_id not in others,
                            parts.get(doc_id))
                 for doc_id, score, explain in results[mode]
             )

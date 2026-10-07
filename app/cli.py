@@ -30,19 +30,12 @@ from dhvani.rank.speedups import (  # noqa: E402
     search_tiered,
 )
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
-from dhvani.rank.query_stub import exact_query  # noqa: E402
-from dhvani.rank.xling import translate  # noqa: E402
-from dhvani.rank.sample_index import SampleIndex  # noqa: E402
+from dhvani.rank.real_index import load_index, make_query  # noqa: E402
 from dhvani.rank.scoring import DEFAULT_WEIGHTS, rank  # noqa: E402
 from dhvani.rank.vsm import ZONES, cosine_scores, log_tf, query_vector, search  # noqa: E402
 
 RANKERS = ("net", "lnc", "bm25")
 MAX_POSTINGS_SHOWN = 6
-
-
-def load_index(mode):
-    # Swap this for the real index once it's ready: Index.load(mode).
-    return SampleIndex.load(mode)
 
 
 def heading(out, title):
@@ -205,9 +198,7 @@ def run(argv=None):
     args = parser.parse_args(argv)
 
     index = load_index(args.stem)
-    query = exact_query(args.query)
-    if not args.no_xling:
-        query = translate(query)
+    query = make_query(args.query, args.stem, xling=not args.no_xling)
     out = [f'Query: "{args.query}"   ranker: {args.ranker}   index: {args.stem}   k: {args.k}']
 
     if args.explain:
