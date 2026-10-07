@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding requirements.txt
+Last updated: 7 Oct, after adding date-aware kal
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -68,7 +68,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `60ac8d1` index elimination: skip low-idf words and score only real contenders | `dhvani/rank/speedups.py` |
 | `bedb0e8` champion lists: precompute each term's top articles and score only those | `dhvani/rank/speedups.py` |
 | `1f6f519` recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
-| added requirements.txt for the whole team | `requirements.txt` |
+| `a5b7682` added requirements.txt for the whole team | `requirements.txt` |
+| date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
 
 ## How to use it
 
@@ -178,8 +179,15 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Recent-news tiers** (`dhvani/rank/speedups.py`)
 `RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
 
+**Date-aware kal** (`dhvani/rank/kal.py`)
+कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. Not wired into the app or CLI yet.
+```python
+from dhvani.rank.kal import apply_kal
+results = apply_kal(search(q, idx, k=10), q, idx)
+```
+
 ## Tests
-105 tests in `partwise-tests/rishit/`, all passing.
+116 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

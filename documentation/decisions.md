@@ -104,3 +104,9 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **One requirements.txt for everyone.** It lists what every part of the code actually imports, so anyone can set up with one command. Plotting and dataset downloads are marked optional because the search engine runs without them.
 
+**kal defaults to yesterday.** When a query has कल but no other clue, we treat it as yesterday, because news mostly reports what already happened.
+
+**Weather words mean tomorrow.** "kal ka mausam" is almost always about tomorrow's weather, and weather news is mostly forecasts, so weather words count as a future cue.
+
+**The kal boost multiplies the score instead of adding to it.** A flat bonus let an unrelated article jump to the top just because it was published on the right day. Multiplying keeps the boost proportional to how relevant the article already is.
+

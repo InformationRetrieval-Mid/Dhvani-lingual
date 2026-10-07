@@ -38,6 +38,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Champion lists, with the high/low fallback and optional g(d) ordering
 - [x] Recent-news tiers: newest articles first, older tiers only if needed
 - [x] `requirements.txt` for the whole team
+- [x] Date-aware kal: tell yesterday from tomorrow from the query, boost articles about the right day
 
 ## In progress
 
@@ -47,7 +48,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 ## Next
 
 ### Rishit: required
-- [ ] Date-aware "kal"
+- [ ] Show date-aware kal in the app and `--explain`
 - [ ] Collapsing duplicate wire stories ("also in: ...")
 - [ ] PageRank and "first to publish" authority in g(d)
 - [ ] Learning-to-rank (after judging)
