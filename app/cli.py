@@ -22,6 +22,8 @@ from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, s
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.difficulty import predict  # noqa: E402
+from dhvani.rank.diversify import DEFAULT_LAMBDA, diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
@@ -179,6 +181,9 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
         label = "BM25 contribution" if ranker == "bm25" else "cosine contribution"
         for term, part in terms.items():
             out.append(f"      {term:<14}  {part:.4f}  ({label})")
+    mmr = explain.get("mmr")
+    if mmr:
+        out.append(f"    mmr: relevance {mmr['relevance']:.2f}, most similar to an earlier pick {mmr['max_similarity']:.2f}")
     dense = explain.get("dense")
     if dense:
         out.append(f"    dense: e5 cosine {dense['cosine']:.4f}, first stage {dense['first_stage']:.4f} -> {dense['score']:.4f}")
@@ -204,6 +209,8 @@ def run(argv=None):
                         help="don't merge copies of the same wire story")
     parser.add_argument("--dense", action="store_true",
                         help="re-rank the top 50 with the multilingual e5 model (needs sentence-transformers)")
+    parser.add_argument("--diversify", action="store_true",
+                        help="re-order with MMR so the top k covers more different stories")
     parser.add_argument("--no-kal", action="store_true",
                         help="don't re-rank kal queries by date")
     parser.add_argument("--no-xling", action="store_true",
@@ -278,7 +285,20 @@ def run(argv=None):
             out.append(f"कल here means {intent}, so articles about that day get a boost: score x (1 + 0.5 x boost).")
         results = apply_kal(results, query, index)
 
+    if args.diversify:
+        if args.explain:
+            heading(out, "4d. Diversify (MMR)")
+            out.append(f"Next pick = {DEFAULT_LAMBDA} x relevance - {1 - DEFAULT_LAMBDA:.1f} x highest similarity to articles already picked.")
+        results = diversify(results, index)
+
     results = results[:args.k] if args.no_collapse else collapse_duplicates(results, index, k=args.k)
+
+    hint = predict(query, results, index)
+    if hint["low_confidence"]:
+        out.append(f"Low confidence: {'; '.join(hint['reasons'])}.")
+    if args.explain:
+        out.append(f"Query difficulty: specificity {hint['specificity']:.2f} (flag below 1.0), "
+                   f"scope {hint['scope']:.2f}, clarity {hint['clarity']:.2f} bits")
 
     heading(out, "5. Results" if args.explain else "Results")
     if not results:

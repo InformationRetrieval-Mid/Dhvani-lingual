@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 17:50
+Last updated: 7 Oct, around 19:00
 
 ## My novelty
 
@@ -18,7 +18,9 @@ What my part adds beyond the lecture basics, and where each one stands.
 | BM25 | Second ranking model next to lnc.ltc and the net score | ~~Done~~ |
 | Dense re-ranking | Multilingual e5 re-scores the top 50, with Viraja's Devanagari spellings added to Hinglish queries so e5 understands them | ~~Done~~ |
 | Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | ~~Done~~ |
-| Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
+| Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the frozen corpus~~ |
+| MMR diversification | Re-orders results so the top 10 covers more different stories | ~~Done~~ |
+| Query difficulty hint | Flags "low confidence" queries from idf, scope, clarity and the parser stage, without judgments | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
@@ -34,6 +36,9 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Duplicate collapsing with "also in"~~
 - [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
 - [x] ~~Rank fusion (RRF) of lnc.ltc, BM25, the net score and dense~~
+- [x] ~~MMR diversification (lambda 0.7), within parser stages~~
+- [x] ~~Query difficulty hint (specificity, scope, clarity, parser stage)~~
+- [x] ~~Full crawl embedded for dense re-ranking (about 1 minute, cached locally)~~
 
 ### Query side
 - [x] ~~Cross-lingual layer with an English to Hindi news dictionary (about 180 entries)~~
@@ -69,17 +74,15 @@ What my part adds beyond the lecture basics, and where each one stands.
 ## Remaining
 
 ### Can do now
-- [ ] Embed the full crawl for dense re-ranking (one run of about 3 to 4 minutes, cached in `data/dense/`)
-- [ ] Result diversification (MMR) so the top 10 isn't one story told several ways
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
-- [ ] Query difficulty hint ("low confidence") for queries whose top scores are weak
 - [ ] Evaluation tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
 - [ ] Autocomplete with prefix search over the term dictionary
 
-### Once the corpus is frozen
-- [ ] Rebuild the four indexes from Riya's cleaned file instead of my local copy
-- [ ] Rerun the speed-ups table, stop words, idf and Zipf on the frozen corpus
-- [ ] Run all 120 queries through every system and write the TREC run files for pooling (works now for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
+### On the frozen corpus
+- [x] ~~Corpus frozen: Riya's full crawl minus its one repeated article, `data/news.jsonl`, 5,000 articles (not in git)~~
+- [x] ~~Four indexes built from it, dense vectors embedded~~
+- [x] ~~Speed-ups table, stop words, idf and Zipf on it~~
+- [ ] Run all 120 queries through every system and write the TREC run files for pooling (done for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
 
 ### Once there are judgments
 - [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
@@ -87,17 +90,18 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [ ] lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off
 - [ ] Stop word experiment: no idf vs idf vs stop words removed
 - [ ] Wins and losses per query
+- [ ] Check the difficulty hint against the judgments: do flagged queries really have lower P@10?
 - [ ] Learning-to-rank: learn the net score's weights (cosine, zone, proximity, g(d), and the dense mix) from the judgments
 
 ## What my code is waiting on
 | From | What | Why it matters for my part |
 |---|---|---|
-| Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
 | Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
 | Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
-| Viraja | Less phonetic expansion for English words ("farmers" gets हार्मोन्स, "snow" gets now) | Adds noise to English queries in the sparse rankers |
+| Viraja | Rare spellings still beat common ones: on the full crawl "bhukamp" goes to भूकम्प (1 article) instead of भूकंप (35), "delhi" to देल्ही (1) instead of दिल्ली (977), "iyer" to एयर instead of अय्यर (74). This is the bigger vocabulary, not her latest change, which fixed "modi" → मोदी | Hinglish queries with these words miss their articles (English ones still work through translation) |
 | Everyone | Judgments | All quality numbers and learning-to-rank |
 
 ## Known issues in my part
+- The frozen corpus wasn't cleaned beyond the one repeated article: 249 bodies have HTML tags, there are 106 astrology pages and about 50 section and live-blog pages saved as articles. The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker. These go in the report as limitations.
 - Two test files share a name with Dhrithi's (`test_build.py`, `test_scoring.py`), so `tests/` and `partwise-tests/` have to be run as separate pytest commands.
 - The dense mix (0.5 first stage, 0.5 e5) and the net score weights are hand-picked for now; learning-to-rank should set them.
