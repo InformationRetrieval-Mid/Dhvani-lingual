@@ -19,9 +19,11 @@ Choices:
 
 Dictionaries:
 - dhvani/rank/data/en_hi_news.tsv, a small news dictionary in the repo.
+- dhvani/rank/data/en_hi_learned.tsv, pairs learned from Jagran's bilingual
+  headlines by dhvani/rank/learn_dict.py. They only fill gaps: the hand-made
+  news dictionary wins wherever both have a word.
 - Optionally the MUSE English-Hindi dictionary (Conneau et al. 2018). If
-  data/muse/en-hi.txt exists it's merged in, with the news dictionary
-  winning where both have a word.
+  data/muse/en-hi.txt exists it's merged in under the other two.
 """
 
 from collections import defaultdict
@@ -30,6 +32,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 NEWS_DICT = Path(__file__).resolve().parent / "data" / "en_hi_news.tsv"
 MUSE_DICT = REPO / "data" / "muse" / "en-hi.txt"
+LEARNED_DICT = Path(__file__).resolve().parent / "data" / "en_hi_learned.tsv"
 
 ENGLISH_STOP_WORDS = {
     "a", "an", "the", "of", "in", "on", "at", "to", "for", "from", "by", "with", "and", "or",
@@ -87,9 +90,11 @@ def _normalise(weighted):
 
 
 class Translator:
-    def __init__(self, news_path=NEWS_DICT, muse_path=MUSE_DICT):
+    def __init__(self, news_path=NEWS_DICT, muse_path=MUSE_DICT, learned_path=LEARNED_DICT):
         self.dictionary = load_muse_dict(muse_path)
-        self.dictionary.update(load_news_dict(news_path))   # news dictionary wins
+        if learned_path and Path(learned_path).exists():
+            self.dictionary.update(load_news_dict(learned_path))   # learned pairs fill gaps
+        self.dictionary.update(load_news_dict(news_path))           # hand-made dictionary wins
         self.max_phrase = max((len(k.split()) for k in self.dictionary), default=1)
 
     def lookup(self, english):

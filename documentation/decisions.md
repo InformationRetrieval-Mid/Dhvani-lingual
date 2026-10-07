@@ -219,3 +219,11 @@ A running list of the choices we made and why. Newest at the bottom.
 **Judging page inside the app.** It's a second Streamlit page, so it uses the same index and setup as search, and nobody has to install anything else.
 
 **Judgment-free numbers rerun when the query side changes.** Viraja's rare-spelling fix changed which Hindi words Hinglish queries reach, so the sanity check, speed-ups and difficulty numbers were rerun on the same frozen corpus. The results file notes the before and after for agreement.
+
+**Translations learned from the corpus, under the hand-made dictionary.** Jagran's bilingual headlines give free aligned pairs. Dice 0.5 with at least 3 pairs keeps the errors low enough while still adding 272 words; the hand-made dictionary always wins, so a learned mistake can't override a known translation.
+
+**Listing pages handled in ranking, not by removing them.** The corpus is frozen, so the 900 listing pages and 104 horoscopes stay in and get a low query-independent quality score instead. They still appear when nothing else matches (a plain "news" query), but never above a real article.
+
+**Non-articles go after all articles, across parser stages.** A listing page contains almost every word somewhere, so it often reached the "all words" stage while the real articles only reached "some words". Demoting within a stage left it on top, so page type is checked before the parser stage.
+
+**Page types saved as ids, decided with the URL.** The index has no URLs, and many listing headlines are plain ("मौसम", "उम्मीदवार"), so the corpus is classified once with the URL and only the ids of non-articles are kept in the repo.
