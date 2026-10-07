@@ -1,0 +1,30 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Project Data (Crawled articles stay local, per policy)
+data/*.jsonl
+data/result-documentation/*.jsonl
+data/*.json
+data/sitemaps/
+data/cache/
+data/*.txt
+!data/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
