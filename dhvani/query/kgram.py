@@ -12,7 +12,7 @@ Aksharantar word list. Either way it is just an iterable of terms, so swapping
 the source changes nothing here.
 """
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from dhvani.query.langid import script
 from dhvani.query.phonetics import dhvani_code
@@ -39,18 +39,38 @@ def kgrams(text, k=2):
 class KGramIndex:
     """Maps character k-grams to the vocabulary terms that contain them."""
 
-    def __init__(self, vocab, k=2):
+    def __init__(self, vocab, k=2, df=None):
+        """``df`` (optional) maps term -> document frequency. When given, the
+        matcher prefers common corpus words among homophones (मोदी over मॉड),
+        which is the signal that separates a real name from a rare look-alike."""
         self.k = k
         self.postings = defaultdict(set)   # k-gram -> {terms}
         self._grams = {}                   # term -> frozenset(k-grams)
         self._by_code = defaultdict(set)   # Dhvani-code -> {terms}
+        self.canon = {}                    # term -> canonical Roman (cached)
+        self.code = {}                     # term -> Dhvani-code (cached)
+        self.df = dict(df) if df else {}   # term -> document frequency
         for term in vocab:
             canonical = _canonical(term)
             grams = kgrams(canonical, k)
             self._grams[term] = grams
+            self.canon[term] = canonical
+            code = dhvani_code(canonical)
+            self.code[term] = code
             for g in grams:
                 self.postings[g].add(term)
-            self._by_code[dhvani_code(canonical)].add(term)
+            self._by_code[code].add(term)
+
+    @classmethod
+    def from_index(cls, index, k=2):
+        """Build from an index exposing ``.vocab`` and ``.df(term)`` (Dhrithi's).
+
+        Carries document frequencies so the matcher prefers common corpus words
+        among homophones. Rishit: use this instead of ``KGramIndex(idx.vocab)``
+        so names (मोदी, कोहली) win over rare look-alikes.
+        """
+        vocab = list(index.vocab)
+        return cls(vocab, k=k, df={term: index.df(term) for term in vocab})
 
     def phonetic_candidates(self, word):
         """Terms that share ``word``'s Dhvani-code, whatever their spelling.
@@ -68,16 +88,24 @@ class KGramIndex:
     def candidates(self, word, limit=50):
         """Return ``[(term, jaccard), ...]`` for the ``limit`` best matches.
 
-        Only terms sharing at least one k-gram with ``word`` are considered;
-        they are ranked by Jaccard overlap on the k-gram sets.
+        Over a real 80k-term vocabulary a common bigram (``ar``, ``sh``) sits in
+        thousands of terms, so computing Jaccard against the whole union is far
+        too slow. Instead we first *count* how many query k-grams each term shares
+        (cheap), keep only the top overlappers, and compute Jaccard just on those.
         """
         qg = kgrams(_canonical(word), self.k)
-        pool = set()
+        shared = Counter()
         for g in qg:
-            pool |= self.postings.get(g, set())
+            terms = self.postings.get(g)
+            if terms:
+                shared.update(terms)
+        if not shared:
+            return []
 
+        # Score Jaccard only on the best overlappers (bounded work per query).
+        best = shared.most_common(max(limit * 5, 200))
         scored = []
-        for term in pool:
+        for term, _count in best:
             tg = self._grams[term]
             jaccard = len(qg & tg) / len(qg | tg)
             scored.append((term, jaccard))

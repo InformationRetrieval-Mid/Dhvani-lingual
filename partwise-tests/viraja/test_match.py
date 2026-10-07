@@ -64,6 +64,33 @@ def test_self_match_in_vocab_does_not_starve_phonetic_variants():
     assert byr.get("बायर", 0) < 0.05                         # near-miss stays tiny
 
 
+def test_df_prefers_the_common_homophone():
+    # "modi" sounds like मोदी, मॉड and मोड; corpus frequency (df) should put the
+    # common one (the name) first instead of a rare look-alike.
+    vocab = ["मोदी", "मॉड", "मोड"]
+    idx = KGramIndex(vocab, k=2, df={"मोदी": 500, "मॉड": 2, "मोड": 3})
+    costs = learn_costs([("modi", "modi")] * 3 + [("x", "x")] * 3, iterations=2)
+    variants = M.weighted_variants("modi", idx, costs, k=3)
+    assert variants and variants[0][0] == "मोदी"
+
+
+def test_phonetic_variants_are_devanagari_only():
+    # A Roman look-alike in the vocab must never be offered as an expansion.
+    idx = KGramIndex(["मौसम", "mosam", "mausam"], k=2)
+    costs = learn_costs([("mosam", "mausam")] * 3 + [("x", "x")] * 3, iterations=2)
+    variants = M.weighted_variants("mosam", idx, costs, k=5)
+    assert all(any("ऀ" <= ch <= "ॿ" for ch in t) for t, _w, _s in variants)
+    assert "मौसम" in [t for t, _w, _s in variants]
+
+
+def test_english_word_rejects_loose_lookalike():
+    # "weather" reads as English and भाथर is only a coincidental same-code word,
+    # too far in spelling to be a transliteration, so nothing should expand.
+    idx = KGramIndex(["भाथर", "मौसम"], k=2, df={"भाथर": 5, "मौसम": 100})
+    costs = learn_costs([("x", "x")] * 3, iterations=2)
+    assert M.weighted_variants("weather", idx, costs, k=3) == []
+
+
 def test_unknown_matcher_raises():
     idx = KGramIndex(VOCAB, k=2)
     try:

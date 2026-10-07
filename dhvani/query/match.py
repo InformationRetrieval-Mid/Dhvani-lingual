@@ -21,11 +21,23 @@ import math
 
 from dhvani.query.editdist import distance as learned_distance
 from dhvani.query.editdist import levenshtein
+from dhvani.query import langid
 from dhvani.query.kgram import _canonical
 from dhvani.query.langid import script
 from dhvani.query.phonetics import dhvani_code, soundex
 
 MATCHERS = ("levenshtein", "soundex", "dhvani", "learned")
+
+# How strongly corpus frequency pulls a common homophone above a rare one.
+DF_WEIGHT = 1.5
+
+
+def _canon(index, term):
+    """Canonical Roman form of ``term``, from the index cache when available."""
+    cache = getattr(index, "canon", None)
+    if cache is not None and term in cache:
+        return cache[term]
+    return _canonical(term)
 
 
 def _ranked(word, index, matcher, costs=None, pool=50):
@@ -49,18 +61,18 @@ def _ranked(word, index, matcher, costs=None, pool=50):
     scored = []
     if matcher == "levenshtein":
         for term, _j in cands:
-            scored.append((term, float(levenshtein(qr, _canonical(term)))))
+            scored.append((term, float(levenshtein(qr, _canon(index, term)))))
     elif matcher == "learned":
         if costs is None:
             raise ValueError("the 'learned' matcher needs costs=(table, default)")
         table, default = costs
         for term, _j in cands:
-            scored.append((term, learned_distance(qr, _canonical(term), table, default)))
+            scored.append((term, learned_distance(qr, _canon(index, term), table, default)))
     elif matcher in ("soundex", "dhvani"):
         key = soundex if matcher == "soundex" else dhvani_code
         qkey = key(qr)
         for term, _j in cands:
-            tr = _canonical(term)
+            tr = _canon(index, term)
             # Same phonetic key ranks first (0); break ties by Levenshtein.
             same = 0.0 if key(tr) == qkey else 1.0
             scored.append((term, same + levenshtein(qr, tr) / 100.0))
@@ -91,33 +103,43 @@ def weighted_variants(word, index, costs, k=5, pool=50, temperature=1.0, code_bo
     Returns ``[(term, weight, "phonetic"), ...]`` with weights summing to 1.0,
     ready to extend a query token's ``expansions`` list.
 
-    Two things keep the weights meaningful when the query word is itself in the
-    index (e.g. "iyer" is an English word in some articles):
+    The goal of expansion is to make a Roman/Hinglish query reach the **Hindi
+    (Devanagari) articles**, so we only ever add Devanagari terms. That single
+    rule removes the noise the real vocabulary is full of — other Roman words and
+    English homophones (laxmi -> laxman, iyer -> year, kal -> kl) — because those
+    are Roman, not Devanagari. On top of that:
 
-    - the **exact self-match is excluded** — it's already the ``"exact"``
-      expansion, and leaving it in the softmax would crush every real variant to
-      a near-zero weight.
-    - candidates that share the query's **Dhvani-code** (true homophones like
-      अय्यर / एयर for "iyer") get a distance bonus, so they rank above mere
-      spelling near-misses and actually carry weight.
+    - candidates sharing the query's **Dhvani-code** (true homophones) get a
+      distance bonus so they rank first and carry real weight;
+    - a quality gate drops anything that isn't a genuine phonetic match, so a word
+      with no real Hindi homophone (farmers, weather) expands to nothing.
     """
     qr = _canonical(word)
     qcode = dhvani_code(qr)
+    codes = getattr(index, "code", {})
+    dfmap = getattr(index, "df", {})
+    # A word that reads as English (farmers, weather, earthquake) must match a
+    # Devanagari term *very* tightly to expand at all, so only genuine
+    # transliterations survive (modi -> मोदी) and coincidental homophones
+    # (weather -> भाथर) are rejected. Hindi/Hinglish words use the normal gate.
+    is_english = langid.classify(word)["en"] >= 0.6
     variants = []
     for term, dist in _ranked(word, index, "learned", costs=costs, pool=pool):
-        cr = _canonical(term)
-        # Exclude only the *Roman* self-match (the query word is itself in the
-        # index as English, e.g. "iyer"). A Devanagari term that romanises to the
-        # same string (कल for "kal") is a real match and must be kept.
-        if cr == qr and script(term) == "roman":
+        if script(term) != "devanagari":
+            continue  # only Devanagari terms are useful expansions for this engine
+        cr = _canon(index, term)
+        maxlen = max(len(qr), len(cr))
+        # English words get a tighter gate (only real transliterations survive),
+        # but with enough slack for the medial schwa our romaniser keeps
+        # (कोहली -> "kohalii" is edit-distance 2 from "kohli").
+        gate = 0.35 * maxlen if is_english else 0.4 * maxlen + 1
+        if levenshtein(qr, cr) > gate:
             continue
-        same_code = bool(qcode) and dhvani_code(cr) == qcode
-        # Quality gate: a variant must actually be close. Same Dhvani-code counts;
-        # otherwise it must be within half its length in edits. This stops junk
-        # expansions when there is no genuine phonetic match.
-        if not same_code and levenshtein(qr, cr) > 0.5 * max(len(qr), len(cr)):
-            continue
-        variants.append((term, dist - (code_bonus if same_code else 0.0)))
+        same_code = bool(qcode) and (codes.get(term) == qcode if codes else dhvani_code(cr) == qcode)
+        # Lower score ranks first: closeness, a same-code bonus, and a corpus
+        # frequency bonus so a common word (मोदी) beats a rare homophone (मॉड).
+        df_bonus = DF_WEIGHT * math.log1p(dfmap.get(term, 0))
+        variants.append((term, dist - (code_bonus if same_code else 0.0) - df_bonus))
 
     variants.sort(key=lambda item: (item[1], item[0]))
     top = variants[:k]
