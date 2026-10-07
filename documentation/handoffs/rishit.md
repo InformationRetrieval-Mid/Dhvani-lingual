@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. Only covers work that's committed on the `rishit` branch.
 
-Last updated: 7 Oct, after adding the experiment runner
+Last updated: 7 Oct, after adding the stop words and idf analysis
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -27,7 +27,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `8cc6b07` cross-lingual layer for english queries | `dhvani/rank/xling.py` and the English to Hindi news dictionary |
 | `69faf76` translation switch in the app and cli | `app/streamlit_app.py`, `app/cli.py` |
 | `561d129` metrics for P@k, R@k, MAP, nDCG and PR curves | `dhvani/eval/metrics.py` |
-| experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
+| `a39e4fa` experiment runner with the stemming comparison | `dhvani/eval/experiments.py`, sample queries and judgments |
+| stop words, idf and zipf analysis | `dhvani/eval/corpus_stats.py`, a no-idf option in `vsm.py` |
 
 ## How to use it
 
@@ -118,8 +119,14 @@ Runs every stemming mode x every ranker x every query, writes TREC run files to 
 .venv/bin/python -m dhvani.eval.experiments --queries eval/queries.tsv --qrels eval/qrels_news.txt
 ```
 
+**Stop words, idf and Zipf** (`dhvani/eval/corpus_stats.py`)
+df, collection frequency and idf for every term, the most frequent terms (Hindi function words like में, का, की come out at the top with idf near 0), a stop word list taken from the data, Zipf's law with a fitted slope, and a stop word experiment: no idf (lnc.lnc) vs idf (lnc.ltc) vs stop words removed. Plots go to `data/eval/` when matplotlib is installed.
+```bash
+.venv/bin/python -m dhvani.eval.corpus_stats
+```
+
 ## Tests
-81 tests in `partwise-tests/rishit/`, all passing.
+86 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -130,4 +137,4 @@ Runs every stemming mode x every ranker x every query, writes TREC run files to 
 - **Riya:** `links` and `dup_of` in the article file, for PageRank and duplicate collapsing.
 
 ## Next
-The stop words and idf analysis, then speed-ups, PageRank and authority.
+Speed-ups (index elimination, champion lists, recent tier), date-aware "kal", duplicate collapsing, PageRank and authority, then learning-to-rank after judging.

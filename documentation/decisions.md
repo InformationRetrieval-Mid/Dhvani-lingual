@@ -85,3 +85,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Judgments per information need.** Each need is written several ways (Hindi, Hinglish, English) and judged once. Every form is scored against the same judged articles, so we can compare how well each form does on equal terms.
 
 **The runner skips what isn't built yet.** Stemming modes that don't exist yet are skipped with a note instead of crashing, so the runner works from day one and fills in as the indexes arrive.
+
+**Stop words come from the data.** Instead of typing in a Hindi stop word list, we rank terms by document frequency. The words with the lowest idf (में, का, की, के) are the stop words, which shows what idf is doing.
+
+**Three ways to handle stop words.** No idf (lnc.lnc) lets every word count fully, idf (lnc.ltc) keeps stop words but pushes them towards zero, and removing them drops them from the query. Comparing the three shows whether removing stop words still matters once idf is in place.

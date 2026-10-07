@@ -22,11 +22,13 @@ def log_tf(tf):
     return 1 + math.log10(tf) if tf > 0 else 0.0
 
 
-def query_vector(query, index):
+def query_vector(query, index, use_idf=True):
     """Turn a query object into normalised ltc weights: {term: weight}.
 
     A term that appears several times in the query (or comes from several
     expansions) adds up its expansion weights into its query tf.
+    With use_idf=False the query side is lnc instead of ltc (no idf), which
+    the stop-word experiment uses to show what idf does.
     """
     qtf = defaultdict(float)
     for token in query["tokens"]:
@@ -38,7 +40,7 @@ def query_vector(query, index):
         df = index.df(term)
         if df == 0:
             continue  # term not in the collection, it can't match anything
-        idf = math.log10(index.N / df)
+        idf = math.log10(index.N / df) if use_idf else 1.0
         # tf can be fractional when it comes from weighted expansions; keep
         # weights below 1 as they are instead of letting log10 go negative.
         tf_weight = log_tf(tf) if tf >= 1 else tf
@@ -64,13 +66,13 @@ def search(query, index, k=10, doc_filter=None):
     return [(doc_id, score, contributions[doc_id]) for doc_id, score in top]
 
 
-def cosine_scores(query, index):
+def cosine_scores(query, index, use_idf=True):
     """Cosine score for every document that shares a term with the query.
 
     Returns (scores, contributions): {doc_id: score} and
     {doc_id: {term: contribution}}.
     """
-    qvec = query_vector(query, index)
+    qvec = query_vector(query, index, use_idf)
 
     # Term-at-a-time accumulation, only touching documents that contain at
     # least one query term.
