@@ -168,10 +168,21 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
     query word is itself in the index (e.g. "iyer" is an English word in some
     articles), `weighted_variants` used to leave it in the softmax, crushing the
     real Devanagari matches to ~0.0008 so they did nothing. It now excludes the
-    self-match (it's already the `"exact"` expansion) and gives same-Dhvani-code
-    homophones a bonus, so अय्यर/एयर/ईयर all carry real weight and अय्यर ranks
-    above spelling near-misses. (The exact word still keeps its own `"exact"`
-    weight; this only changes how the *phonetic* weight is shared.)
+    *Roman* self-match (it's already the `"exact"` expansion) and gives
+    same-Dhvani-code homophones a bonus, so अय्यर/एयर carry real weight. A
+    Devanagari term that romanises to the query (कल for "kal") is **not** treated
+    as a self-match — it's a real phonetic hit and kept.
+
+14. **English words are detected properly and not phonetically expanded.** The
+    old 40-word English seed meant real English words (farmers, snow, earthquake,
+    worried) fell through to "Hinglish" and got phonetic junk (farmers → हामॉन्स).
+    Now `langid` uses a bundled wordlist `dhvani/query/english_words.txt` (~48k
+    common English words from wordfreq, minus a `HINDI_PROTECT` set so kal/ka/hai/
+    chai/mausam stay Hindi). English-dominant tokens are skipped for expansion,
+    and a quality gate drops any variant that isn't a genuine phonetic match. The
+    wordlist is a static file, so there's **no runtime dependency** (wordfreq was
+    only used to build it). Result: hinglish full-query nDCG rose 0.879 → 0.954
+    and English stopped injecting junk. English→Hindi stays Rishit's xling job.
 
 ## Dependency note for packaging
 Runtime + tests need `regex` and `pytest`. Re-training the edit costs needs
