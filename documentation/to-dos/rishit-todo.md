@@ -98,11 +98,10 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Judging page in the app, one judgments file per person in the repo, linked from the search page~~
 - [x] ~~Evaluation runs end to end on the judgments (checked with the first ones)~~
 - [x] ~~Judgment-free results rerun after Viraja's rare-spelling fix (cross-form agreement up about 0.1, 6 queries flagged instead of 11)~~
-- [ ] Judge my 8 needs (23 of 297 done: 10 for R01, 13 for R02)
+- [x] ~~Judge my 8 needs (all 297 done)~~
 - [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
 
 ### Once there are judgments
-- [ ] Decide whether the evaluation runs use listing-page demotion; if so, rerun them and add the newly ranked articles to the pool (they'd need judging too)
 - [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
 - [ ] Translation off vs on for the English queries
 - [ ] lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off
