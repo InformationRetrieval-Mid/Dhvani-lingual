@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after learning translations from bilingual headlines
+Last updated: 7 Oct, after adding the listing-page quality score
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -101,7 +101,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `5117981`, `f52476a` my relevance judgments so far (23 of 345) | `judgments/qrels_rishit.txt` |
 | `47a924f` judgment-free results rerun after viraja's spelling fix | `documentation/results/rishit-results.md` |
 | `b63bacc` docs brought up to date | `documentation/` |
-| translations learned from jagran's bilingual headlines | `dhvani/rank/learn_dict.py`, `dhvani/rank/data/en_hi_learned.tsv`, `dhvani/rank/xling.py` |
+| `e3f1762` translations learned from jagran's bilingual headlines | `dhvani/rank/learn_dict.py`, `dhvani/rank/data/en_hi_learned.tsv`, `dhvani/rank/xling.py` |
+| listing pages and horoscopes pushed below real articles | `dhvani/rank/quality.py`, `dhvani/rank/data/page_types.tsv`, `app/streamlit_app.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -169,7 +170,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
+With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--keep-listings`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -287,6 +288,12 @@ Jagran's headlines end with an English version ("भूकंप के झट�
 .venv/bin/python -m dhvani.rank.learn_dict      # relearn from data/news.jsonl
 ```
 
+**Page-type quality** (`dhvani/rank/quality.py`)
+18% of the frozen corpus (900 pages) are section and city listing pages the crawler saved as articles ("देवरिया की सबसे ताज़ा खबर", "Guna News, Guna Samachar", amarujala.com/technology), and 2% (104) are daily horoscopes. A listing page stitches dozens of headlines together, so it contains almost any combination of words and was 21 to 33% of the top 10 for our needs queries. `classify(headline, url)` labels each page article, listing or horoscope, from its URL (site root, /live/, or a short section-style path with no article slug) and its headline (patterns like "सबसे ताज़ा खबर", "Samachar", "News in Hindi", with ताज़ा and ताजा treated the same; Jagran's bilingual article headlines are never listings). The index has no URLs, so `python -m dhvani.rank.quality` classifies the corpus file once and saves the non-article ids to `dhvani/rank/data/page_types.tsv` (ids only). `demote(results, idx)` multiplies non-article scores by 0.3 and puts them after every real article: they often reach a stricter parser stage than real articles, so demoting them within their stage wasn't enough. In the app it's the "Push listing pages down" switch (on by default) with a "Listing page" or "Horoscope" tag; in the CLI it's on by default, results show `[listing]`, and `--keep-listings` turns it off.
+```bash
+.venv/bin/python -m dhvani.rank.quality      # reclassify data/news.jsonl
+```
+
 **Sanity check** (`dhvani/eval/sanity.py`)
 Evaluation that needs no judgments, from the run files. Cross-form agreement: for each need, how much of the Hindi form's top 10 its Hinglish, messy and English forms also return, plus the English form with translation off. System agreement: top-10 overlap and Kendall's tau between every pair of rankers and of stemming modes. Numbers are in the results file.
 ```bash
@@ -302,7 +309,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## Tests
-201 tests in `partwise-tests/rishit/`, all passing.
+206 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

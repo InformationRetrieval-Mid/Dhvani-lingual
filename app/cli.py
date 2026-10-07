@@ -25,6 +25,7 @@ from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, Sentence
 from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import DEFAULT_LAMBDA, diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
+from dhvani.rank.quality import demote  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -209,6 +210,8 @@ def run(argv=None):
                         help="don't merge copies of the same wire story")
     parser.add_argument("--dense", action="store_true",
                         help="re-rank the top 50 with the multilingual e5 model (needs sentence-transformers)")
+    parser.add_argument("--keep-listings", action="store_true",
+                        help="don't push listing pages and horoscopes below real articles")
     parser.add_argument("--diversify", action="store_true",
                         help="re-order with MMR so the top k covers more different stories")
     parser.add_argument("--no-kal", action="store_true",
@@ -285,6 +288,9 @@ def run(argv=None):
             out.append(f"कल here means {intent}, so articles about that day get a boost: score x (1 + 0.5 x boost).")
         results = apply_kal(results, query, index)
 
+    if not args.keep_listings:
+        results = demote(results, index)
+
     if args.diversify:
         if args.explain:
             heading(out, "4d. Diversify (MMR)")
@@ -316,6 +322,8 @@ def run(argv=None):
                 tag += f"  [kal: {kal['intent']}]"
             if explain.get("also_in"):
                 tag += f"  [also in: {', '.join(explain['also_in'])}]"
+            if explain.get("page_type", "article") != "article":
+                tag += f"  [{explain['page_type']}]"
             out.append(f"{i}. {score:.4f}  {doc_id}  {headline}{tag}")
 
     text = "\n".join(out)

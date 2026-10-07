@@ -92,3 +92,7 @@ def test_diversify_flag_adds_the_mmr_step():
 def test_vague_query_gets_a_low_confidence_line():
     assert "Low confidence" in cli.run(["में के", "--k", "2"])
     assert "Low confidence" not in cli.run(["कोहली शतक", "--k", "2"])
+
+
+def test_keep_listings_flag_is_accepted():
+    assert "Results" in cli.run(["दिल्ली बारिश", "--k", "2", "--keep-listings"])

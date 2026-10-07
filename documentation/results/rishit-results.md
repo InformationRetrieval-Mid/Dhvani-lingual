@@ -14,6 +14,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Sanity check without judgments | Frozen corpus (5,000 articles) |
 | Query difficulty hint | Frozen corpus (5,000 articles) |
 | Learned translations | Frozen corpus (5,000 articles) |
+| Page-type quality | Frozen corpus (5,000 articles) |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
 
@@ -183,3 +184,30 @@ Exact agreement undercounts: many "disagreements" are correct variants (women �
 - **The corpus can teach itself to translate.** 272 pairs with no outside data, mostly right, many of them names and places a general dictionary wouldn't have.
 - **On our needs the effect is flat**, because the hand dictionary was grown from these same needs and the new words (rahul, gandhi, uttarakhand, rajya sabha) were already reachable through Viraja's phonetic layer. The value is for English words outside the needs (airport, compensation, border, challan).
 - **Listing pages hide the gain.** For new English queries the top results are often section pages like "अंबाला की सबसे ताज़ा खबर", with or without the learned pairs.
+
+## Page-type quality: pushing listing pages down
+
+> **Frozen corpus.** 64 needs queries, no stemming, top 30 from the parser, then cut to 10.
+
+- **How to rerun:** `python -m dhvani.rank.quality`, then compare `demote()` on and off with `cross_form_agreement()`
+
+| Page type | Pages | Share |
+|---|---|---|
+| Article | 3,996 | 80% |
+| Listing (section, city, live-blog index pages) | 900 | 18% |
+| Horoscope | 104 | 2% |
+
+Listing pages were 21% of the top 10 with the net score and 33% with BM25 before this.
+
+Agreement with the Hindi form of the same need (overlap@10), before → after pushing non-articles down:
+
+| Form | Net score | BM25 |
+|---|---|---|
+| Hinglish | 0.37 → **0.44** | 0.46 → **0.55** |
+| Messy | 0.28 → **0.37** | 0.45 → **0.52** |
+| English | 0.24 → **0.36** | 0.39 → **0.49** |
+
+**What it shows**
+- **A fifth of the corpus wasn't news,** and it was crowding out real articles, most of all for English and Hinglish queries, whose words a listing page is most likely to contain somewhere.
+- **A query-independent quality score fixes most of it.** English queries agree with their Hindi form half again as often with the net score (0.24 → 0.36). This is the largest single improvement measured so far.
+- **It works without cleaning the corpus,** so every number stays on the same frozen set of articles.
