@@ -18,6 +18,8 @@ Last updated: 8 Oct, final: graphs and the sanity check on the final runs
 
 Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to rank fusion.
 
+Every command, with all the options, is in `documentation/commands.md`.
+
 **Regenerate the graphs** (PR curves, rankers, stemming, translation, learning to rank) into `documentation/figures/`: `.venv/bin/python scripts/rishit_figures.py`.
 
 **Run everything in my part at once** (tests, every evaluation, then a demo of the best queries; about 3 minutes):
