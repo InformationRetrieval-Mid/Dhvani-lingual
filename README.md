@@ -41,14 +41,15 @@ Hindi also has no standard Roman spelling, its words change form a lot, and news
 
 | | |
 |---|---|
-| 🔎 **Three query forms, one result** | Hindi, Hinglish (any spelling) and English all reach the same Hindi index |
-| 🗣️ **Phonetic matching** | Language ID, a Hindi-aware Soundex (Dhvani-code), learned edit costs, Viterbi correction across the query |
-| 🌐 **Translation learned from the corpus** | 272 English to Hindi pairs mined from Jagran's bilingual headlines, with no outside dictionary |
-| 📊 **Ranking** | lnc.ltc, BM25, a net score with g(d), rank fusion (RRF), dense e5 re-ranking, MMR, learning to rank |
-| ⚡ **Lecture 7 speed-ups** | Index elimination, champion lists, recency tiers, cluster pruning, impact-ordered postings |
-| 🧹 **Quality** | Listing pages and horoscopes pushed down, duplicates collapsed, credit for the paper that published first |
-| 📅 **कल: yesterday or tomorrow?** | Works out which one the query means from cues in it |
-| 🧪 **Evaluation** | 32 needs times 4 forms = 128 queries, 1,245 hand labels, P/R/MAP/nDCG, significance tests |
+| **A corpus we built ourselves** | 5,000 Hindi news articles, crawled from five national dailies with a polite, robots-compliant crawler, cleaned and deduplicated |
+| **Three query forms, one result** | Hindi, Hinglish (any spelling) and English all reach the same Hindi index |
+| **Phonetic matching** | Language ID, a Hindi-aware Soundex (Dhvani-code), learned edit costs, Viterbi correction across the query |
+| **Translation learned from the corpus** | 272 English to Hindi pairs mined from Jagran's bilingual headlines, with no outside dictionary |
+| **Ranking** | lnc.ltc, BM25, a net score with g(d), rank fusion (RRF), dense e5 re-ranking, MMR, learning to rank |
+| **Lecture 7 speed-ups** | Index elimination, champion lists, recency tiers, cluster pruning, impact-ordered postings |
+| **Quality** | Listing pages and horoscopes pushed down, duplicates collapsed, credit for the paper that published first |
+| **Date-aware कल (yesterday or tomorrow)** | Works out which one the query means from cues in it |
+| **Evaluation** | 32 needs times 4 forms = 128 queries, 1,245 hand labels, P/R/MAP/nDCG, significance tests |
 
 ---
 
@@ -218,6 +219,8 @@ Every command is also listed in [`documentation/commands.md`](documentation/comm
 
 ## Where the data comes from
 
+The corpus is not borrowed, we built it. A polite, robots-compliant Mercator crawler gathered 5,000 Hindi articles from five national newspapers over two days, keeping a strict 8-second gap per site and honouring every site's robots.txt (RFC 9309). It pulls clean text from each page's JSON-LD, tags the state and city from the URL, and collapses near-duplicate wire stories with MinHash and LSH, so the same story carried by several papers is linked rather than counted twice. The result is a clean, well-tagged corpus that everything else is built on.
+
 | Data | Source | Size |
 |---|---|---|
 | **News corpus** | Crawled by us from Dainik Jagran, Amar Ujala, Live Hindustan, Aaj Tak and Navbharat Times, using their news sitemaps and following robots.txt (RFC 9309) | 5,000 articles, about 20% from each paper |
@@ -333,7 +336,7 @@ data/             corpus and built indexes (git-ignored)
 
 | Member | Part |
 |---|---|
-| **Riya** | Crawler, robots.txt, frontier and politeness, extraction, near-duplicate detection, corpus |
+| **Riya** | The corpus and crawler: a Mercator frontier with per-host politeness, a custom RFC 9309 robots parser, JSON-LD article extraction, MinHash and LSH near-duplicate detection, and adaptive recrawl |
 | **Dhrithi** | Normalization, light / aggressive / auto stemming, positional index, Boolean, phrase and proximity search |
 | **Viraja** | Hinglish layer: language ID, Dhvani-code, learned edit costs, Viterbi correction, Rocchio |
 | **Rishit** | Ranking, translation layer, speed-ups, evaluation, learning to rank, the app, joining all the parts |
