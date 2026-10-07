@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding PageRank and first-to-publish authority
+Last updated: 7 Oct, after using authority g(d) in the app and CLI
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -36,7 +36,7 @@ python3 -m venv .venv
 
 **Where things stand right now.** Everything here runs on the 20-article sample index with exact-match queries plus English translation. The real pieces exist on teammates' branches but aren't plugged in yet:
 - Viraja's `build_query(raw, index=None, costs=None)` in `dhvani/query/build.py` is ready to replace `query_stub.exact_query`.
-- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light and aggr, with `doc_norm`, `doc_len`, `links` and `city` filled in. There's no `auto` mode yet.
+- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light, aggr and auto (selective stemming), with `doc_norm`, `doc_len`, `links` and `city` filled in.
 - Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`.
 
 ## My part
@@ -71,7 +71,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `a5b7682` added requirements.txt for the whole team | `requirements.txt` |
 | `4354852` date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
 | `e48f17f` date-aware kal in the app and cli, with the boost shown in explain | `app/streamlit_app.py`, `app/cli.py`, `dhvani/rank/kal.py` |
-| authority ranking: pagerank and first-to-publish credit in g(d) | `dhvani/rank/authority.py`, a `static=` option in `scoring.py` |
+| `62400c3` authority ranking: pagerank and first-to-publish credit in g(d) | `dhvani/rank/authority.py`, a `static=` option in `scoring.py` |
+| authority g(d) in the app and cli, with its parts shown in score details | `app/streamlit_app.py`, `app/cli.py`, a `static=` option in `parser.py` |
 
 ## How to use it
 
@@ -189,7 +190,7 @@ results = apply_kal(search(q, idx, k=10), q, idx)
 ```
 
 **Authority: PageRank and first to publish** (`dhvani/rank/authority.py`)
-`pagerank(link_graph(idx))` runs power iteration (damping 0.85) over the links between crawled articles from `meta["links"]`; links to articles that weren't crawled and self-links are ignored, and articles with no outgoing links spread their vote evenly, so the scores sum to 1. `originals(idx)` finds the first-to-publish article of each duplicate cluster (the one later copies point to with `dup_of`). `static_scores(idx)` combines them into g(d) = 0.5 x recency + 0.3 x PageRank (scaled to [0, 1]) + 0.2 x original flag, and returns the parts too. Pass it to the net score with `rank(q, idx, static=g)`; without `static` the net score uses plain recency as before. Champion lists take it as `static_scores=g`. Not wired into the app or CLI yet.
+`pagerank(link_graph(idx))` runs power iteration (damping 0.85) over the links between crawled articles from `meta["links"]`; links to articles that weren't crawled and self-links are ignored, and articles with no outgoing links spread their vote evenly, so the scores sum to 1. `originals(idx)` finds the first-to-publish article of each duplicate cluster (the one later copies point to with `dup_of`). `static_scores(idx)` combines them into g(d) = 0.5 x recency + 0.3 x PageRank (scaled to [0, 1]) + 0.2 x original flag, and returns the parts too. Pass it to the net score with `rank(q, idx, static=g)`; without `static` the net score uses plain recency as before. Champion lists take it as `static_scores=g`, and the query parser as `parse_and_rank(q, idx, static=g)`. In the app it's the "Authority (PageRank + first to publish)" switch (on by default), and Score details shows "Authority g(d)" with its three parts. In the CLI it's on by default, `--explain` breaks g(d) into recency, PageRank and first to publish, and `--no-authority` goes back to plain recency.
 ```python
 from dhvani.rank.authority import static_scores
 g, parts = static_scores(idx)
@@ -197,16 +198,16 @@ rank(q, idx, k=10, static=g)
 ```
 
 ## Tests
-131 tests in `partwise-tests/rishit/`, all passing.
+133 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
 
 ## What I need from others
-- **Dhrithi:** the `auto` mode (selective stemming) for the third column. Build the none and light indexes on Riya's 300-article sample, then on the full crawl. (`doc_norm`, `doc_len`, `links`, `city` and log10 idf are done.)
+- **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. (`auto` mode, `doc_norm`, `doc_len`, `links`, `city` and log10 idf are done.)
 - **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
 - **Riya:** the full crawl for the freeze. Keep article text out of git (only metadata in the repo, full text on Drive) because the repo is public.
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms) and the merge into `main`.
 
 ## Next
-Speed-ups (index elimination, champion lists, recent tier), date-aware "kal", duplicate collapsing, PageRank and authority, then learning-to-rank after judging.
+Duplicate collapsing, speed-ups in the app and CLI, the speed-ups results table, then the merge into `main` and learning-to-rank after judging.

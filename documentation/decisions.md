@@ -118,3 +118,4 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **The original gets the credit, not the newest copy.** When several papers run the same wire story, recency alone favoured the latest copy. First-to-publish credit gives the boost to the article the others copied, so the original ranks first.
 
+**Authority is on by default in the app and CLI.** The net score now uses the full g(d) (recency, PageRank and first to publish) unless it's switched off, so the original of a wire story ranks above its copies. The switch and `--no-authority` are there to show the difference side by side.

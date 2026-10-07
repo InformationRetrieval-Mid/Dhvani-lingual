@@ -132,10 +132,10 @@ def stage_matches(index, query):
     return out
 
 
-def _score_all(query, index, ranker, doc_filter):
+def _score_all(query, index, ranker, doc_filter, static=None):
     n = max(index.N, 1)
     if ranker == "net":
-        results = rank(query, index, k=n, doc_filter=doc_filter)
+        results = rank(query, index, k=n, doc_filter=doc_filter, static=static)
     elif ranker == "lnc":
         results = search(query, index, k=n, doc_filter=doc_filter)
     else:
@@ -143,13 +143,13 @@ def _score_all(query, index, ranker, doc_filter):
     return {doc_id: (score, explain) for doc_id, score, explain in results}
 
 
-def parse_and_rank(query, index, k=10, ranker="net", doc_filter=None):
+def parse_and_rank(query, index, k=10, ranker="net", doc_filter=None, static=None):
     """Rank with the cascade. Returns [(doc_id, score, explain)], best first.
 
     explain gets a "stage" entry saying which stage first matched the
     article, and a "stages_run" entry listing the stages that were needed.
     """
-    scored = _score_all(query, index, ranker, doc_filter)
+    scored = _score_all(query, index, ranker, doc_filter, static)
 
     picked = {}          # doc_id -> stage index where it first matched
     stages_run = []

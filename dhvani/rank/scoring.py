@@ -119,6 +119,7 @@ def rank(query, index, k=10, weights=None, now=None, doc_filter=None, static=Non
             "zone": zone_score,
             "proximity": prox,
             "recency": g,
+            "static": static is not None,
             "net": net,
         }
         scored.append((doc_id, net, explain))

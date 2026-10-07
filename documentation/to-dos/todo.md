@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -41,6 +41,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Date-aware kal: tell yesterday from tomorrow from the query, boost articles about the right day
 - [x] Date-aware kal shown in the app (switch, tag, boost in Score details) and the CLI (`--explain` step 4c, `--no-kal`)
 - [x] PageRank and first-to-publish authority in g(d), usable by the net score and champion lists
+- [x] Authority g(d) used in the app and CLI, with recency, PageRank and first to publish shown in the score breakdown
 
 ## In progress
 
@@ -51,7 +52,6 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 
 ### Rishit: required
 - [ ] Collapsing duplicate wire stories ("also in: ...")
-- [ ] Use authority g(d) in the app and CLI
 - [ ] Learning-to-rank (after judging)
 - [ ] Dense re-ranker (only if there's time)
 
@@ -68,7 +68,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 ### Rishit: needed from teammates
 | From | What | Status |
 |---|---|---|
-| Dhrithi | Real indexes for none, light and auto with the `formats.md` methods | none, light and aggr exist; no auto yet; not built on Riya's sample yet |
+| Dhrithi | Real indexes for none, light and auto with the `formats.md` methods none, light, aggr and auto exist and were tested on Riya's sample; full-crawl build waits for the freeze |
 | Dhrithi | `doc_norm` filled, `links` and `city` kept in `meta`, `doc_len` if possible | Done |
 | Dhrithi | `analyze(text, mode)` so queries are processed like articles | Done (`text/analyzer.py`) |
 | Viraja | Query object with Hinglish expansions | Done (`dhvani/query/build.py`), not merged yet |
@@ -94,8 +94,9 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] Positional index with headline and body zones, df, metadata, save and load, JSONL builder
 - [x] Boolean AND (smallest list first), skip pointers, phrase and proximity search
 - [x] `idf()` helper and a hand-made stop word list
-- [ ] Selective stemming (the auto column)
-- [ ] Indexes built on Riya's sample, then on the full crawl
+- [x] Selective stemming (the auto column)
+- [x] Stop word analysis and idf aligned to base 10
+- [ ] Indexes built on the full crawl
 - [ ] Stem-diff report
 - [ ] YASS, extended biwords, compression (extras, can wait)
 
@@ -117,7 +118,6 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - **Article text in a public repo.** Riya's `data/news_sample_300.jsonl` is committed and the repo is public. Plan: keep only metadata in git and share the full text on Drive.
 - **Merge clashes to sort out:** four different `.gitignore` files, `dhvani/eval/__init__.py` on both Riya's and Rishit's branches, a top-level `conftest.py` on Riya's, and Riya's edit to `formats.md`.
 - **Folder layout:** Dhrithi's code is in top-level `text/`, `index/` and `tests/` instead of under `dhvani/`; imports need to keep working after the merge.
-- **Index file in git:** `indexes/aggr.pkl` is committed on Dhrithi's branch.
 - **idf log base:** Dhrithi's `idf()` uses the natural log; this branch and the slides use log10. Rankings are the same either way, but the numbers in the report should match.
 
 ## Checkpoints

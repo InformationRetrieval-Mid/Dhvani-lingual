@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
+from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
@@ -138,7 +139,7 @@ def explain_parser(out, query, index, k):
             break
 
 
-def explain_result(out, i, doc_id, score, explain, index, ranker):
+def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
     article = getattr(index, "articles", {}).get(doc_id, {})
     meta = index.meta[doc_id]
     out.append("")
@@ -155,7 +156,13 @@ def explain_result(out, i, doc_id, score, explain, index, ranker):
             out.append(f"      {term:<14}  {part:.4f}")
         out.append(f"    + {w['zone']} x zone      {explain['zone']:.4f}")
         out.append(f"    + {w['prox']} x proximity {explain['proximity']:.4f}")
-        out.append(f"    + {w['recency']} x recency   {explain['recency']:.4f}")
+        if explain.get("static"):
+            out.append(f"    + {w['recency']} x g(d)      {explain['recency']:.4f}")
+            if parts:
+                out.append(f"        g(d) = 0.5 x recency {parts['recency']:.4f} + 0.3 x PageRank {parts['pagerank']:.4f}"
+                           f" + 0.2 x first to publish {parts['original']:.0f}")
+        else:
+            out.append(f"    + {w['recency']} x recency   {explain['recency']:.4f}")
         out.append(f"    = net score       {explain['net']:.4f}")
     else:
         label = "BM25 contribution" if ranker == "bm25" else "cosine contribution"
@@ -173,6 +180,8 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
+    parser.add_argument("--no-authority", action="store_true",
+                        help="net score uses plain recency instead of recency + PageRank + first to publish")
     parser.add_argument("--no-kal", action="store_true",
                         help="don't re-rank kal queries by date")
     parser.add_argument("--no-xling", action="store_true",
@@ -195,14 +204,16 @@ def run(argv=None):
         if not args.no_parser:
             explain_parser(out, query, index, args.k)
 
+    static, parts = (None, {}) if args.no_authority else static_scores(index)
+    pool = args.k
     if not args.no_parser:
-        results = parse_and_rank(query, index, k=args.k, ranker=args.ranker)
+        results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static)
     elif args.ranker == "net":
-        results = rank(query, index, k=args.k)
+        results = rank(query, index, k=pool, static=static)
     elif args.ranker == "lnc":
-        results = search(query, index, k=args.k)
+        results = search(query, index, k=pool)
     else:
-        results = search_bm25(query, index, k=args.k)
+        results = search_bm25(query, index, k=pool)
 
     if not args.no_kal:
         intent = kal_intent(query)
@@ -216,7 +227,7 @@ def run(argv=None):
         out.append("No matches.")
     for i, (doc_id, score, explain) in enumerate(results, start=1):
         if args.explain:
-            explain_result(out, i, doc_id, score, explain, index, args.ranker)
+            explain_result(out, i, doc_id, score, explain, index, args.ranker, parts.get(doc_id))
         else:
             headline = getattr(index, "articles", {}).get(doc_id, {}).get("headline", "")
             stage = explain.get("stage")

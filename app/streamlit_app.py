@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
+from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
@@ -278,11 +279,17 @@ def load_index(mode):
     return SampleIndex.load(mode)
 
 
-def run_ranker(ranker, query, index, k, doc_filter, use_parser=True):
+@st.cache_resource
+def load_static(mode):
+    """Authority g(d) for an index: recency + PageRank + first to publish."""
+    return static_scores(load_index(mode))
+
+
+def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):
     if use_parser:
-        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter)
+        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static)
     if ranker == "net":
-        return rank(query, index, k=k, doc_filter=doc_filter)
+        return rank(query, index, k=k, doc_filter=doc_filter, static=static)
     if ranker == "lnc":
         return search(query, index, k=k, doc_filter=doc_filter)
     return search_bm25(query, index, k=k, doc_filter=doc_filter)
@@ -318,12 +325,16 @@ def snippet(body, sources, max_words=28):
     return " ".join(words[:max_words]) + (" …" if len(words) > max_words else "")
 
 
-def score_table(explain, terms):
+def score_table(explain, terms, parts=None):
     rows = []
     if "cosine" in explain:
+        g_label = "Authority g(d)" if explain.get("static") else "Recency g(d)"
         for label, key in (("Cosine", "cosine"), ("Headline match", "zone"),
-                           ("Proximity", "proximity"), ("Recency g(d)", "recency")):
+                           ("Proximity", "proximity"), (g_label, "recency")):
             rows.append(f"<tr><td>{label}</td><td>{explain[key]:.4f}</td></tr>")
+        if explain.get("static") and parts:
+            for label, key in (("  recency", "recency"), ("  PageRank", "pagerank"), ("  first to publish", "original")):
+                rows.append(f"<tr><td>{label}</td><td>{parts[key]:.4f}</td></tr>")
     for term, value in terms.items():
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
@@ -334,7 +345,7 @@ def score_table(explain, terms):
     return f'<table class="dv-table">{"".join(rows)}</table>'
 
 
-def result_row(doc_id, score, explain, index, sources, only_here):
+def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     article = index.articles.get(doc_id, {"headline": doc_id, "body": ""})
     meta = index.meta[doc_id]
     terms = explain.get("terms", explain)
@@ -360,7 +371,7 @@ def result_row(doc_id, score, explain, index, sources, only_here):
       <div class="dv-headline">{highlight(article["headline"], sources)}</div>
       <div class="dv-snippet">{highlight(snippet(article["body"], sources), sources)}</div>
       <div class="dv-chips">{chips}</div>
-      <details><summary>Score details</summary>{score_table(explain, terms)}</details>
+      <details><summary>Score details</summary>{score_table(explain, terms, parts)}</details>
     </div>"""
 
 
@@ -406,6 +417,8 @@ def main():
             k = st.slider("Results per column", 3, 20, 10)
             use_parser = st.toggle("Smart query parsing", value=True,
                                    help="Try the exact phrase first, then all the words, then any word.")
+            use_authority = st.toggle("Authority (PageRank + first to publish)", value=True,
+                                      help="Net score uses g(d) = recency + PageRank + first-to-publish credit.")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -436,7 +449,8 @@ def main():
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
-        results[mode] = run_ranker(ranker, query, index, k, doc_filter, use_parser)
+        static = load_static(mode)[0] if use_authority else None
+        results[mode] = run_ranker(ranker, query, index, k, doc_filter, use_parser, static)
         if use_kal:
             results[mode] = apply_kal(results[mode], query, index)
 
@@ -445,9 +459,11 @@ def main():
     for col, (mode, label) in zip(columns, MODES):
         others = set().union(*(ids[m] for m in ids if m != mode))
         count = len(results[mode])
+        parts = load_static(mode)[1] if use_authority else {}
         if results[mode]:
             rows = "".join(
-                result_row(doc_id, score, explain, load_index(mode), sources_map, doc_id not in others)
+                result_row(doc_id, score, explain, load_index(mode), sources_map, doc_id not in others,
+                           parts.get(doc_id))
                 for doc_id, score, explain in results[mode]
             )
         else:

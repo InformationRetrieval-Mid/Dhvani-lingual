@@ -50,3 +50,13 @@ def test_kal_explain_has_its_own_step():
 def test_no_kal_turns_it_off():
     text = cli.run(["कल बारिश", "--k", "2", "--no-kal"])
     assert "kal:" not in text
+
+
+def test_authority_breakdown_in_explain():
+    text = cli.run(["रेल लाइन उद्घाटन", "--k", "1", "--explain"])
+    assert "x g(d)" in text and "PageRank" in text and "first to publish" in text
+
+
+def test_no_authority_uses_plain_recency():
+    text = cli.run(["रेल लाइन उद्घाटन", "--k", "1", "--explain", "--no-authority"])
+    assert "x recency" in text and "PageRank" not in text
