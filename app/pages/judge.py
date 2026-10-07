@@ -79,6 +79,8 @@ def highlight(text, words):
 def main():
     st.set_page_config(page_title="Dhvani judging", page_icon="✅", layout="centered")
     st.markdown(STYLE, unsafe_allow_html=True)
+    st.markdown('<a href="/" target="_self" style="font-size:0.85rem;text-decoration:none;">← Back to search</a>',
+                unsafe_allow_html=True)
     st.title("Judging")
 
     descriptions, pool, need_words = needs_and_pool()
