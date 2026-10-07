@@ -12,6 +12,7 @@ never overwrite entries another source already added.
 """
 
 from dhvani.query import match as M
+from dhvani.query.aliases import ALIASES
 
 
 def expand_token(token, index, costs, k=5):
@@ -33,6 +34,16 @@ def expand_token(token, index, costs, k=5):
         if term not in seen:
             token["expansions"].append((term, round(weight, 4), source))
             seen.add(term)
+
+    # Curated alias: for a few high-value proper nouns the phonetic matcher misses
+    # (delhi -> दिल्ली, iyer -> अय्यर), force the correct Devanagari form to the
+    # front with full weight, but only if it is actually in the index vocabulary.
+    alias = ALIASES.get(surface)
+    if alias and index is not None and alias in getattr(index, "canon", {}):
+        token["expansions"] = [e for e in token["expansions"] if e[0] != alias]
+        exact = [e for e in token["expansions"] if e[2] == "exact"]
+        rest = [e for e in token["expansions"] if e[2] != "exact"]
+        token["expansions"] = exact + [(alias, 1.0, "phonetic")] + rest
     return token
 
 
