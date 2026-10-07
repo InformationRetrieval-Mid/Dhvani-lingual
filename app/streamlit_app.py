@@ -27,11 +27,17 @@ from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
+from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
+    ClusterPruning,
+    ImpactOrdered,
     RecencyTiers,
     search_champions,
+    search_clusters,
+    search_impact,
     search_index_elimination,
     search_tiered,
 )
@@ -43,12 +49,13 @@ from dhvani.rank.vsm import search  # noqa: E402
 
 MODES = [("none", "No stemming"), ("light", "Stemming"), ("auto", "Auto")]
 
-RANKERS = {"Net score": "net", "lnc.ltc": "lnc", "BM25": "bm25"}
+RANKERS = {"Net score": "net", "lnc.ltc": "lnc", "BM25": "bm25", "Fusion": "rrf"}
 
 RANKER_NOTES = {
     "net": "Cosine similarity with headline, proximity and recency boosts.",
     "lnc": "Plain cosine similarity using SMART lnc.ltc weights.",
     "bm25": "Okapi BM25 with term saturation and length normalisation.",
+    "rrf": "Reciprocal rank fusion of lnc.ltc, BM25 and the net score (and dense when it's on).",
 }
 
 SUGGESTIONS = ["भूकंप के झटके", "shreyas iyer shatak", "smriti mandhana captain", "chardham yatra record"]
@@ -303,7 +310,27 @@ def load_tiers(mode):
     return RecencyTiers(load_index(mode))
 
 
-SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers"]
+@st.cache_resource
+def load_encoder():
+    return SentenceEncoder()
+
+
+@st.cache_resource
+def load_dense(mode):
+    return DenseIndex(load_index(mode), load_encoder())
+
+
+@st.cache_resource
+def load_clusters(mode):
+    return ClusterPruning(load_index(mode))
+
+
+@st.cache_resource
+def load_impact(mode):
+    return ImpactOrdered(load_index(mode))
+
+
+SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers", "Cluster pruning", "Impact-ordered postings"]
 
 
 def run_speedup(name, query, mode, k, doc_filter):
@@ -313,12 +340,18 @@ def run_speedup(name, query, mode, k, doc_filter):
         return search_index_elimination(query, index, k=k, doc_filter=doc_filter)
     if name == "Champion lists":
         return search_champions(query, index, load_champions(mode), k=k, doc_filter=doc_filter)
-    return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
+    if name == "Recent tiers":
+        return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
+    if name == "Cluster pruning":
+        return search_clusters(query, index, load_clusters(mode), k=k, doc_filter=doc_filter)
+    return search_impact(query, index, load_impact(mode), k=k, max_docs=max(20, index.N // 15), doc_filter=doc_filter)
 
 
-def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):
+def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None, dense=None):
     if use_parser:
-        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static)
+        return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static, dense=dense)
+    if ranker == "rrf":
+        return search_rrf(query, index, k=k, doc_filter=doc_filter, static=static, dense=dense)
     if ranker == "net":
         return rank(query, index, k=k, doc_filter=doc_filter, static=static)
     if ranker == "lnc":
@@ -366,10 +399,18 @@ def score_table(explain, terms, parts=None):
         if explain.get("static") and parts:
             for label, key in (("  recency", "recency"), ("  PageRank", "pagerank"), ("  first to publish", "original")):
                 rows.append(f"<tr><td>{label}</td><td>{parts[key]:.4f}</td></tr>")
+    if "rrf" in explain:
+        for name, r in explain["rrf"].items():
+            rows.append(f"<tr><td>Rank in {html.escape(name)}</td><td>{'#' + str(r) if r else '-'}</td></tr>")
+        rows.append(f'<tr class="total"><td>RRF score</td><td>{explain["rrf_score"]:.4f}</td></tr>')
     for term, value in terms.items():
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
         rows.append(f'<tr class="total"><td>Net score</td><td>{explain["net"]:.4f}</td></tr>')
+    dense = explain.get("dense")
+    if dense:
+        rows.append(f"<tr><td>Dense (e5) cosine</td><td>{dense['cosine']:.4f}</td></tr>")
+        rows.append(f'<tr class="total"><td>After dense re-rank</td><td>{dense["score"]:.4f}</td></tr>')
     kal = explain.get("kal")
     if kal:
         rows.append(f'<tr><td>कल boost ({kal["intent"]})</td><td>x {1 + kal["weight"] * kal["boost"]:.2f}</td></tr>')
@@ -464,6 +505,9 @@ def main():
                                      help="Show a wire story once, with the other papers that ran it.")
             speedup = st.selectbox("Speed-up", SPEEDUPS,
                                    help="Score fewer articles with a Lecture 7 speed-up (lnc.ltc only).")
+            use_dense = dense_available() and st.toggle(
+                "Dense re-ranking (e5)", value=False,
+                help="Re-rank the top 50 with a multilingual embedding model: half first stage, half meaning.")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -491,6 +535,8 @@ def main():
 
     results, speed_stats = {}, {}
     pool = collapse_pool(k) if use_collapse else k
+    if use_dense:
+        pool = max(pool, DEFAULT_DEPTH)
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
@@ -498,7 +544,10 @@ def main():
         if speedup != "Off":
             results[mode], speed_stats[mode] = run_speedup(speedup, queries[mode], mode, pool, doc_filter)
         else:
-            results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static)
+            fuse_dense = load_dense(mode) if use_dense and ranker == "rrf" else None
+            results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static, fuse_dense)
+        if use_dense and not (ranker == "rrf" and speedup == "Off"):
+            results[mode] = dense_rerank(results[mode], queries[mode], load_dense(mode))
         if use_kal:
             results[mode] = apply_kal(results[mode], queries[mode], index)
         if use_collapse:

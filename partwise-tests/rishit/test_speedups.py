@@ -166,3 +166,90 @@ def test_all_tiers_give_the_exact_ranking():
     fast, _ = search_tiered(q, idx, tiers, k=100)
     exact = search(q, idx, k=100)
     assert [d for d, _, _ in fast] == [d for d, _, _ in exact]
+
+
+# --- cluster pruning ---------------------------------------------------------
+
+from dhvani.rank.speedups import ClusterPruning, search_clusters  # noqa: E402
+
+
+def test_about_sqrt_n_leaders_and_every_article_in_one_cluster():
+    idx = SampleIndex.load()
+    cp = ClusterPruning(idx)
+    assert len(cp.leaders) == round(idx.N ** 0.5)          # 20 articles -> 4 leaders
+    members = [d for m in cp.members.values() for d in m]
+    assert sorted(members) == sorted(idx.meta)             # each article exactly once
+    assert all(cp.leader_of[l] == l for l in cp.leaders)
+
+
+def test_followers_join_their_most_similar_leader():
+    idx = SampleIndex.load()
+    cp = ClusterPruning(idx)
+    for doc_id, leader in cp.leader_of.items():
+        if doc_id in cp.leaders:
+            continue
+        sims = {l: sum(w * cp.vectors[l].get(t, 0.0) for t, w in cp.vectors[doc_id].items()) for l in cp.leaders}
+        assert sims[leader] == max(sims.values())
+
+
+def test_same_seed_same_clusters():
+    idx = SampleIndex.load()
+    assert ClusterPruning(idx, seed=3).leaders == ClusterPruning(idx, seed=3).leaders
+
+
+def test_all_leaders_gives_the_exact_ranking():
+    idx = SampleIndex.load()
+    cp = ClusterPruning(idx)
+    q = exact_query("दिल्ली बारिश")
+    fast, stats = search_clusters(q, idx, cp, k=5, b=len(cp.leaders))
+    assert overlap_at_k(fast, search(q, idx, k=5), k=5) == 1.0
+    assert stats["leaders_used"] == len(cp.leaders)
+
+
+def test_cluster_search_scores_at_most_the_full_candidates():
+    idx = SampleIndex.load()
+    q = exact_query("दिल्ली बारिश")
+    _results, stats = search_clusters(q, idx, ClusterPruning(idx), k=2, b=1)
+    assert stats["method"] == "cluster pruning"
+    assert 0 < stats["scored"] <= stats["full_candidates"]
+    assert 1 <= stats["leaders_used"] <= stats["leaders"]
+
+
+# --- impact-ordered postings -------------------------------------------------
+
+from dhvani.rank.speedups import ImpactOrdered, search_impact  # noqa: E402
+
+
+def test_impact_lists_are_sorted_by_weight():
+    idx = SampleIndex.load()
+    imp = ImpactOrdered(idx)
+    for term in ("बारिश", "दिल्ली"):
+        weights = [w for _d, w in imp.postings(term)]
+        assert weights == sorted(weights, reverse=True)
+        assert {d for d, _w in imp.postings(term)} == {d for z in ("headline", "body") for d, _tf, _p in idx.postings(term, z)}
+
+
+def test_reading_everything_gives_the_exact_ranking():
+    idx = SampleIndex.load()
+    q = exact_query("दिल्ली बारिश")
+    fast, stats = search_impact(q, idx, ImpactOrdered(idx), k=5, max_docs=None, min_share=0.0)
+    exact = search(q, idx, k=5)
+    assert [d for d, _, _ in fast] == [d for d, _, _ in exact]
+    assert stats["postings_read"] == stats["postings_total"]
+
+
+def test_max_docs_stops_each_list_early():
+    idx = SampleIndex.load()
+    q = exact_query("दिल्ली बारिश")
+    _results, stats = search_impact(q, idx, ImpactOrdered(idx), k=5, max_docs=1)
+    assert stats["postings_read"] <= len(query_vector(q, idx))
+    assert stats["postings_read"] < stats["postings_total"]
+
+
+def test_weight_floor_stops_reading_low_weight_articles():
+    idx = SampleIndex.load()
+    imp = ImpactOrdered(idx)
+    q = exact_query("बारिश")
+    _results, stats = search_impact(q, idx, imp, k=5, max_docs=None, min_share=0.99)
+    best = imp.postings("बारिश")[0][1]
+    assert stats["postings_read"] == sum(1 for _d, w in imp.postings("बारिश") if w >= 0.99 * best)

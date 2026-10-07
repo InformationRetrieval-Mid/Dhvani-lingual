@@ -149,3 +149,45 @@ A running list of the choices we made and why. Newest at the bottom.
 **Fallback to the sample index.** If the real indexes aren't built, the app and CLI still run on the 20-article sample, and the tests always use it so they pass the same way on every machine.
 
 **Dictionary grown from the information needs.** Words like earthquake, protest, detained, bypoll and pilgrims were added because the English forms of our needs use them. General news words only; nothing is copied from articles.
+
+**Cluster pruning uses random leaders.** Lecture 7 picks sqrt(N) leaders at random: it's fast, and random picks land where the articles are dense. A fixed seed keeps the clusters the same between runs so results can be compared.
+
+**Cluster pruning falls back like champion lists.** If the closest clusters give fewer than k results, the next-closest leader is added, so a query never comes back with a short page.
+
+**On the sample, champion lists beat cluster pruning.** Cluster pruning scores the fewest articles but keeps only 28% of the exact top 10 with one cluster, while champion lists with r=5 keep 93% for about the same work. News clusters by story are small and specific, so a query's articles are often spread over several clusters. We'll recheck on the full crawl.
+
+**All my results in one file.** `documentation/results/rishit-results.md` has a section per experiment, each saying which corpus, queries, k and date it used. Numbers from the 300-article sample are marked as early, so they don't get mixed up with the final numbers on the frozen corpus.
+
+**Impact-ordered postings stop after a fixed number of articles.** Lecture 7 gives two ways to stop early: after a set number of articles, or when the weight drops below a threshold. On news the weights inside one word's list are close together, so the threshold hardly cuts anything. Stopping after 20 articles per word (or N / 15 on a bigger corpus) is the default; the threshold stays in the speed-ups table for comparison.
+
+**Query words are read in decreasing idf.** The rarest words decide the ranking most, so their lists are read first, as the lecture suggests.
+
+**High/low lists weren't built separately.** Champion lists already fall back to the full postings when they give fewer than k results, which is the high list / low list idea.
+
+**multilingual-e5-small for dense re-ranking.** It's trained for search (not just sentence similarity), covers Hindi, and is small enough to embed the whole corpus on a laptop in seconds to minutes. LaBSE was about four times bigger for no clear gain here.
+
+**Dense re-ranks, it doesn't retrieve.** lnc.ltc, BM25 or the net score pick the top 50 from the index, and dense only re-scores those. The IR part stays in charge of what's a candidate, which is what the assignment asks for, and there's no need for a vector index.
+
+**Half first stage, half dense, both scaled.** e5's cosines are bunched together (about 0.75 to 0.85), so both scores are min-max scaled over the candidates before mixing. 0.5 each is a starting point; learning-to-rank can set it once there are judgments.
+
+**Dense gets the query with Devanagari spellings added.** e5 does well with Hindi and English but not Roman Hindi: on its own "kal ka mausam" scored a cricket article above a weather one. Adding Viraja's confident Devanagari spellings and the translations fixes that. Phonetic spellings under 0.4 are left out because for English words they're often unrelated (farmers → हार्मोन्स).
+
+**Dense is optional.** It needs torch and a model download, so it lives in `requirements-dense.txt`, and the app and CLI hide it when it isn't installed. Nobody else on the team has to install it.
+
+**Working copy of the full crawl without the repeat.** Riya's file has one article saved twice, and Dhrithi's index builder stops on a repeated id. Rather than wait, we build from a local copy that keeps the later of the two. It stays out of git, and the indexes get rebuilt from Riya's cleaned file once she sends it.
+
+**Speed-up numbers redone on the full crawl.** On 300 articles every speed-up looked close to exact because there was so little to skip. On 5,000 the differences are clear, so the full-crawl table is the main one and the 300-article table is kept only for comparison.
+
+**Function words stay in the index.** The top-df words are all Hindi function words with idf near 0, so lnc.ltc already ignores them in practice. Keeping them means phrase queries like "भूकंप के झटके" still match exactly.
+
+**Zipf slope reported over the frequent words.** The fit over every word is pulled down by the 40,255 words that appear once, so the report quotes the slope over the top 1,000 words (-0.90) next to the overall one (-1.45).
+
+**RRF with c = 60.** That's the value from Cormack, Clarke and Buettcher (SIGIR 2009), which works well without tuning. RRF only looks at ranks, so lnc.ltc, BM25, the net score and e5 can be combined without making their scores comparable.
+
+**The net score is one of the fused lists.** It already carries zones, proximity and authority, so fusing it with plain lnc.ltc and BM25 lets those signals count without hand-picking weights between the three.
+
+**Dense only orders what the index found.** In fusion the dense list is the sparse lists' candidates ordered by e5 cosine, so dense never brings in an article that no IR ranker matched.
+
+**Dense is used once, not twice.** With Fusion and Dense both on, dense is one of the fused lists and the separate re-ranking step is skipped.
+
+**My to-do covers only my code.** Team items like the report, the video and the README, and the teammates' own task lists, are tracked by each person. My to-do keeps my code, my novelty with what's done and left, and only the outside things my code is waiting on.

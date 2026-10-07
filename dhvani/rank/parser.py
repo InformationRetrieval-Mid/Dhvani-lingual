@@ -24,6 +24,7 @@ Phrase and sub-phrase checks use positions from the positional index
 """
 
 from dhvani.rank.bm25 import search_bm25
+from dhvani.rank.fusion import search_rrf
 from dhvani.rank.scoring import rank
 from dhvani.rank.vsm import ZONES, search
 
@@ -132,9 +133,11 @@ def stage_matches(index, query):
     return out
 
 
-def _score_all(query, index, ranker, doc_filter, static=None):
+def _score_all(query, index, ranker, doc_filter, static=None, dense=None):
     n = max(index.N, 1)
-    if ranker == "net":
+    if ranker == "rrf":
+        results = search_rrf(query, index, k=n, depth=n, doc_filter=doc_filter, static=static, dense=dense)
+    elif ranker == "net":
         results = rank(query, index, k=n, doc_filter=doc_filter, static=static)
     elif ranker == "lnc":
         results = search(query, index, k=n, doc_filter=doc_filter)
@@ -143,13 +146,13 @@ def _score_all(query, index, ranker, doc_filter, static=None):
     return {doc_id: (score, explain) for doc_id, score, explain in results}
 
 
-def parse_and_rank(query, index, k=10, ranker="net", doc_filter=None, static=None):
+def parse_and_rank(query, index, k=10, ranker="net", doc_filter=None, static=None, dense=None):
     """Rank with the cascade. Returns [(doc_id, score, explain)], best first.
 
     explain gets a "stage" entry saying which stage first matched the
     article, and a "stages_run" entry listing the stages that were needed.
     """
-    scored = _score_all(query, index, ranker, doc_filter, static)
+    scored = _score_all(query, index, ranker, doc_filter, static, dense)
 
     picked = {}          # doc_id -> stage index where it first matched
     stages_run = []

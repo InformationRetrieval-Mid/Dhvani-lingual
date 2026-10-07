@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after plugging in the real index and query layer
+Last updated: 7 Oct, after adding rank fusion and tidying the docs
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -16,18 +16,18 @@ Last updated: 7 Oct, after plugging in the real index and query layer
 | Viraja | `Viraja` | Hinglish phonetic layer | `dhvani/query/` |
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
-Each person commits to their own branch. Riya's, Dhrithi's and Viraja's branches are merged into `main`; `rishit` goes in next.
+Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to the plug-in work, and the later commits (cluster pruning, impact-ordered postings, dense, the full-crawl numbers and rank fusion) go in with the next merge.
 
 **Setup.**
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest partwise-tests/rishit -q
-# copy Riya's news_sample_300.jsonl into data/ first (it isn't in git)
-.venv/bin/python -m index.build --input data/news_sample_300.jsonl
+# put Riya's crawl in data/ first (it isn't in git); data/news.jsonl is the full crawl without its one repeated article
+.venv/bin/python -m index.build --input data/news.jsonl
 .venv/bin/streamlit run app/streamlit_app.py
 ```
-Without the built indexes the app and CLI fall back to the 20-article sample index.
+Without the built indexes the app and CLI fall back to the 20-article sample index. Dense re-ranking is optional: `.venv/bin/pip install -r requirements-dense.txt` (sentence-transformers and torch, about 500 MB); the model, about 470 MB, downloads on first use.
 
 **Rules for working in this repo.**
 - Commits go under the person who did the work. No AI co-author lines or tool names in commit messages.
@@ -37,12 +37,14 @@ Without the built indexes the app and CLI fall back to the 20-article sample ind
 - Article text never goes in git. Only the top-level `data/` folder is ignored, so crawled articles, indexes and downloads go there.
 - Don't change a shared format in `formats.md` without telling the group.
 
-**Where things stand right now.** The app and CLI run on the real pieces: Dhrithi's index built on Riya's 300 articles, Viraja's `build_query` with phonetic variants, and the cross-lingual layer, all through `dhvani/rank/real_index.py`. Hindi, Hinglish and English versions of a need find the same articles (for example भूकंप के झटके, bhukamp ke jhatke delhi and earthquake delhi). The tests stay on the 20-article sample.
+**Where things stand right now.** The app and CLI run on the real pieces: Dhrithi's index built on Riya's full crawl (5,000 articles), Viraja's `build_query` with phonetic variants, and the cross-lingual layer, all through `dhvani/rank/real_index.py`. Hindi, Hinglish and English versions of a need find the same articles (for example भूकंप के झटके, bhukamp ke jhatke delhi and earthquake delhi). The tests stay on the 20-article sample.
 - Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`. It's kept out of git on `main`; copy it into your local `data/` folder.
-- The full crawl isn't done yet, so everything is on the 300 articles for now.
+- Riya's full crawl is `data/news_dedup.jsonl` (5,001 lines, not in git). One article is in it twice, which Dhrithi's builder refuses, so for now build from a local copy without the repeat: `data/news.jsonl`, 5,000 articles. The four indexes build in about 30 s.
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
+
+**My novelty**, in short: cross-lingual ranking inside the vector space model, the three stemming columns with match types, date-aware कल, authority g(d) from PageRank and first to publish, duplicate collapsing, BM25, dense re-ranking with e5, and rank fusion. Learning-to-rank comes after judging. The to-do has the full table with what's done and what's left.
 
 ## Committed so far
 
@@ -80,7 +82,13 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `24b3804` speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
 | `5feba40` speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
 | `612c363` my 8 information needs from stories in riya's crawl | `documentation/needs/rishit-needs.md` |
-| real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
+| `3714640` real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
+| `8e75d5a` cluster pruning: leaders and followers, compared with the other speed-ups | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
+| `21dd828` results file with early speed-ups numbers on riya's 300 articles | `documentation/results/rishit-results.md` |
+| `c302928` impact-ordered postings: read each word's best articles first and stop early | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
+| `1fd899d` dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
+| `2c5f883` speed-ups, stop words and zipf on riya's full crawl | `documentation/results/rishit-results.md`, two plots in `documentation/figures/` |
+| rank fusion (rrf) of lnc.ltc, bm25, net score and dense | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -92,7 +100,7 @@ idx = SampleIndex.load("none")
 ```
 
 **Query stub** (`dhvani/rank/query_stub.py`)
-Builds the query object from `formats.md` with exact matches only. It stands in for Viraja's `dhvani.query.build.build_query`, which is finished on her branch and has the same output shape; swap the import once the branches are merged.
+Builds the query object from `formats.md` with exact matches only. The real pipeline now uses Viraja's `build_query` (see "Real index and query layer" below); the stub is only used with the sample index and in the tests.
 ```python
 from dhvani.rank.query_stub import exact_query
 q = exact_query("दिल्ली बारिश")
@@ -127,10 +135,10 @@ rank(q, idx, k=10, doc_filter=f)     # same for search() and search_bm25()
 ```
 
 **Article text** (`SampleIndex.articles`)
-`idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. The real system will read this from the article file.
+`idx.articles[doc_id]` gives `{"headline", "body"}` for showing results. With the real index, `load_index()` points `articles` at Dhrithi's stored text, so the same code works for both.
 
 **The app** (`app/streamlit_app.py`)
-Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc or BM25), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched (exact, phonetic, translated, or feedback for Rocchio terms), an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has "Smart query parsing", "Date-aware kal" and "Translate English words" switches, all on by default. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. For now all three columns use the sample index, so they look the same.
+Styled after Apple's design guidelines. A translucent bar sits at the top, and a big centred search field has suggestion pills under it. A segmented control picks the ranking model (net score, lnc.ltc, BM25 or Fusion), and a Filters popover next to it holds newspaper, section, state, results per column and date range. Results show in three grouped lists side by side: no stemming, stemming and auto. Each row shows the paper, section, place, date and score, the headline and best-matching sentence with matched words tinted by match type, chips for how each word matched (exact, phonetic, translated, or feedback for Rocchio terms), an "Only here" tag if the result isn't in the other columns, a small label for the parser stage that matched it, and a "Score details" disclosure with the full breakdown. The Filters popover has switches for "Smart query parsing", "Authority (PageRank + first to publish)", "Collapse duplicate stories", "Date-aware kal" and "Translate English words" (all on by default) and "Dense re-ranking (e5)" (off by default, only shown when it's installed), plus a "Speed-up" menu. The suggestion pills are real stories from the crawl. Works in light and dark mode, and respects reduced motion, transparency and contrast settings. Each column uses its own index from Dhrithi's builder, or the sample index if none is built.
 ```bash
 .venv/bin/streamlit run app/streamlit_app.py
 ```
@@ -139,7 +147,7 @@ Styled after Apple's design guidelines. A translucent bar sits at the top, and a
 Turns one query into stricter-to-looser searches: exact phrase, part of the phrase (two neighbouring words), all words, all words with variants, then any word. It stops once it has k results. Articles found at a stricter stage rank above looser ones, and within a stage the chosen ranker decides. Each result's explain dict gets `stage` and `stages_run`, and its word scores are always under `terms`. Feedback tokens from Rocchio (all expansions tagged `prf`) don't take part in the phrase and AND stages; they only count in "any word" and in the score.
 ```python
 from dhvani.rank.parser import parse_and_rank
-parse_and_rank(q, idx, k=10, ranker="net", doc_filter=None)   # ranker: net, lnc or bm25
+parse_and_rank(q, idx, k=10, ranker="net", doc_filter=None)   # ranker: net, lnc, bm25 or rrf
 ```
 
 **Terminal search and --explain** (`app/cli.py`)
@@ -148,7 +156,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a step 4b showing how many articles each parser stage found and where it stopped. `--no-parser` turns the parser off, `--no-xling` turns translation off and `--no-kal` turns date-aware kal off.
+With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -172,7 +180,7 @@ Runs every stemming mode x every ranker x every query, writes TREC run files to 
 ```
 
 **Stop words, idf and Zipf** (`dhvani/eval/corpus_stats.py`)
-df, collection frequency and idf for every term, the most frequent terms (Hindi function words like में, का, की come out at the top with idf near 0), a stop word list taken from the data, Zipf's law with a fitted slope, and a stop word experiment: no idf (lnc.lnc) vs idf (lnc.ltc) vs stop words removed. Plots go to `data/eval/` when matplotlib is installed.
+df, collection frequency and idf for every term, the most frequent terms (Hindi function words like में, का, की come out at the top with idf near 0), a stop word list taken from the data, Zipf's law with a fitted slope, and a stop word experiment: no idf (lnc.lnc) vs idf (lnc.ltc) vs stop words removed. Plots go to `data/eval/` when matplotlib is installed; the ones for the report are copied to `documentation/figures/`, and the numbers on the full crawl are in `documentation/results/rishit-results.md`.
 ```bash
 .venv/bin/python -m dhvani.eval.corpus_stats
 ```
@@ -190,7 +198,15 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Recent-news tiers** (`dhvani/rank/speedups.py`)
 `RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
 
-All three speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions` or `--speedup tiers`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; the real numbers come from the full crawl. Both use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
+**Cluster pruning** (`dhvani/rank/speedups.py`)
+`ClusterPruning(index, n_leaders=None, seed=0)` picks sqrt(N) random leaders (71 for 5,000 articles) and puts every other article in the cluster of its most similar leader, by cosine of their lnc vectors. `search_clusters(q, idx, clusters, k, b=1)` compares the query with the leaders only and scores the clusters of the b closest; if that gives fewer than k results it adds the next-closest leader. Returns `(results, stats)` with the leaders used. A fixed seed keeps the clusters the same between runs.
+
+Numbers comparing all the speed-ups on Riya's full crawl (5,000 articles, before the freeze) are in `documentation/results/rishit-results.md`.
+
+**Impact-ordered postings** (`dhvani/rank/speedups.py`)
+`ImpactOrdered(index)` sorts each word's postings by the word's lnc weight in the article, highest first. `search_impact(q, idx, impact, k, max_docs=20, min_share=0.0)` goes through the query words in decreasing idf and reads each list from the top, stopping after `max_docs` articles or once the weight drops below `min_share` x the list's best weight. Articles past the cut-off just miss that word's small contribution. Returns `(results, stats)` with postings read against the total. The app and CLI use `max_docs` = N / 15 (at least 20).
+
+All five speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions`, `--speedup tiers`, `--speedup clusters` or `--speedup impact`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50 cluster pruning at b = 1 and 3, and impact-ordered postings stopping after 20 or 50 articles or below half the best weight. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; numbers on Riya's full crawl are in `documentation/results/rishit-results.md`. They all use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
 
 **Date-aware kal** (`dhvani/rank/kal.py`)
 कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. It only reorders within a query-parser stage, so a stricter match stays above a looser one. In the app it's the "Date-aware kal" switch (on by default), boosted results get a "कल · tomorrow" or "कल · yesterday" tag, and Score details shows the boost. In the CLI, results show `[kal: tomorrow]`, `--explain` adds a step 4c, and `--no-kal` turns it off.
@@ -222,17 +238,32 @@ idx = load_index("light")
 rank(make_query("bhukamp ke jhatke delhi", "light"), idx, k=10)
 ```
 
+**Dense re-ranking** (`dhvani/rank/dense.py`, optional)
+Re-scores the top 50 of any ranker with `intfloat/multilingual-e5-small`: score = 0.5 x first-stage score + 0.5 x e5 cosine, both min-max scaled over the 50 first (e5's cosines sit in a narrow 0.75 to 0.85 band, so unscaled they'd never change anything). The sparse ranker still picks the candidates. e5 handles Hindi and English but not Roman Hindi, so `dense_query_text()` sends the raw query plus the best Devanagari spelling of each Roman word: translations always, phonetic spellings only with weight 0.4 or more. "kal ka mausam" becomes "kal ka mausam कल का मौसम". Article vectors are computed once and cached in `data/dense/` (12.8 s for 300 articles). Like kal, it only reorders within a parser stage. In the app it's the "Dense re-ranking (e5)" switch, off by default and only shown if sentence-transformers is installed; Score details shows the e5 cosine. In the CLI it's `--dense`, and `--explain` adds a step 4b. Tests use a fake encoder, so they don't need the model.
+```python
+from dhvani.rank.dense import DenseIndex, SentenceEncoder, dense_rerank
+dense = DenseIndex(idx, SentenceEncoder())
+results = dense_rerank(rank(q, idx, k=50), q, dense)
+```
+
+**Rank fusion** (`dhvani/rank/fusion.py`)
+`search_rrf(q, idx, k, depth=50, static=None, dense=None)` runs lnc.ltc, BM25 and the net score (top 50 each) and fuses them with reciprocal rank fusion: each article scores the sum of 1 / (60 + its rank) over the lists. With a `DenseIndex` it also adds a dense list: the articles the sparse lists found, ordered by e5 cosine. `rrf(lists, k)` does the fusing for any {name: results}. Only ranks are used, so cosine, BM25 and e5 scores never need to be on the same scale. explain gets `"rrf"` (the article's rank in each list) and `"rrf_score"`. It works with the query parser (`parse_and_rank(..., ranker="rrf", dense=...)`). In the app it's the "Fusion" ranking model, and Score details shows the rank in each list; with Dense on, dense becomes one of the fused lists instead of a re-ranker. In the CLI it's `--ranker rrf`, and `--explain` prints the ranks.
+```python
+from dhvani.rank.fusion import search_rrf
+results = search_rrf(q, idx, k=10)
+```
+
 ## Tests
-144 tests in `partwise-tests/rishit/`, all passing.
+168 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
 
 ## What I need from others
-- **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. Fold letter case in the normalizer (right now "Iyer" and "iyer" are different terms), and commit the auto candidates file or say how to generate it, since without it the Auto column is the same as no stemming.
-- **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
-- **Riya:** the full crawl for the freeze. Strip leftover HTML from article bodies first: 24 of the 300 have `<a class=backlink href=...>` tags, so words like "href" get indexed. Keep article text out of git because the repo is public.
-- **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
+- **Riya:** a cleaned, frozen corpus. In the full crawl one article is saved twice (`jagran_40397148`, which stops Dhrithi's index builder), 249 bodies still have HTML tags, and there are 106 astrology pages and about 50 section and live-blog pages saved as articles. The listing pages come first for many queries. Also the pooling script's CLI, and her 8 information needs.
+- **Dhrithi:** her 8 information needs. Case folding and the auto candidates file are done; the indexes just need rebuilding once the corpus is frozen.
+- **Viraja:** less phonetic expansion for English words. Her language ID gives almost every Roman word 0.9 Hinglish, so "farmers" also searches हार्मोन्स and "snow" also searches now. Separately, "iyer" now reaches अय्यर through Dhvani-code, but with almost no weight, because "iyer" is also an English word in the index. (The k-gram index already runs over Dhrithi's real vocabulary through `real_index.py`.)
+- **Everyone:** judgments, once the runs are pooled.
 
 ## Next
-Merging this into `main`, then the experiments on the frozen corpus, judging, and learning-to-rank.
+Commit rank fusion and merge `rishit` into `main`, point the experiment runner at the real index, then MMR and the other extras while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.
