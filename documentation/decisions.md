@@ -227,3 +227,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Non-articles go after all articles, across parser stages.** A listing page contains almost every word somewhere, so it often reached the "all words" stage while the real articles only reached "some words". Demoting within a stage left it on top, so page type is checked before the parser stage.
 
 **Page types saved as ids, decided with the URL.** The index has no URLs, and many listing headlines are plain ("मौसम", "उम्मीदवार"), so the corpus is classified once with the URL and only the ids of non-articles are kept in the repo.
+
+**Pool rebuilt from the current runs.** The first pool came from runs made before Viraja's rare-spelling fix; 146 of today's top-10 articles weren't in it. It was rebuilt early, while only 23 pairs had been judged (all still in the new pool), so nothing was lost. Riya's per-need pooling gives the identical 641 articles.
