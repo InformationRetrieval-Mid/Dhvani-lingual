@@ -31,3 +31,8 @@ def test_independent_vowels():
 
 def test_non_devanagari_passes_through():
     assert romanize("kal") == "kal"
+
+
+def test_anusvara_is_homorganic():
+    assert romanize("भूकंप") == "bhuukamp"  # anusvara before प -> m, not n
+    assert romanize("हिंदी") == "hindii"    # anusvara before द -> n

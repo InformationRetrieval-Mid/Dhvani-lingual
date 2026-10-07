@@ -54,6 +54,9 @@ _NUKTA_MAP = {"क": "q", "ख": "kh", "ग": "g", "ज": "z", "ड": "r", "ढ"
 _VIRAMA = "्"
 _ANUSVARA = "ं"
 _CHANDRABINDU = "ँ"
+# Before a labial consonant an anusvara is the nasal "m" (भूकंप -> bhukamp),
+# otherwise "n" (हिंदी -> hindi). Homorganic nasal assimilation.
+_LABIAL_CONS = set("पफबभम") | {"फ़"}
 _VISARGA = "ः"
 
 _DEVA_DIGITS = {d: str(i) for i, d in enumerate("०१२३४५६७८९")}
@@ -103,7 +106,8 @@ def romanize(word):
             out.append(_MATRAS[ch])
             trailing_schwa = False
         elif ch in (_ANUSVARA, _CHANDRABINDU):
-            out.append("n")
+            nxt = next((c for c in word[i + 1:] if c in _CONSONANTS), None)
+            out.append("m" if nxt in _LABIAL_CONS else "n")
             trailing_schwa = False
         elif ch == _VISARGA:
             out.append("h")

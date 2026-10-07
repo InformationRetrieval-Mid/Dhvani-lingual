@@ -89,8 +89,10 @@ for _chars, _cls in [
         _DEVA_CLASS[_ch] = _cls
 
 _ANUSVARA, _CHANDRABINDU = "ं", "ँ"
-_DEVA_CLASS[_ANUSVARA] = "4"
-_DEVA_CLASS[_CHANDRABINDU] = "4"
+# Consonants before which an anusvara is pronounced as the labial nasal म (class
+# 5); before anything else it is the dental/other nasal न (class 4). This makes
+# भूकंप code like भूकम्प and हिंदी like हिन्दी.
+_LABIALS = set("पफबभम") | {"फ़"}
 
 # Roman phonetic units, longest first so digraphs win over single letters.
 _ROMAN_UNITS = [
@@ -117,7 +119,15 @@ def _collapse(digits):
 
 
 def _dhvani_devanagari(word):
-    return _collapse(_DEVA_CLASS[ch] for ch in word if ch in _DEVA_CLASS)
+    digits = []
+    for i, ch in enumerate(word):
+        if ch in (_ANUSVARA, _CHANDRABINDU):
+            # Homorganic nasal: look at the next consonant to decide म vs न.
+            nxt = next((c for c in word[i + 1:] if c in _DEVA_CLASS), None)
+            digits.append("5" if nxt in _LABIALS else "4")
+        elif ch in _DEVA_CLASS:
+            digits.append(_DEVA_CLASS[ch])
+    return _collapse(digits)
 
 
 def _dhvani_roman(word):

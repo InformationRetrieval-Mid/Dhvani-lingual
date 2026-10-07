@@ -191,6 +191,21 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
     (one line in `dhvani/rank/real_index.py:_phonetic_tools`) so df is carried —
     otherwise homophone ranking falls back to spelling-distance only.
 
+16. **Rare spellings beating common ones — two more full-corpus fixes.**
+    - **Homorganic anusvara:** `romanize` (and Dhvani-code) now turn an anusvara
+      before a labial into "m" (भूकंप → "bhukamp"), elsewhere "n" (हिंदी). So
+      भूकंप (35 docs) now matches "bhukamp" and df picks it over भूकम्प (1 doc).
+    - **Soundex-keyed candidates:** `phonetic_candidates` unions Dhvani-code *and*
+      Soundex matches, a second net for sound-alikes whose codes differ (delhi /
+      दिल्ली share Soundex D400).
+    - **Place names protected:** common Indian cities/states (delhi, mumbai,
+      bihar…) are in `HINDI_PROTECT`, so they read as Hinglish and expand to their
+      Devanagari form instead of being gated as English.
+    Known hard cases left for the limitations section: "delhi" (the silent "h" in
+    the English spelling inflates the edit distance to दिल्ली — "dilli" works
+    perfectly), and "iyer" → एयर ("air", common) over the rarer surname अय्यर —
+    genuine homophones that df resolves toward the corpus-common word.
+
 14. **English words are detected properly and not phonetically expanded.** The
     old 40-word English seed meant real English words (farmers, snow, earthquake,
     worried) fell through to "Hinglish" and got phonetic junk (farmers → हामॉन्स).

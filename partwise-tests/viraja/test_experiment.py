@@ -37,3 +37,14 @@ def test_phonetic_expansion_recovers_hinglish_queries():
 def test_expansion_does_not_hurt_hindi():
     results = _results()
     assert results["hindi"]["expanded"][1] >= results["hindi"]["exact"][1]
+
+
+def test_rocchio_runs_and_reports_both_arms():
+    idx = E.build_sample_index("none")
+    queries = E.load_queries(os.path.join(E.SAMPLE_DIR, "queries.tsv"))
+    qrels = read_qrels(os.path.join(E.SAMPLE_DIR, "qrels.txt"))
+    costs = load_costs(E.EDIT_COSTS)
+    roc = E.run_rocchio(idx, queries, qrels, costs)
+    assert set(roc) == {"no_rocchio", "rocchio"}
+    # Rocchio should not collapse retrieval; on this sample it helps a little.
+    assert roc["rocchio"][1] >= roc["no_rocchio"][1]
