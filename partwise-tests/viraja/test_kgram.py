@@ -28,3 +28,10 @@ def test_unrelated_query_returns_few_or_no_candidates():
     idx = KGramIndex(VOCAB, k=2)
     # "zzzz" shares no k-grams with any weather/news term.
     assert idx.candidates("zzzz", limit=5) == []
+
+
+def test_phonetic_candidates_catch_same_sounding_distant_spellings():
+    # iyer / अय्यर share Dhvani-code 26 but almost no k-grams.
+    idx = KGramIndex(["अय्यर", "श्रेयस", "मौसम"], k=2)
+    assert "अय्यर" in idx.phonetic_candidates("iyer")
+    assert "श्रेयस" not in idx.phonetic_candidates("iyer")  # different code
