@@ -97,7 +97,9 @@
 - [x] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [x] `test_crawler.py`: Validate crawl loops, 429 backoff, 403/CAPTCHA disabling, and link harvesting
 - [x] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
+- [x] `test_recrawl.py`: Validate EWMA freshness tracking, HTTP 304 conditional polling, and burst routing
 - [x] `test_format_compliance.py`: Validate schema compliance with `formats.md`
+- [x] `test_pool.py`: Validate need_id aggregation, cross-form deduplication, and --raw-qid override
 
 ### 12. Evaluation & Submission Deliverables
 - [x] Generate deduplication threshold precision/recall table

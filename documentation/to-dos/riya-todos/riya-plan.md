@@ -311,28 +311,31 @@ All crawled articles must be written to `data/news.jsonl` (one JSON line per art
 * **`test_frontier.py`:** Verify that the min-heap strictly enforces $\ge 8.0$ seconds delay per host and front queues respect priority weights.
 * **`test_normalizer.py`:** Verify URL cleaning, AMP-to-canonical conversion, and query parameter stripping.
 * **`test_extractor.py`:** Verify JSON-LD extraction, IST date parsing, and absence of author names on sample HTML fixtures.
+* **`test_crawler.py`:** Verify crawl loops, HTTP 429 backoff, HTTP 403 host quarantine, and in-body link harvesting.
 * **`test_dedup.py`:** Precision & recall on 100 labeled article pairs, plus speed comparison of exact Jaccard vs MinHash + LSH.
+* **`test_recrawl.py`:** Verify EWMA change-rate tracking, HTTP 304 conditional scheduling, and surge detection queue routing.
 * **`test_format_compliance.py`:** JSON schema validation ensuring every record in `data/news.jsonl` adheres to `formats.md`.
+* **`test_pool.py`:** Verify shared TREC run pooling aggregating by `need_id`, multi-form candidate deduplication, `--raw-qid` override, and Format 5 compliance.
 
 ---
 
 ## 6. Milestones & Checklist
-* [ ] **Phase 1 (H1–H3):**
+* [x] **Phase 1 (H1–H3):**
   - [x] Implement `robots.py` and unit tests.
-  - [ ] Build `frontier.py` (asyncio + heapq) and sitemap parser.
-  - **Handoff (H3):** Generate and provide `data/news_sample_300.jsonl` (300 clean articles, deferred until initial extractor and normalizer are complete).
-* [ ] **Phase 2 (H3–H8):**
-  - Implement `extractor.py`, `normalizer.py`, and `filters.py`.
-  - Start continuous 5-site crawling.
-* [ ] **Phase 3 (H8–H12):**
-  - Implement `dedup.py` (shingles, Jaccard, `dup_of`, `links`).
-  - Monitor crawl logs and site balance.
-* [ ] **Phase 4 (H12–H22):**
-  - Add MinHash + LSH, adaptive recrawl (`recrawl.py`), and burst prioritization.
-  - **Corpus Freeze (H18):** Lock master news corpus at 5k–12k articles.
-* [ ] **Phase 5 (H22–H28):**
-  - Implement `dhvani/eval/pool.py`.
-  - Generate evaluation tables (dedup threshold precision/recall, MinHash vs exact speed).
+  - [x] Build `frontier.py` (asyncio + heapq) and sitemap parser.
+  - **Handoff (H3):** Generate and provide `data/news_sample_300.jsonl` (300 clean articles).
+* [x] **Phase 2 (H3–H8):**
+  - [x] Implement `extractor.py`, `normalizer.py`, and `filters.py`.
+  - [x] Start continuous 5-site crawling.
+* [x] **Phase 3 (H8–H12):**
+  - [x] Implement `dedup.py` (shingles, Jaccard, `dup_of`, `links`).
+  - [x] Monitor crawl logs and site balance.
+* [x] **Phase 4 (H12–H22):**
+  - [x] Add MinHash + LSH, adaptive recrawl (`recrawl.py`), and burst prioritization.
+  - **Corpus Freeze (H18):** Lock master news corpus at 5k–12k articles (5,001 articles crawled).
+* [x] **Phase 5 (H22–H28):**
+  - [x] Implement `dhvani/eval/pool.py` (need-level aggregation, cross-form deduplication, `--raw-qid`).
+  - [x] Generate evaluation tables and figures (`documentation/results/riya-corpus-results/` and `documentation/figures/`).
 * [ ] **Phase 6 (H28–H36):**
   - Write report section (crawling, robots.txt findings, deduplication).
   - Record video segment (crawler live log, robots test demo, duplicate story clusters).
