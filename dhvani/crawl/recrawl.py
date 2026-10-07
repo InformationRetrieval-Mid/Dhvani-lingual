@@ -246,3 +246,20 @@ class AdaptiveRecrawler:
             return "Q0"
 
         return "Q1"
+
+    def get_rate(self, source_slug: str) -> float:
+        """Get current estimated arrival rate lambda_s (URLs/hour)."""
+        return self.change_rates.get(source_slug, 1.0)
+
+    def get_polling_interval(self, source_slug: str) -> float:
+        """Alias for get_next_poll_interval."""
+        return self.get_next_poll_interval(source_slug)
+
+    def is_category_burst(
+        self,
+        category: Optional[str],
+        current_time: Optional[float] = None,
+    ) -> bool:
+        """Alias for is_bursting."""
+        return self.is_bursting(category, current_time=current_time)
+

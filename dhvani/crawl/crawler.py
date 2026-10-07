@@ -580,7 +580,7 @@ class NewsCrawler:
                                     if article.get("section"):
                                         sec = article["section"]
                                         self.recrawler.record_article(sec, timestamp=self.time_func())
-                                        if self.recrawler.is_category_burst(sec, current_time=self.time_func()):
+                                        if self.recrawler.is_bursting(sec, current_time=self.time_func()):
                                             if sec not in self.active_burst_categories_seen:
                                                 self.active_burst_categories_seen.add(sec)
                                                 score = self.recrawler.get_burst_score(sec, current_time=self.time_func())
@@ -819,7 +819,7 @@ class NewsCrawler:
 
 ## 6. Adaptive Recrawling Performance & Bandwidth Optimization
 
-| News Source | Sitemap Polls | 304 Not Modified | 304 Savings Ratio | Est. Velocity ($\lambda_s$) | Calculated Interval ($\tau_s$) |
+| News Source | Sitemap Polls | 304 Not Modified | 304 Savings Ratio | Est. Velocity ($\\lambda_s$) | Calculated Interval ($\\tau_s$) |
 |---|---|---|---|---|---|
 """ + "\n".join(recrawl_rows) + f"""
 
