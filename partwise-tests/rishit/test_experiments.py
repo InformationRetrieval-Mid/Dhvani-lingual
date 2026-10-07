@@ -74,7 +74,8 @@ def test_speedup_table_has_every_method_and_sane_numbers():
     queries, _ = sample()
     rows = speedup_table(queries, SampleIndex.load(), k=3, champion_r=(1, 50))
     names = [r[0] for r in rows]
-    assert names == ["index elimination", "champion lists, r=1", "champion lists, r=50", "recent-news tiers"]
+    assert names == ["index elimination", "champion lists, r=1", "champion lists, r=50", "recent-news tiers",
+                     "cluster pruning, b=1", "cluster pruning, b=3"]
     for _name, scored, kept in rows:
         assert 0.0 < scored <= 1.0 and 0.0 <= kept <= 1.0
     big_r = dict((n, (s, k)) for n, s, k in rows)["champion lists, r=50"]

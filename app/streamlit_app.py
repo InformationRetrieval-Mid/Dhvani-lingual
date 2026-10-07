@@ -30,8 +30,10 @@ from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E40
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
+    ClusterPruning,
     RecencyTiers,
     search_champions,
+    search_clusters,
     search_index_elimination,
     search_tiered,
 )
@@ -303,7 +305,12 @@ def load_tiers(mode):
     return RecencyTiers(load_index(mode))
 
 
-SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers"]
+@st.cache_resource
+def load_clusters(mode):
+    return ClusterPruning(load_index(mode))
+
+
+SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers", "Cluster pruning"]
 
 
 def run_speedup(name, query, mode, k, doc_filter):
@@ -313,7 +320,9 @@ def run_speedup(name, query, mode, k, doc_filter):
         return search_index_elimination(query, index, k=k, doc_filter=doc_filter)
     if name == "Champion lists":
         return search_champions(query, index, load_champions(mode), k=k, doc_filter=doc_filter)
-    return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
+    if name == "Recent tiers":
+        return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
+    return search_clusters(query, index, load_clusters(mode), k=k, doc_filter=doc_filter)
 
 
 def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):

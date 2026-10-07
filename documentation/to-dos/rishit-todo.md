@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 15:25 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 16:10 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -70,7 +70,7 @@ Last updated: 7 Oct, around 15:25 (teammates' status read from their branches on
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
 - [ ] Query difficulty prediction with a "low confidence" hint
 - [ ] Evaluation dashboard tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
-- [ ] Cluster pruning (leaders and followers), compared with champion lists for speed vs quality
+- [x] ~~Cluster pruning (leaders and followers), compared with champion lists for speed vs quality~~
 - [ ] High/low lists and impact-ordered postings with early stopping
 - [ ] Result diversification (MMR) so the top 10 isn't one story repeated
 - [ ] Autocomplete with prefix search over the term dictionary
@@ -136,6 +136,8 @@ Last updated: 7 Oct, around 15:25 (teammates' status read from their branches on
 - **Auto column on a fresh checkout:** without Dhrithi's generated files the auto column gives the same results as no stemming. She needs to commit the small candidates file or document how to generate it.
 - **HTML left in article bodies:** 24 of Riya's 300 articles have `<a class=backlink ...>` tags in the body, so words like "href" get indexed. Needs fixing in the crawler before the full crawl.
 - **No case folding in the normalizer:** "Iyer" and "iyer" are different index terms. The query side works around it; Dhrithi's normalizer should lowercase.
+- **Riya's test writes a report into `data/`:** `test_crawler_recrawl_integration` writes `data/result-documentation/crawl_stats.md` for a fake 2-article crawl on every test run. It should write to the test's temporary folder.
+- **अय्यर gets almost no weight for "iyer":** Viraja's Dhvani-code fix brings अय्यर into the candidates, but "iyer" is also an English word in the index and takes 97% of the weight, and एयर and ईयर rank above अय्यर.
 - **Two test files share a name:** `test_build.py` and `test_scoring.py` are in both `tests/` and `partwise-tests/`, so running both folders in one pytest command errors. Run them separately, or rename Dhrithi's two files.
 - ~~**Folder layout:** Dhrithi's top-level `text/` and `index/` import fine on `main`.~~
 - ~~**idf log base:** Dhrithi moved to log10, same as this branch and the slides.~~

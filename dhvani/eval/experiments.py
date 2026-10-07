@@ -28,9 +28,11 @@ from dhvani.rank.query_stub import exact_query
 from dhvani.rank.sample_index import SampleIndex
 from dhvani.rank.speedups import (
     ChampionLists,
+    ClusterPruning,
     RecencyTiers,
     overlap_at_k,
     search_champions,
+    search_clusters,
     search_index_elimination,
     search_tiered,
 )
@@ -135,7 +137,7 @@ def xling_comparison(queries, qrels, loader=default_loader, ranker="net", k=METR
     return out
 
 
-def speedup_table(queries, index, k=METRICS_K, query_builder=None, champion_r=(2, 5, 10, 50)):
+def speedup_table(queries, index, k=METRICS_K, query_builder=None, champion_r=(2, 5, 10, 50), cluster_b=(1, 3)):
     """Speed vs quality for the Lecture 7 speed-ups, against exact lnc.ltc.
 
     For each method: the mean share of candidate articles actually scored, and
@@ -149,6 +151,9 @@ def speedup_table(queries, index, k=METRICS_K, query_builder=None, champion_r=(2
         methods.append((f"champion lists, r={r}", lambda q, c=champs: search_champions(q, index, c, k=k)))
     tiers = RecencyTiers(index)
     methods.append(("recent-news tiers", lambda q: search_tiered(q, index, tiers, k=k)))
+    clusters = ClusterPruning(index)
+    for b in cluster_b:
+        methods.append((f"cluster pruning, b={b}", lambda q, b=b: search_clusters(q, index, clusters, k=k, b=b)))
 
     rows = []
     for name, run in methods:

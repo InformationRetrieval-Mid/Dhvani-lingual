@@ -233,3 +233,84 @@ def search_tiered(query, index, tiers, k=10, doc_filter=None):
         "full_candidates": len(all_candidates),
     }
     return results, stats
+
+
+# --- Cluster pruning --------------------------------------------------------
+#
+# Lecture 7's leaders and followers. Pick sqrt(N) articles at random as
+# leaders; every other article follows the leader it's most similar to
+# (cosine of their lnc vectors). At query time the query is compared with the
+# leaders only, and just the clusters of the closest b leaders get scored.
+# Random leaders are fast to pick and tend to land where the articles are
+# dense, which is what makes this work.
+#
+# If the chosen clusters give fewer than k results, the next-closest leaders
+# are added one at a time, the same fallback idea as champion lists.
+
+import random  # noqa: E402
+
+
+def doc_vectors(index):
+    """{doc_id: {term: lnc weight}}, built from the postings."""
+    vectors = defaultdict(dict)
+    for term in index.vocab:
+        for doc_id, tf in _doc_tf(index, term).items():
+            vectors[doc_id][term] = log_tf(tf) / index.doc_norm[doc_id]
+    return vectors
+
+
+def _dot(a, b):
+    if len(a) > len(b):
+        a, b = b, a
+    return sum(w * b.get(t, 0.0) for t, w in a.items())
+
+
+class ClusterPruning:
+    def __init__(self, index, n_leaders=None, seed=0):
+        docs = sorted(index.meta)
+        n_leaders = n_leaders or max(1, round(math.sqrt(len(docs))))
+        self.leaders = sorted(random.Random(seed).sample(docs, min(n_leaders, len(docs))))
+        self.vectors = doc_vectors(index)
+        self.members = {leader: [leader] for leader in self.leaders}
+        self.leader_of = {leader: leader for leader in self.leaders}
+        for doc_id in docs:
+            if doc_id in self.leader_of:
+                continue
+            vec = self.vectors.get(doc_id, {})
+            # Ties (including no shared words at all) go to the first leader by id.
+            best = max(self.leaders, key=lambda l: (_dot(vec, self.vectors.get(l, {})), -self.leaders.index(l)))
+            self.members[best].append(doc_id)
+            self.leader_of[doc_id] = best
+
+    def nearest_leaders(self, qvec):
+        """Leaders ordered by similarity to the query, closest first."""
+        return sorted(self.leaders, key=lambda l: (-_dot(qvec, self.vectors.get(l, {})), l))
+
+
+def search_clusters(query, index, clusters, k=10, b=1, doc_filter=None):
+    """lnc.ltc scoring only the clusters of the b leaders closest to the query."""
+    qvec = query_vector(query, index)
+    all_candidates = set()
+    for term in qvec:
+        all_candidates.update(_doc_tf(index, term))
+
+    order = clusters.nearest_leaders(qvec)
+    used, candidates, results = 0, set(), []
+    while used < len(order):
+        candidates.update(clusters.members[order[used]])
+        used += 1
+        if used < b:
+            continue
+        scores, contributions = _score(qvec, index, candidates, doc_filter)
+        results = _top(scores, contributions, k)
+        if len(results) >= k:
+            break
+
+    stats = {
+        "method": "cluster pruning",
+        "leaders": len(clusters.leaders),
+        "leaders_used": used,
+        "scored": len(candidates & all_candidates),
+        "full_candidates": len(all_candidates),
+    }
+    return results, stats

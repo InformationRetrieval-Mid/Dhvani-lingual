@@ -149,3 +149,9 @@ A running list of the choices we made and why. Newest at the bottom.
 **Fallback to the sample index.** If the real indexes aren't built, the app and CLI still run on the 20-article sample, and the tests always use it so they pass the same way on every machine.
 
 **Dictionary grown from the information needs.** Words like earthquake, protest, detained, bypoll and pilgrims were added because the English forms of our needs use them. General news words only; nothing is copied from articles.
+
+**Cluster pruning uses random leaders.** Lecture 7 picks sqrt(N) leaders at random: it's fast, and random picks land where the articles are dense. A fixed seed keeps the clusters the same between runs so results can be compared.
+
+**Cluster pruning falls back like champion lists.** If the closest clusters give fewer than k results, the next-closest leader is added, so a query never comes back with a short page.
+
+**On the sample, champion lists beat cluster pruning.** Cluster pruning scores the fewest articles but keeps only 28% of the exact top 10 with one cluster, while champion lists with r=5 keep 93% for about the same work. News clusters by story are small and specific, so a query's articles are often spread over several clusters. We'll recheck on the full crawl.

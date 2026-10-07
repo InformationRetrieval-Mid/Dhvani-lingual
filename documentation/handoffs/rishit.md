@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after plugging in the real index and query layer
+Last updated: 7 Oct, after adding cluster pruning
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -80,7 +80,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `24b3804` speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
 | `5feba40` speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
 | `612c363` my 8 information needs from stories in riya's crawl | `documentation/needs/rishit-needs.md` |
-| real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
+| `3714640` real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
+| cluster pruning: leaders and followers, compared with the other speed-ups | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
 
 ## How to use it
 
@@ -190,7 +191,12 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Recent-news tiers** (`dhvani/rank/speedups.py`)
 `RecencyTiers(index, tier_days=(2, 7, None))` puts each article in a tier by age (last 2 days, last week, older), measured from the newest article. `search_tiered(q, idx, tiers, k)` searches tier 0 first and only adds older tiers if there are fewer than k results. Returns `(results, stats)` with the tiers used.
 
-All three speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions` or `--speedup tiers`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; the real numbers come from the full crawl. Both use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
+**Cluster pruning** (`dhvani/rank/speedups.py`)
+`ClusterPruning(index, n_leaders=None, seed=0)` picks sqrt(N) random leaders (17 for 300 articles) and puts every other article in the cluster of its most similar leader, by cosine of their lnc vectors. `search_clusters(q, idx, clusters, k, b=1)` compares the query with the leaders only and scores the clusters of the b closest; if that gives fewer than k results it adds the next-closest leader. Returns `(results, stats)` with the leaders used. A fixed seed keeps the clusters the same between runs.
+
+First numbers on Riya's 300 articles, 64 queries (R and V needs), k = 10, share of candidates scored and share of the exact top 10 kept: index elimination 0.21 / 0.72, champion lists r=5 0.27 / 0.93, r=10 0.37 / 0.99, cluster pruning b=1 0.15 / 0.28, b=3 0.26 / 0.39. Recent tiers scores everything here because the whole sample is from the last two days.
+
+All four speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions`, `--speedup tiers` or `--speedup clusters`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50 and cluster pruning at b = 1 and 3. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; the real numbers come from the full crawl. They all use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
 
 **Date-aware kal** (`dhvani/rank/kal.py`)
 कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. It only reorders within a query-parser stage, so a stricter match stays above a looser one. In the app it's the "Date-aware kal" switch (on by default), boosted results get a "कल · tomorrow" or "कल · yesterday" tag, and Score details shows the boost. In the CLI, results show `[kal: tomorrow]`, `--explain` adds a step 4c, and `--no-kal` turns it off.
@@ -223,7 +229,7 @@ rank(make_query("bhukamp ke jhatke delhi", "light"), idx, k=10)
 ```
 
 ## Tests
-144 tests in `partwise-tests/rishit/`, all passing.
+149 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
