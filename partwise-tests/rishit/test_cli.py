@@ -52,6 +52,17 @@ def test_no_kal_turns_it_off():
     assert "kal:" not in text
 
 
+def test_wire_story_is_collapsed_with_also_in():
+    text = cli.run(["रेल लाइन उद्घाटन", "--k", "3"])
+    assert "[also in: amarujala]" in text
+    assert text.count("रेल लाइन का उद्घाटन") == 1
+
+
+def test_no_collapse_shows_both_copies():
+    text = cli.run(["रेल लाइन उद्घाटन", "--k", "3", "--no-collapse"])
+    assert "aajtak_5004" in text and "amarujala_3004" in text
+
+
 def test_authority_breakdown_in_explain():
     text = cli.run(["रेल लाइन उद्घाटन", "--k", "1", "--explain"])
     assert "x g(d)" in text and "PageRank" in text and "first to publish" in text

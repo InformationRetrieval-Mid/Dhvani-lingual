@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 14:15 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -42,6 +42,7 @@ Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on
 - [x] Date-aware kal shown in the app (switch, tag, boost in Score details) and the CLI (`--explain` step 4c, `--no-kal`)
 - [x] PageRank and first-to-publish authority in g(d), usable by the net score and champion lists
 - [x] Authority g(d) used in the app and CLI, with recency, PageRank and first to publish shown in the score breakdown
+- [x] Duplicate collapsing: one result per wire story with "also in" the other papers, in the app and CLI
 
 ## In progress
 
@@ -51,7 +52,6 @@ Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on
 ## Next
 
 ### Rishit: required
-- [ ] Collapsing duplicate wire stories ("also in: ...")
 - [ ] Learning-to-rank (after judging)
 - [ ] Dense re-ranker (only if there's time)
 
@@ -84,6 +84,7 @@ Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on
 - [x] JSON-LD extraction with HTML fallback, IST dates, state and city from URLs, `links`, no author names
 - [x] Near-duplicate clustering: MD5, 4-word shingles, MinHash + LSH, 24 h window, Jaccard 0.70 (0 duplicates in the 300 sample)
 - [x] 300-article sample (`data/news_sample_300.jsonl`) with corpus and dedup stats
+- [x] Crawler fix for burst detection (`is_bursting`), merged into `main`
 - [ ] Full crawl of 5,000+ articles (needed for the freeze)
 - [ ] Adaptive recrawl, burst detection, conditional requests
 - [ ] Pooling CLI, format-compliance test, dedup threshold precision/recall table
@@ -110,13 +111,15 @@ Last updated: 7 Oct, around 13:45 (teammates' status read from their branches on
 
 ### Everyone
 - [ ] 8 information needs each (Hindi, Hinglish and English forms)
-- [ ] Merge all branches into `main`
+- [x] Riya's, Dhrithi's and Viraja's branches merged into `main` (sample corpus left out of git)
+- [ ] Merge `rishit` into `main`
 - [ ] Judging after the freeze
 - [ ] Own results table, report section and video segment
 
 ### Open issues
-- **Article text in a public repo.** Riya's `data/news_sample_300.jsonl` is committed and the repo is public. Plan: keep only metadata in git and share the full text on Drive.
-- **Merge clashes to sort out:** four different `.gitignore` files, `dhvani/eval/__init__.py` on both Riya's and Rishit's branches, a top-level `conftest.py` on Riya's, and Riya's edit to `formats.md`.
+- **Article text in a public repo.** Riya's `data/news_sample_300.jsonl` is left out of git on `main`, but it's still committed on her own branch. Plan: share the full text on Drive.
+- **Merge clashes left:** `dhvani/eval/__init__.py` is on both Riya's and Rishit's branches. The `.gitignore` files are combined into one on `main`.
+- **Tests that need local files:** 7 of Dhrithi's test files and Viraja's `test_experiment.py` need `data/dev_news.jsonl` and the auto candidates file, which only exist on Dhrithi's laptop. They need a small generator or setup steps in the README.
 - **Folder layout:** Dhrithi's code is in top-level `text/`, `index/` and `tests/` instead of under `dhvani/`; imports need to keep working after the merge.
 - **idf log base:** Dhrithi's `idf()` uses the natural log; this branch and the slides use log10. Rankings are the same either way, but the numbers in the report should match.
 

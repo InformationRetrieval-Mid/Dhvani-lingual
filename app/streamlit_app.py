@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
+from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
@@ -254,6 +255,7 @@ div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(2
 .dv-table td { padding: 0.28rem 0; color: var(--dv-secondary); border-top: 0.5px solid var(--dv-separator); }
 .dv-table td:last-child { text-align: right; color: var(--dv-text); }
 .dv-table tr.total td { font-weight: 600; color: var(--dv-text); }
+.dv-also { font-size: 0.75rem; color: var(--dv-secondary); margin-top: 0.45rem; }
 .dv-empty { padding: 1.4rem 1rem; text-align: center; font-size: 0.88rem; color: var(--dv-tertiary); }
 
 /* Accessibility settings */
@@ -358,6 +360,9 @@ def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     kal = explain.get("kal")
     if kal and kal["boost"]:
         stage_tag += f'<span class="dv-stage">कल · {kal["intent"]}</span>'
+    also = ""
+    if explain.get("also_in"):
+        also = f'<div class="dv-also">Also in {html.escape(", ".join(explain["also_in"]))}</div>'
     chips = "".join(
         f'<span class="dv-chip {sources.get(t, "exact")}">{html.escape(t)} · {MATCH_LABELS.get(sources.get(t, "exact"), "Match")}</span>'
         for t in terms
@@ -371,6 +376,7 @@ def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
       <div class="dv-headline">{highlight(article["headline"], sources)}</div>
       <div class="dv-snippet">{highlight(snippet(article["body"], sources), sources)}</div>
       <div class="dv-chips">{chips}</div>
+      {also}
       <details><summary>Score details</summary>{score_table(explain, terms, parts)}</details>
     </div>"""
 
@@ -419,6 +425,8 @@ def main():
                                    help="Try the exact phrase first, then all the words, then any word.")
             use_authority = st.toggle("Authority (PageRank + first to publish)", value=True,
                                       help="Net score uses g(d) = recency + PageRank + first-to-publish credit.")
+            use_collapse = st.toggle("Collapse duplicate stories", value=True,
+                                     help="Show a wire story once, with the other papers that ran it.")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -446,13 +454,18 @@ def main():
     sources_map = term_sources(query)
 
     results = {}
+    pool = collapse_pool(k) if use_collapse else k
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
         static = load_static(mode)[0] if use_authority else None
-        results[mode] = run_ranker(ranker, query, index, k, doc_filter, use_parser, static)
+        results[mode] = run_ranker(ranker, query, index, pool, doc_filter, use_parser, static)
         if use_kal:
             results[mode] = apply_kal(results[mode], query, index)
+        if use_collapse:
+            results[mode] = collapse_duplicates(results[mode], index, k=k)
+        else:
+            results[mode] = results[mode][:k]
 
     ids = {mode: {doc_id for doc_id, _, _ in res} for mode, res in results.items()}
     columns = st.columns(len(MODES), gap="medium")

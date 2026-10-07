@@ -26,6 +26,10 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **Own branches, merge at checkpoints.** Everyone commits to their own branch and merges into `main` only at the checkpoints, so `main` always works.
 
+**Sample corpus stays out of git on main.** When merging Riya's branch, `data/news_sample_300.jsonl` was left out because the repo is public and it holds full article text. Her stats reports, which only have counts, are kept.
+
+**One combined .gitignore.** Each branch had its own. On `main` they're merged into one: everything in `data/` is ignored except the placeholder and Riya's stats reports, and built indexes are ignored too.
+
 **Commits as ourselves.** Every commit is under the person who did the work. AI help is declared in the report's AI-use section instead.
 
 ## Rishit's ranking code
@@ -119,3 +123,9 @@ A running list of the choices we made and why. Newest at the bottom.
 **The original gets the credit, not the newest copy.** When several papers run the same wire story, recency alone favoured the latest copy. First-to-publish credit gives the boost to the article the others copied, so the original ranks first.
 
 **Authority is on by default in the app and CLI.** The net score now uses the full g(d) (recency, PageRank and first to publish) unless it's switched off, so the original of a wire story ranks above its copies. The switch and `--no-authority` are there to show the difference side by side.
+
+**Duplicates collapse to the best-ranked copy, not always the original.** Authority already pushes the original up, so usually it's the one kept. If a copy ranks higher for a query, that copy is shown and the original is listed under "also in", so the user sees the best match first.
+
+**Ask for 3k results before collapsing.** Collapsing can remove results, so the ranker returns three times as many and the list is cut to k afterwards. That way the top k still has k different stories.
+
+**Extra explain info stays out of the term scores.** lnc.ltc and BM25 return a plain dictionary of term scores. When kal or collapsing add their own info, the term scores move under "terms" so the app doesn't mistake "also in" for a query word.

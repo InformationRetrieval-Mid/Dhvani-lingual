@@ -86,3 +86,11 @@ def test_kal_keeps_the_parser_stage_order():
     reranked = apply_kal(parse_and_rank(q, idx, k=5), q, idx)
     ranks = [STAGES.index(e["stage"]) for _, _, e in reranked]
     assert ranks == sorted(ranks)
+
+
+def test_kal_keeps_term_scores_separate_for_plain_rankers():
+    idx = SampleIndex.load()
+    q = exact_query("कल बारिश")
+    _, _, explain = apply_kal(search(q, idx, k=3), q, idx)[0]
+    assert "kal" in explain and "kal" not in explain["terms"]
+    assert all(isinstance(v, float) for v in explain["terms"].values())

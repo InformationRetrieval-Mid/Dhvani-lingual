@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
+from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
@@ -171,6 +172,8 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
     kal = explain.get("kal")
     if kal:
         out.append(f"    x kal boost ({kal['intent']}): x {1 + kal['weight'] * kal['boost']:.2f} = {score:.4f}")
+    if explain.get("also_in"):
+        out.append(f"    also in: {', '.join(explain['also_in'])} ({', '.join(explain['duplicates'])})")
 
 
 def run(argv=None):
@@ -182,6 +185,8 @@ def run(argv=None):
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
     parser.add_argument("--no-authority", action="store_true",
                         help="net score uses plain recency instead of recency + PageRank + first to publish")
+    parser.add_argument("--no-collapse", action="store_true",
+                        help="don't merge copies of the same wire story")
     parser.add_argument("--no-kal", action="store_true",
                         help="don't re-rank kal queries by date")
     parser.add_argument("--no-xling", action="store_true",
@@ -205,7 +210,7 @@ def run(argv=None):
             explain_parser(out, query, index, args.k)
 
     static, parts = (None, {}) if args.no_authority else static_scores(index)
-    pool = args.k
+    pool = args.k if args.no_collapse else collapse_pool(args.k)
     if not args.no_parser:
         results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static)
     elif args.ranker == "net":
@@ -222,6 +227,8 @@ def run(argv=None):
             out.append(f"कल here means {intent}, so articles about that day get a boost: score x (1 + 0.5 x boost).")
         results = apply_kal(results, query, index)
 
+    results = results[:args.k] if args.no_collapse else collapse_duplicates(results, index, k=args.k)
+
     heading(out, "5. Results" if args.explain else "Results")
     if not results:
         out.append("No matches.")
@@ -235,6 +242,8 @@ def run(argv=None):
             kal = explain.get("kal")
             if kal and kal["boost"]:
                 tag += f"  [kal: {kal['intent']}]"
+            if explain.get("also_in"):
+                tag += f"  [also in: {', '.join(explain['also_in'])}]"
             out.append(f"{i}. {score:.4f}  {doc_id}  {headline}{tag}")
 
     text = "\n".join(out)

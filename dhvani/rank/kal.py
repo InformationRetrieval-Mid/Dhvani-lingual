@@ -111,7 +111,9 @@ def apply_kal(results, query, index, weight=0.5, texts=None, now=None):
     reranked = []
     for doc_id, score, explain in results:
         boost = kal_boost(intent, index.meta[doc_id], text_of(doc_id), today)
-        explain = dict(explain)
+        # lnc.ltc and BM25 give a plain {term: contribution} dict; keep the term
+        # scores under "terms" so the extra info doesn't look like a term.
+        explain = dict(explain) if "terms" in explain else {"terms": dict(explain)}
         explain["kal"] = {"intent": intent, "boost": boost, "weight": weight}
         reranked.append((doc_id, score * (1 + weight * boost), explain))
     # Keep the query parser's order: a stricter stage (e.g. exact phrase)

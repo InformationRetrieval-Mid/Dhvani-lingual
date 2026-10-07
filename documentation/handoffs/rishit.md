@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after using authority g(d) in the app and CLI
+Last updated: 7 Oct, after adding duplicate collapsing
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -16,7 +16,7 @@ Last updated: 7 Oct, after using authority g(d) in the app and CLI
 | Viraja | `Viraja` | Hinglish phonetic layer | `dhvani/query/` |
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
-Each person commits to their own branch. Nothing has been merged into `main` yet, so `main` only has the plan and the formats.
+Each person commits to their own branch. Riya's, Dhrithi's and Viraja's branches are merged into `main`; `rishit` goes in next.
 
 **Setup.**
 ```bash
@@ -37,7 +37,7 @@ python3 -m venv .venv
 **Where things stand right now.** Everything here runs on the 20-article sample index with exact-match queries plus English translation. The real pieces exist on teammates' branches but aren't plugged in yet:
 - Viraja's `build_query(raw, index=None, costs=None)` in `dhvani/query/build.py` is ready to replace `query_stub.exact_query`.
 - Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light, aggr and auto (selective stemming), with `doc_norm`, `doc_len`, `links` and `city` filled in.
-- Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`.
+- Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`. It's kept out of git on `main`; copy it into your local `data/` folder.
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -72,7 +72,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `4354852` date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
 | `e48f17f` date-aware kal in the app and cli, with the boost shown in explain | `app/streamlit_app.py`, `app/cli.py`, `dhvani/rank/kal.py` |
 | `62400c3` authority ranking: pagerank and first-to-publish credit in g(d) | `dhvani/rank/authority.py`, a `static=` option in `scoring.py` |
-| authority g(d) in the app and cli, with its parts shown in score details | `app/streamlit_app.py`, `app/cli.py`, a `static=` option in `parser.py` |
+| `fb53231` authority g(d) in the app and cli, with its parts shown in score details | `app/streamlit_app.py`, `app/cli.py`, a `static=` option in `parser.py` |
+| duplicate collapsing: one result per wire story, with the other papers listed | `dhvani/rank/collapse.py`, `app/streamlit_app.py`, `app/cli.py`, a fix in `kal.py` |
 
 ## How to use it
 
@@ -197,8 +198,15 @@ g, parts = static_scores(idx)
 rank(q, idx, k=10, static=g)
 ```
 
+**Duplicate collapsing** (`dhvani/rank/collapse.py`)
+When the same wire story runs in several papers, Riya's dedup gives every later copy a `dup_of` pointing at the earliest one. `collapse_duplicates(results, idx, k)` keeps only the best-ranked article of each story and records the other copies in `explain["duplicates"]` and their papers in `explain["also_in"]`, so the top k shows k different stories. Ask the ranker for `collapse_pool(k)` results (3k) first, then collapse to k. It works on the output of any ranker. In the app it's the "Collapse duplicate stories" switch (on by default) and results show "Also in amarujala". In the CLI results show `[also in: ...]`, and `--no-collapse` turns it off.
+```python
+from dhvani.rank.collapse import collapse_duplicates, collapse_pool
+results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
+```
+
 ## Tests
-133 tests in `partwise-tests/rishit/`, all passing.
+142 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -207,7 +215,7 @@ rank(q, idx, k=10, static=g)
 - **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. (`auto` mode, `doc_norm`, `doc_len`, `links`, `city` and log10 idf are done.)
 - **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
 - **Riya:** the full crawl for the freeze. Keep article text out of git (only metadata in the repo, full text on Drive) because the repo is public.
-- **Everyone:** 8 information needs each (Hindi, Hinglish and English forms) and the merge into `main`.
+- **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
 
 ## Next
-Duplicate collapsing, speed-ups in the app and CLI, the speed-ups results table, then the merge into `main` and learning-to-rank after judging.
+Speed-ups in the app and CLI, the speed-ups results table, my 8 information needs, then merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.
