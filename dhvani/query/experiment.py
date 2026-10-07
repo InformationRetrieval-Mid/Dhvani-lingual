@@ -58,7 +58,7 @@ def run(index, queries, qrels, costs, kgram=None):
     from dhvani.eval.metrics import ndcg_at_k, precision_at_k
     from dhvani.rank import vsm
 
-    kgram = kgram or KGramIndex(index.vocab, k=2)
+    kgram = kgram or KGramIndex.from_index(index)
     buckets = {}
     for qid, need_id, form, text in queries:
         rel = qrels.get(need_id, {})
@@ -84,6 +84,39 @@ def run(index, queries, qrels, costs, kgram=None):
     }
 
 
+def run_rocchio(index, queries, qrels, costs, kgram=None, k=10, feedback_k=10):
+    """Compare phonetic expansion with vs without Rocchio feedback on top.
+
+    Returns ``{"no_rocchio": (P@10, nDCG@10), "rocchio": (...)}`` averaged over all
+    queries. The baseline is the phonetically-expanded query; Rocchio then treats
+    that run's top ``feedback_k`` docs as relevant and folds their terms back in.
+    """
+    from dhvani.eval.metrics import ndcg_at_k, precision_at_k
+    from dhvani.query import rocchio as R
+    from dhvani.rank import vsm
+
+    kgram = kgram or KGramIndex.from_index(index)
+    scores = {"no_rocchio": [[], []], "rocchio": [[], []]}
+    for qid, need_id, form, text in queries:
+        rel = qrels.get(need_id, {})
+        if not rel:
+            continue
+        base = [d for d, _s, _e in vsm.search(build_query(text, index=kgram, costs=costs), index, k=k)]
+        feedback = R.document_vectors(index, base[:feedback_k])
+        fq = build_query(text, index=kgram, costs=costs)
+        R.expand_query(fq, list(feedback.values()), k=10)
+        rocchio = [d for d, _s, _e in vsm.search(fq, index, k=k)]
+        scores["no_rocchio"][0].append(precision_at_k(base, rel, 10))
+        scores["no_rocchio"][1].append(ndcg_at_k(base, rel, 10))
+        scores["rocchio"][0].append(precision_at_k(rocchio, rel, 10))
+        scores["rocchio"][1].append(ndcg_at_k(rocchio, rel, 10))
+
+    def avg(xs):
+        return sum(xs) / len(xs) if xs else 0.0
+
+    return {which: (avg(v[0]), avg(v[1])) for which, v in scores.items()}
+
+
 def main(argv=None):
     from dhvani.eval.metrics import read_qrels
 
@@ -91,7 +124,7 @@ def main(argv=None):
     qrels = read_qrels(os.path.join(SAMPLE_DIR, "qrels.txt"))
     index = build_sample_index("none")
     costs = load_costs(EDIT_COSTS)
-    kgram = KGramIndex(index.vocab, k=2)
+    kgram = KGramIndex.from_index(index)
 
     results = run(index, queries, qrels, costs, kgram=kgram)
     print(f"{index.N} docs, {len(queries)} queries\n")
@@ -101,6 +134,13 @@ def main(argv=None):
     for form in sorted(results):
         ex, exp = results[form]["exact"], results[form]["expanded"]
         print(f"{form:<10}{ex[0]:>12.3f}{exp[0]:>12.3f}{ex[1]:>12.3f}{exp[1]:>12.3f}")
+
+    roc = run_rocchio(index, queries, qrels, costs, kgram=kgram)
+    print(f"\n{'rocchio':<12}{'P@10':>10}{'nDCG@10':>10}")
+    print("-" * 32)
+    for which in ("no_rocchio", "rocchio"):
+        p, n = roc[which]
+        print(f"{which:<12}{p:>10.3f}{n:>10.3f}")
     return 0
 
 
