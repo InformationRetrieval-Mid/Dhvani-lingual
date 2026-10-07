@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 19:00
+Last updated: 7 Oct, around 19:40
 
 ## My novelty
 
@@ -21,6 +21,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the frozen corpus~~ |
 | MMR diversification | Re-orders results so the top 10 covers more different stories | ~~Done~~ |
 | Query difficulty hint | Flags "low confidence" queries from idf, scope, clarity and the parser stage, without judgments | ~~Done~~ |
+| Sanity check without judgments | Agreement between the four forms of a need and between systems, from the run files | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
@@ -84,6 +85,13 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Speed-ups table, stop words, idf and Zipf on it~~
 - [ ] Run all 120 queries through every system and write the TREC run files for pooling (done for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
 
+### Judging
+- [x] ~~Sanity check without judgments: cross-form agreement and system agreement on the frozen corpus~~
+- [x] ~~Pool per need from the run files (804 articles for 16 needs)~~
+- [x] ~~Judging page in the app, one judgments file per person in the repo~~
+- [ ] Judge my 8 needs (345 articles)
+- [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
+
 ### Once there are judgments
 - [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
 - [ ] Translation off vs on for the English queries
@@ -96,10 +104,10 @@ What my part adds beyond the lecture basics, and where each one stands.
 ## What my code is waiting on
 | From | What | Why it matters for my part |
 |---|---|---|
-| Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
-| Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
+| Riya, Dhrithi | Their 8 information needs each (ids starting with Y and D) | Needed for the full runs and the pool |
+| Dhrithi | Auto candidates rebuilt on the frozen corpus | Auto is 99% the same as no stemming on 5,000 articles |
 | Viraja | Rare spellings still beat common ones: on the full crawl "bhukamp" goes to भूकम्प (1 article) instead of भूकंप (35), "delhi" to देल्ही (1) instead of दिल्ली (977), "iyer" to एयर instead of अय्यर (74). This is the bigger vocabulary, not her latest change, which fixed "modi" → मोदी | Hinglish queries with these words miss their articles (English ones still work through translation) |
-| Everyone | Judgments | All quality numbers and learning-to-rank |
+| Riya, Viraja, Dhrithi | Judging their own needs on the judging page | All quality numbers and learning-to-rank |
 
 ## Known issues in my part
 - The frozen corpus wasn't cleaned beyond the one repeated article: 249 bodies have HTML tags, there are 106 astrology pages and about 50 section and live-blog pages saved as articles. The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker. These go in the report as limitations.

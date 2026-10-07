@@ -209,3 +209,11 @@ A running list of the choices we made and why. Newest at the bottom.
 **The k-gram index knows document frequencies.** Viraja's `KGramIndex.from_index` carries each word's df, so among sound-alike spellings the common word wins ("modi" now goes to मोदी, not मोड़). On the full crawl rare spellings can still win when they're a closer letter match (भूकम्प over भूकंप), which is on her side to tune.
 
 **The frozen corpus is the 5,000-article crawl as it is.** The team froze Riya's full crawl with only its one repeated article removed. HTML leftovers, astrology pages and section pages stay in and are reported as limitations, so every number in the report is on the same fixed set of articles.
+
+**A sanity check before judgments.** The rubric accepts a clear sanity check for a partial system. Agreement between the four forms of a need tests the Track 5 claim directly (do Hindi, Hinglish and English find the same news?), and agreement between systems shows where judgments will matter most.
+
+**Pool per need.** The pool merges every form of a need, so each article is judged once per need, which is how `formats.md` defines judgments and how the metrics read them. It cut 1,254 per-form pairs to 804.
+
+**Judgments in git, one file per person.** Judgments are only ids and grades, so they're safe in a public repo. A file per person means four people judging at the same time never conflict, and `all_judgments()` merges them, keeping the higher grade on a disagreement.
+
+**Judging page inside the app.** It's a second Streamlit page, so it uses the same index and setup as search, and nobody has to install anything else.
