@@ -65,10 +65,15 @@ def needs_and_pool():
 
 
 def highlight(text, words):
-    out = html.escape(text)
-    for w in sorted(words, key=len, reverse=True):
-        out = out.replace(html.escape(w), f"<mark>{html.escape(w)}</mark>")
-    return out
+    """Mark whole query words only, and skip short function words like के and में."""
+    keep = {w.lower() for w in words if len(w) >= 3}
+    out = []
+    for piece in re.split(r"([\w\u0900-\u097f]+)", text):
+        if piece.lower() in keep:
+            out.append(f"<mark>{html.escape(piece)}</mark>")
+        else:
+            out.append(html.escape(piece))
+    return "".join(out)
 
 
 def main():
