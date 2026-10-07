@@ -25,6 +25,7 @@ from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E40
 from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
 from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import DEFAULT_LAMBDA, diversify  # noqa: E402
+from dhvani.rank.feedback import FEEDBACK_DOCS, feedback_query  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.quality import demote  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
@@ -213,6 +214,8 @@ def run(argv=None):
                         help="re-rank the top 50 with the multilingual e5 model (needs sentence-transformers)")
     parser.add_argument("--keep-listings", action="store_true",
                         help="don't push listing pages and horoscopes below real articles")
+    parser.add_argument("--prf", action="store_true",
+                        help="pseudo-relevance feedback: add terms from the top articles (Rocchio) and search again")
     parser.add_argument("--diversify", action="store_true",
                         help="re-order with MMR so the top k covers more different stories")
     parser.add_argument("--no-kal", action="store_true",
@@ -225,7 +228,14 @@ def run(argv=None):
 
     index = load_index(args.stem)
     query = make_query(args.query, args.stem, xling=not args.no_xling)
+    prf_terms = []
+    if args.prf:
+        n_before = len(query["tokens"])
+        query, _feedback = feedback_query(query, index, args.stem, args.ranker if args.ranker != "rrf" else "net")
+        prf_terms = [t["expansions"][0][0] for t in query["tokens"][n_before:]]
     out = [f'Query: "{args.query}"   ranker: {args.ranker}   index: {args.stem}   k: {args.k}']
+    if prf_terms:
+        out.append(f"Feedback (Rocchio, top {FEEDBACK_DOCS} articles) added: {' '.join(prf_terms)}")
 
     if args.explain:
         explain_query(out, query)

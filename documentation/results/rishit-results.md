@@ -15,6 +15,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Query difficulty hint | Frozen corpus (5,000 articles) |
 | Learned translations | Frozen corpus (5,000 articles) |
 | Page-type quality | Frozen corpus (5,000 articles) |
+| Pseudo-relevance feedback (Rocchio) | Frozen corpus, partial judgments |
 | Learning-to-rank | Early run on partial judgments |
 | Wins and losses | Waiting for judgments |
 
@@ -232,3 +233,25 @@ Average learned weights (features standardised): zone +0.98, BM25 +0.83, PageRan
 - **Headline match and BM25 carry most of the signal**, more than the cosine the net score is built on.
 - **The hand-picked authority parts may hurt.** Recency and first to publish get negative weight, so they push relevant articles down on these needs. Worth checking again on the full judgments before changing the net score.
 - **The parser stage gets negative weight** once the other features are known, which suggests stricter stages already show up through zone and BM25.
+
+## Pseudo-relevance feedback (Rocchio)
+
+> **Frozen corpus; the metric rows use partial judgments** (Viraja's 459 and Rishit's first 23, 40 queries), so they're early.
+
+- **Setup:** top 5 real articles as feedback, tf x idf vectors, Rocchio alpha 1.0 and beta 0.75, top 5 new terms, net score, no stemming, listing pages pushed down
+- **How to rerun:** `feedback_query()` in `dhvani/rank/feedback.py`, or `app/cli.py "query" --prf`
+
+| | Without feedback | With feedback |
+|---|---|---|
+| Hinglish vs Hindi form agreement | 0.46 | 0.47 |
+| Messy vs Hindi form agreement | 0.42 | 0.35 |
+| English vs Hindi form agreement | 0.39 | 0.38 |
+| P@10 (early, 40 judged queries) | 0.588 | 0.545 |
+| MAP (early, 40 judged queries) | 0.217 | 0.206 |
+
+Examples of the terms it adds: "earthquake tremors delhi" → तीव्रता, रिक्टर, महसूस, चमोली; "iyer century" → श्रेयस, वेस्टइंडीज; "smriti mandana captain bani" → हरमनप्रीत, कप्तानी, बीसीसीआई; "farmers worried about snow" → हेक्टेयर, अनुदान, फसल, क्षति.
+
+**What it shows**
+- **It helps when the first results are right.** "iyer century" picks up the first name श्रेयस and all of the top 3 become Shreyas Iyer stories.
+- **It drifts when they're mixed.** "farmers worried about snow" moves to crop damage in general, and messy queries, whose first results are the weakest, lose the most.
+- **On average it doesn't pay off on our needs,** so it's off by default. The judgments will say whether that holds.

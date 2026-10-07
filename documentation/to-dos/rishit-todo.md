@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 22:55
+Last updated: 7 Oct, around 23:20
 
 ## My novelty
 
@@ -25,6 +25,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Judging page | Per-need pooling and a page in the app to mark each article 0, 1 or 2, saved to git per person | ~~Done~~; judging in progress |
 | Learned translations | English to Hindi pairs learned from Jagran's bilingual headlines with Dice alignment, no outside data | ~~Done~~ |
 | Page-type quality | Listing pages and horoscopes (20% of the corpus) recognised from URL and headline and pushed below real articles | ~~Done~~ |
+| Rocchio feedback switch | Viraja's Rocchio wired into search with idf-weighted article vectors from real articles only | ~~Done~~; off by default (it drifts as often as it helps) |
 | Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | Built and running on the judgments so far; final numbers after judging |
 
 ## Done
@@ -39,6 +40,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~PageRank (damping 0.85, power iteration) and first-to-publish credit in g(d)~~
 - [x] ~~Duplicate collapsing with "also in"~~
 - [x] ~~Listing pages and horoscopes pushed below real articles (page-type quality)~~
+- [x] ~~Pseudo-relevance feedback switch (Rocchio, top 5 articles, 5 terms)~~
 - [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
 - [x] ~~Rank fusion (RRF) of lnc.ltc, BM25, the net score and dense~~
 - [x] ~~MMR diversification (lambda 0.7), within parser stages~~

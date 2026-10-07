@@ -96,3 +96,7 @@ def test_vague_query_gets_a_low_confidence_line():
 
 def test_keep_listings_flag_is_accepted():
     assert "Results" in cli.run(["दिल्ली बारिश", "--k", "2", "--keep-listings"])
+
+
+def test_prf_flag_reports_the_added_terms():
+    assert "Feedback (Rocchio" in cli.run(["दिल्ली बारिश", "--k", "2", "--prf"])
