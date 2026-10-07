@@ -278,9 +278,12 @@ today; phonetic / xling matches are added as extra `expansions` entries later �
   - `rocchio.py` — Rocchio top-10 pseudo-relevance feedback (adds `"prf"` terms).
   - `heatmap.py` — edit-cost heatmap → `documentation/figures/edit_cost_heatmap.png`.
   - `names.py` + `names_testset.tsv` — 50-name set; acc@1 soundex/dhvani 1.000, learned 0.993, levenshtein 0.973.
-* [ ] **Phase 5 (H22–H28):**
-  - Judge the pools (~2 h).
-  - **Results table:** the phonetic methods compared (word-by-word and on full queries); with vs without query expansion.
+* [~] **Phase 5 (H22–H28):**
+  - [x] Word-level results written up: `documentation/results/viraja-phonetic-results.md` (Aksharantar + 50-name tables).
+  - [x] My 8 information needs (4 forms each): `documentation/needs/viraja-needs.md`.
+  - [x] Full-query experiment (`experiment.py`): phonetic with vs without expansion through Dhrithi's index + Rishit's ranker — hinglish nDCG 0.000→0.879. Preliminary on the sample; re-run on the full corpus after judging.
+  - [ ] Rocchio on/off table (code ready in `rocchio.py`; needs a real-corpus first retrieval).
+  - [ ] Judge the pools with the group (~2 h).
 * [ ] **Phase 6 (H28–H36):**
   - Write report section (phonetic matching and what's new about it).
   - Record video segment (0:00–0:50 the problem; 4:00–4:45 codes, candidates, heatmap, query expansion).

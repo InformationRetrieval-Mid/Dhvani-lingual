@@ -48,6 +48,27 @@ Phonetic codes nail name variants (Lakshmi/Laxmi, Siddharth/Sidharth). Edit-cost
 
 Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out as real Hinglish confusions (`q→k`, `z→j`, dropped schwa `a→∅`, `v→w`, `u→o`), rebuild with `python -m dhvani.query.evaluate`.
 
+## Phase 5 so far (word-level done; full-query queued)
+- **Word-level results:** `documentation/results/viraja-phonetic-results.md` — the
+  four matchers compared on Aksharantar (dhvani 0.931 acc@1, top) and the 50-name
+  set (soundex/dhvani 1.000), plus what the learned edit distance learned.
+- **My 8 information needs** (4 forms each: hindi / hinglish / messy / english):
+  `documentation/needs/viraja-needs.md`, ids `V01`–`V08`, ready to append to the
+  group's `queries.tsv`.
+- **Full-query experiment (done on the sample):** `dhvani/query/experiment.py`
+  runs the eval queries through **Dhrithi's index** + **Rishit's ranker**, exact
+  vs phonetic-expanded, scored with `dhvani/eval/metrics.py`. Headline result:
+  Hinglish nDCG@10 **0.000 → 0.879** with expansion; Hindi unchanged (0.985).
+  Table in `documentation/results/viraja-phonetic-results.md` §4. `test_experiment.py`
+  `importorskip`s the three parts, so it skips here and runs once we're merged.
+  Re-run `python -m dhvani.query.experiment` on the full corpus + 120 queries
+  after judging.
+- **Still queued:** Rocchio on/off table (needs a first retrieval over the real
+  corpus; `rocchio.py` is ready).
+- **Note on Dhrithi's layout:** her modules are top-level `index/` and `text/`
+  (not under `dhvani/`), so `experiment.py` imports `index.positional`. If she
+  moves them under `dhvani/`, that one import path updates.
+
 ## For Rishit
 
 - `build_query(raw)` returns exactly the format-4 object your ranker scores. It
