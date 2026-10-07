@@ -87,3 +87,8 @@ def test_rrf_ranker_shows_ranks_in_each_list():
 def test_diversify_flag_adds_the_mmr_step():
     text = cli.run(["दिल्ली बारिश", "--k", "3", "--diversify", "--explain"])
     assert "Diversify (MMR)" in text and "mmr: relevance" in text
+
+
+def test_vague_query_gets_a_low_confidence_line():
+    assert "Low confidence" in cli.run(["में के", "--k", "2"])
+    assert "Low confidence" not in cli.run(["कोहली शतक", "--k", "2"])

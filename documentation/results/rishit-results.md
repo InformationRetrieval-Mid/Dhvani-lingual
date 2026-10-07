@@ -11,6 +11,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Stop words, idf and Zipf | Riya's full crawl, before the freeze (5,000 articles) |
 | Dense re-ranking vs sparse only | Waiting for judgments |
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
+| Query difficulty hint | Riya's full crawl, before the freeze (5,000 articles) |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
 
@@ -90,3 +91,20 @@ The 15 most widespread words, by document frequency (df), with collection freque
 **What it shows**
 - **The stop words come straight out of the data.** The top 15 by df are all Hindi postpositions, conjunctions and auxiliaries. के is in 4,926 of 5,000 articles, so its idf is almost 0 and it barely affects lnc.ltc even without a stop list. That's why the ranker keeps them instead of removing them: idf already does the job, and phrase queries like "भूकंप के झटके" still match exactly.
 - **Zipf's law holds for the frequent words.** Over the 1,000 most frequent words the slope is -0.90, close to the -1 of Zipf's law. The fit over all 83,560 words gives -1.45 because 40,255 words appear only once (names, numbers, typos), which drags the tail down. On the plot the line follows the middle of the curve and overshoots the very top, where a handful of function words take a large share of all tokens.
+
+## Query difficulty
+
+> **Before the freeze, no judgments yet.** Same 5,000-article corpus. Whether flagged queries really do worse can only be checked once there are judgments.
+
+- **Queries:** the 64 needs queries (R01 to R08, V01 to V08, four forms each), plus a handful of deliberately vague ones
+- **How to rerun:** `predict()` in `dhvani/rank/difficulty.py`
+
+| Signal | Needs queries | Vague queries |
+|---|---|---|
+| Specificity (highest per-word idf) | lowest 1.24, middle half 2.4 to 3.4 | news 0.63, kya hua 0.56, बड़ी खबर 0.81, के में 0.01, india 0.69 |
+| Clarity (bits) | 1.14 to 1.74 | news 3.02, के में 1.27 |
+
+**What it shows so far**
+- **Specificity separates them cleanly.** Every needs query has a word with idf above 1.2; every vague query stays below 1.0. The threshold sits at 1.0.
+- **Clarity doesn't work here.** It stays in a narrow band for real queries, and "news" scores highest of all because its top results are near-identical listing pages. It's kept as a reported number only.
+- **11 of the 64 needs queries are flagged**, all because only the "any word" stage matched: 10 Hinglish or messy forms of Viraja's needs and the messy form of R01. Those are the forms where the phonetic layer didn't find every word, so the flag points at real weak spots.

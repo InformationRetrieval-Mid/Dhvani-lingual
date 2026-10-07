@@ -28,6 +28,7 @@ from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
@@ -211,6 +212,7 @@ div[data-testid="stPopoverBody"] [data-testid="stCheckbox"],
 div[data-testid="stPopoverBody"] [data-testid="stSlider"] { filter: hue-rotate(207deg) saturate(1.05); }
 
 .dv-note { text-align: center; font-size: 0.82rem; color: var(--dv-tertiary); margin: 0.75rem 0 2.5rem; }
+.dv-hint { text-align: center; font-size: 0.82rem; color: var(--dv-secondary); margin: 0.6rem 0 0; }
 .dv-ranker-note { text-align: center; font-size: 0.8rem; color: var(--dv-tertiary); margin-top: 0.35rem; }
 
 /* Inset grouped lists, one per stemming mode. */
@@ -562,6 +564,11 @@ def main():
             results[mode] = collapse_duplicates(results[mode], index, k=k)
         else:
             results[mode] = results[mode][:k]
+
+    hint = predict(queries["none"], results["none"], load_index("none"))
+    if hint["low_confidence"]:
+        st.markdown(f'<div class="dv-hint">Low confidence: {html.escape("; ".join(hint["reasons"]))}. Try more specific words.</div>',
+                    unsafe_allow_html=True)
 
     ids = {mode: {doc_id for doc_id, _, _ in res} for mode, res in results.items()}
     columns = st.columns(len(MODES), gap="medium")

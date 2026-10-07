@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 18:10
+Last updated: 7 Oct, around 18:35
 
 ## My novelty
 
@@ -20,6 +20,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | ~~Done~~ |
 | Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
 | MMR diversification | Re-orders results so the top 10 covers more different stories | ~~Done~~ |
+| Query difficulty hint | Flags "low confidence" queries from idf, scope, clarity and the parser stage, without judgments | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
@@ -36,6 +37,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
 - [x] ~~Rank fusion (RRF) of lnc.ltc, BM25, the net score and dense~~
 - [x] ~~MMR diversification (lambda 0.7), within parser stages~~
+- [x] ~~Query difficulty hint (specificity, scope, clarity, parser stage)~~
 - [x] ~~Full crawl embedded for dense re-ranking (about 1 minute, cached locally)~~
 
 ### Query side
@@ -73,7 +75,6 @@ What my part adds beyond the lecture basics, and where each one stands.
 
 ### Can do now
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
-- [ ] Query difficulty hint ("low confidence") for queries whose top scores are weak
 - [ ] Evaluation tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
 - [ ] Autocomplete with prefix search over the term dictionary
 
@@ -88,6 +89,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [ ] lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off
 - [ ] Stop word experiment: no idf vs idf vs stop words removed
 - [ ] Wins and losses per query
+- [ ] Check the difficulty hint against the judgments: do flagged queries really have lower P@10?
 - [ ] Learning-to-rank: learn the net score's weights (cosine, zone, proximity, g(d), and the dense mix) from the judgments
 
 ## What my code is waiting on

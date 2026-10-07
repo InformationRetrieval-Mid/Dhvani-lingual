@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding MMR diversification
+Last updated: 7 Oct, after adding the query difficulty hint
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -90,7 +90,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `2c5f883` speed-ups, stop words and zipf on riya's full crawl | `documentation/results/rishit-results.md`, two plots in `documentation/figures/` |
 | `a18d81e` rank fusion (rrf), and the to-do and handoff brought up to date | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
 | `1d0a6d3` experiments and corpus stats run on the real index, run files for pooling | `dhvani/eval/experiments.py`, `dhvani/eval/corpus_stats.py` |
-| mmr diversification so the top results cover more stories | `dhvani/rank/diversify.py`, `app/streamlit_app.py`, `app/cli.py` |
+| `ca8c138` mmr diversification so the top results cover more stories | `dhvani/rank/diversify.py`, `app/streamlit_app.py`, `app/cli.py` |
+| query difficulty hint: low confidence when every word is common or nothing has all the words | `dhvani/rank/difficulty.py`, `app/streamlit_app.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -263,8 +264,15 @@ from dhvani.rank.diversify import diversify
 results = diversify(parse_and_rank(q, idx, k=30), idx, k=10)
 ```
 
+**Query difficulty** (`dhvani/rank/difficulty.py`)
+`predict(q, results, idx)` estimates whether the results are probably poor, without judgments (query performance prediction). Signals: specificity, the highest idf among the query's words, where each word's idf comes from its most common strong spelling (weight 0.3 or more, so Hinglish "kya" counts as common because क्या is); scope, the share of articles containing any query word; clarity (Cronen-Townsend et al. 2002), the KL divergence in bits between the top 10's language model and the collection's; and the parser stage. It flags "low confidence" when specificity is below 1.0 (the rarest word is in more than 10% of articles) or only the "any word" stage matched. Clarity is reported but not used for the flag, because on the full crawl vague queries often hit near-identical listing pages, which look focused. In the app a "Low confidence: ..." line appears above the results; the CLI prints the same line, and `--explain` shows all the signals. About 0.18 s per query on the full crawl, mostly clarity.
+```python
+from dhvani.rank.difficulty import predict
+hint = predict(q, parse_and_rank(q, idx, k=10), idx)   # hint["low_confidence"], hint["reasons"]
+```
+
 ## Tests
-178 tests in `partwise-tests/rishit/`, all passing.
+184 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -276,4 +284,4 @@ results = diversify(parse_and_rank(q, idx, k=30), idx, k=10)
 - **Everyone:** judgments, once the runs are pooled.
 
 ## Next
-The remaining extras (query difficulty hint, evaluation tab, facet counts, autocomplete) while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.
+The remaining extras (evaluation tab, facet counts, autocomplete) while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.

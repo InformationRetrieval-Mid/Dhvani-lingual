@@ -22,6 +22,7 @@ from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, s
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
+from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import DEFAULT_LAMBDA, diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
@@ -291,6 +292,13 @@ def run(argv=None):
         results = diversify(results, index)
 
     results = results[:args.k] if args.no_collapse else collapse_duplicates(results, index, k=args.k)
+
+    hint = predict(query, results, index)
+    if hint["low_confidence"]:
+        out.append(f"Low confidence: {'; '.join(hint['reasons'])}.")
+    if args.explain:
+        out.append(f"Query difficulty: specificity {hint['specificity']:.2f} (flag below 1.0), "
+                   f"scope {hint['scope']:.2f}, clarity {hint['clarity']:.2f} bits")
 
     heading(out, "5. Results" if args.explain else "Results")
     if not results:
