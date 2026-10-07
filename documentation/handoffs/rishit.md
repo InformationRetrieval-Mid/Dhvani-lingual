@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after judging started and the judgment-free results were rerun
+Last updated: 7 Oct, after adding the run-everything script
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -17,6 +17,11 @@ Last updated: 7 Oct, after judging started and the judgment-free results were re
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
 Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to rank fusion.
+
+**Run everything in my part at once** (tests, every evaluation, then a demo of the best queries; about 3 minutes):
+```bash
+.venv/bin/python scripts/rishit_results.py            # add --quick for just the tests and the demo
+```
 
 **Setup.**
 ```bash
@@ -100,7 +105,14 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `537cb56` judging link in the search page's top bar, and a way back | `app/streamlit_app.py`, `app/pages/judge.py` |
 | `5117981`, `f52476a` my relevance judgments so far (23 of 345) | `judgments/qrels_rishit.txt` |
 | `47a924f` judgment-free results rerun after viraja's spelling fix | `documentation/results/rishit-results.md` |
-| docs brought up to date | `documentation/` |
+| `b63bacc` docs brought up to date | `documentation/` |
+| `e3f1762` translations learned from jagran's bilingual headlines | `dhvani/rank/learn_dict.py`, `dhvani/rank/data/en_hi_learned.tsv`, `dhvani/rank/xling.py` |
+| `8ce491a` listing pages and horoscopes pushed below real articles | `dhvani/rank/quality.py`, `dhvani/rank/data/page_types.tsv`, `app/streamlit_app.py`, `app/cli.py` |
+| `81f5271` judging pool rebuilt from the current runs (641 articles) | `judgments/pool.tsv`, `documentation/` |
+| `726bce6` decode html entities in headlines before showing them | `app/streamlit_app.py` |
+| `06800e3` evaluation runs push listing pages down, pool extended (802 articles) | `dhvani/eval/experiments.py`, `dhvani/eval/judge.py`, `judgments/pool.tsv` |
+| `b798dc3` significance tests and learning-to-rank | `dhvani/eval/significance.py`, `dhvani/eval/ltr.py`, `dhvani/eval/experiments.py` |
+| one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -168,7 +180,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
+With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--keep-listings`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -185,7 +197,7 @@ per_query, means = evaluate(rankings, qrels_by_query, k=10)   # means: P@10, R@1
 ```
 
 **Experiment runner** (`dhvani/eval/experiments.py`)
-Runs every stemming mode x every ranker (net, lnc.ltc, BM25, fusion) x every query, writes TREC run files to `<out>/runs/`, and prints the full results table (overall and per query form), the stemming comparison, per-query wins and losses against no stemming, and English queries with translation off vs on. With the real index built, it uses Dhrithi's index for each mode and the real query pipeline (`real_index.make_query`), reads the queries from the tsv blocks in `documentation/needs/*.md` (`read_needs()`), and skips modes that aren't built (yass). Without judgments it writes the run files for pooling and the speed-ups table and stops there. Without the real index it falls back to the sample index and the made-up queries and judgments in `dhvani/eval/sample/`. On the full crawl, 64 queries x 4 modes x 4 rankers take about 6 minutes.
+Runs every stemming mode x every ranker (net, lnc.ltc, BM25, fusion) x every query, pushing listing pages and horoscopes below real articles as the app does (top 30 ranked, demoted, cut to 10), writes TREC run files to `<out>/runs/`, and prints the full results table (overall and per query form), the stemming comparison, per-query wins and losses against no stemming, and English queries with translation off vs on. With the real index built, it uses Dhrithi's index for each mode and the real query pipeline (`real_index.make_query`), reads the queries from the tsv blocks in `documentation/needs/*.md` (`read_needs()`), and skips modes that aren't built (yass). Without judgments it writes the run files for pooling and the speed-ups table and stops there. Without the real index it falls back to the sample index and the made-up queries and judgments in `dhvani/eval/sample/`. On the full crawl, 64 queries x 4 modes x 4 rankers take about 6 minutes.
 ```bash
 .venv/bin/python -m dhvani.eval.experiments --out data/eval/full                        # run files for pooling
 .venv/bin/python -m dhvani.eval.experiments --out data/eval/full                        # with judgments/ filled in: every metric
@@ -280,6 +292,27 @@ from dhvani.rank.difficulty import predict
 hint = predict(q, parse_and_rank(q, idx, k=10), idx)   # hint["low_confidence"], hint["reasons"]
 ```
 
+**Learned translations** (`dhvani/rank/learn_dict.py`)
+Jagran's headlines end with an English version ("भूकंप के झटकों से कांपा ... - earthquake tremors felt ..."), so the frozen corpus has 973 Hindi/English headline pairs. `learn()` aligns words across them with the Dice coefficient (2 x pairs with both / (pairs with the English word + pairs with the Hindi word)), after dropping words in more than 5% of pairs, and keeps each English word's best Hindi word when it's seen in at least 3 pairs with Dice 0.5 or more. That gives 272 pairs (airport → एयरपोर्ट, arrested → गिरफ्तार, compensation → मुआवजा, border → सीमा, and many names and places), written to `dhvani/rank/data/en_hi_learned.tsv`. The translator loads them under the hand-made dictionary, which wins wherever both have a word. About 85% are right on a spot check; the wrong ones come from a single recurring story (students → वृंदावन). Numbers are in the results file.
+```bash
+.venv/bin/python -m dhvani.rank.learn_dict      # relearn from data/news.jsonl
+```
+
+**Page-type quality** (`dhvani/rank/quality.py`)
+18% of the frozen corpus (900 pages) are section and city listing pages the crawler saved as articles ("देवरिया की सबसे ताज़ा खबर", "Guna News, Guna Samachar", amarujala.com/technology), and 2% (104) are daily horoscopes. A listing page stitches dozens of headlines together, so it contains almost any combination of words and was 21 to 33% of the top 10 for our needs queries. `classify(headline, url)` labels each page article, listing or horoscope, from its URL (site root, /live/, or a short section-style path with no article slug) and its headline (patterns like "सबसे ताज़ा खबर", "Samachar", "News in Hindi", with ताज़ा and ताजा treated the same; Jagran's bilingual article headlines are never listings). The index has no URLs, so `python -m dhvani.rank.quality` classifies the corpus file once and saves the non-article ids to `dhvani/rank/data/page_types.tsv` (ids only). `demote(results, idx)` multiplies non-article scores by 0.3 and puts them after every real article: they often reach a stricter parser stage than real articles, so demoting them within their stage wasn't enough. In the app it's the "Push listing pages down" switch (on by default) with a "Listing page" or "Horoscope" tag; in the CLI it's on by default, results show `[listing]`, and `--keep-listings` turns it off.
+```bash
+.venv/bin/python -m dhvani.rank.quality      # reclassify data/news.jsonl
+```
+
+**Significance tests** (`dhvani/eval/significance.py`)
+`compare(a, b)` takes two {qid: score} dicts (per-query AP) and returns both means, the difference, a paired randomization test p-value (10,000 random swaps, Smucker et al. 2007) and a paired t-test p-value (t distribution computed in the module, no SciPy). The experiment runner prints them for every ranker against lnc.ltc and every stemming mode against no stemming, on judged queries only.
+
+**Learning to rank** (`dhvani/eval/ltr.py`)
+Every judged query-article pair becomes a row of 10 features (cosine, BM25, zone, proximity, recency, PageRank, first to publish, real article or not, parser stage, dense cosine), and a logistic regression learns how much each says about relevance (grade 1 or 2 = relevant). It's tested leave-one-need-out: for each need, a model trained on the other needs re-ranks that need's net-score top 30, and MAP, P@10 and a significance test compare it with the net score. It prints the average learned weights too.
+```bash
+.venv/bin/python -m dhvani.eval.ltr            # add --dense to include the e5 cosine
+```
+
 **Sanity check** (`dhvani/eval/sanity.py`)
 Evaluation that needs no judgments, from the run files. Cross-form agreement: for each need, how much of the Hindi form's top 10 its Hinglish, messy and English forms also return, plus the English form with translation off. System agreement: top-10 overlap and Kendall's tau between every pair of rankers and of stemming modes. Numbers are in the results file.
 ```bash
@@ -287,7 +320,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 **Judging** (`dhvani/eval/judge.py`, `app/pages/judge.py`, `judgments/`)
-`python -m dhvani.eval.judge` pools the top 10 of every run for every form of a need into one list per need (`judgments/pool.tsv`, 804 articles for the 16 needs, about 50 each), so each article is judged once per need, as `formats.md` says. The "judge" page in the app's sidebar shows the need, then each pooled article (paper, date, headline and the start of the body, with the Hindi query words highlighted), with buttons for 0 not relevant, 1 partly, 2 fully, and Skip. It's reached from the "Judging" link in the search page's top bar, and has a link back. It picks your needs by name (R for Rishit, V for Viraja), shows progress, and saves after every click to `judgments/qrels_<person>.txt` in the `formats.md` judgment format. One file per person, all in git (ids and grades only, no article text), so four people can judge at once without conflicts. `all_judgments()` merges the files, keeping the higher grade if two people judged the same pair, and the experiment runner uses them by default.
+`python -m dhvani.eval.judge` pools the top 10 of every run for every form of a need into one list per need (`judgments/pool.tsv`, 802 articles for the 16 needs, about 50 each). New runs only ever add to it, so nothing already judged is dropped; `--fresh` starts over. Riya's `dhvani/eval/pool.py` pools per need the same way, so each article is judged once per need, as `formats.md` says. The "judge" page in the app's sidebar shows the need, then each pooled article (paper, date, headline and the start of the body, with the Hindi query words highlighted), with buttons for 0 not relevant, 1 partly, 2 fully, and Skip. It's reached from the "Judging" link in the search page's top bar, and has a link back. It picks your needs by name (R for Rishit, V for Viraja), shows progress, and saves after every click to `judgments/qrels_<person>.txt` in the `formats.md` judgment format. One file per person, all in git (ids and grades only, no article text), so four people can judge at once without conflicts. `all_judgments()` merges the files, keeping the higher grade if two people judged the same pair, and the experiment runner uses them by default.
 ```bash
 .venv/bin/python -m dhvani.eval.judge --runs data/eval/full/runs   # rebuild the pool
 .venv/bin/streamlit run app/streamlit_app.py                         # then open "judge" in the sidebar
@@ -295,16 +328,17 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## Tests
-196 tests in `partwise-tests/rishit/`, all passing.
+215 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
 
 ## What I need from others
-- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them). Pooling per need is now done in `dhvani/eval/judge.py`.
+- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them).
 - **Dhrithi:** her 8 information needs (need ids starting with D). Also: auto stemming is 99% the same as no stemming on the frozen corpus, because its candidates came from the 300-article sample; rebuilding them on the 5,000 would make the third column count.
-- **Viraja:** her rare-spelling fix works for "bhukamp" (now भूकंप) and "modi" (मोदी), and lifted cross-form agreement by about 0.1. Still wrong: "delhi" → देल्ही instead of दिल्ली (977 articles) and "iyer" → एयर instead of अय्यर (74). Also her V01 to V08 judgments (459 articles in the pool).
+- **Riya:** her pooling script now pools per need and matches `judge.py` exactly (641 articles from the current runs).
+- **Viraja:** her rare-spelling fix works for "bhukamp" (now भूकंप) and "modi" (मोदी), and lifted cross-form agreement by about 0.1. Still wrong: "delhi" → देल्ही instead of दिल्ली (977 articles) and "iyer" → एयर instead of अय्यर (74). She judged all 459 articles of the old pool; the current pool has about 210 new V articles for her to judge.
 - **Everyone:** judge your own 8 needs on the judging page ("Judging" in the top bar) and push your `judgments/qrels_<name>.txt`.
 
 ## Next
-Finish judging my 8 needs (23 of 345 done). The evaluation already runs end to end on the judgments (checked with the first ones); once mine and Viraja's are in, rerun it and fill in the results file, then significance tests and learning-to-rank. Learning translations from Jagran's bilingual headlines can be done meanwhile. The full list is in `documentation/to-dos/rishit-todo.md`.
+Finish judging my 8 needs (23 of 297 done); Viraja has about 210 new articles to judge after the pool grew. The evaluation already runs end to end on the judgments (checked with the first ones); once mine and Viraja's are in, rerun it and fill in the results file, then significance tests and learning-to-rank. Learning translations from Jagran's bilingual headlines can be done meanwhile. The full list is in `documentation/to-dos/rishit-todo.md`.

@@ -13,7 +13,9 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
 | Sanity check without judgments | Frozen corpus (5,000 articles) |
 | Query difficulty hint | Frozen corpus (5,000 articles) |
-| Learning-to-rank | Waiting for judgments |
+| Learned translations | Frozen corpus (5,000 articles) |
+| Page-type quality | Frozen corpus (5,000 articles) |
+| Learning-to-rank | Early run on partial judgments |
 | Wins and losses | Waiting for judgments |
 
 ## Speed-ups vs exact lnc.ltc
@@ -154,3 +156,79 @@ Share of the same top 10 (overlap) and Kendall's tau on the order of the article
 - **BM25 and fusion agree best across forms**, so they're the most robust to how the query is written; the net score agrees least, because its zone and authority boosts favour different articles per form.
 - **lnc.ltc and BM25 mostly agree; the net score differs most**, because zones, proximity and authority reorder a lot. Judgments will say whether that's better or worse.
 - **Auto stemming is almost the same as no stemming** on the frozen corpus (0.99), because its candidates were learned on the 300-article sample and few of them apply to 5,000 articles.
+
+## Learned translations
+
+> **Frozen corpus.** Learned from the 973 Jagran headlines that have an English version appended.
+
+- **How to rerun:** `python -m dhvani.rank.learn_dict`
+
+Cut-off choice, checked against the 180-entry hand-made dictionary (English words both have, and how many the learned pair agrees with exactly):
+
+| Dice at least | Pairs at least | Learned | Also in hand dictionary | Agree exactly |
+|---|---|---|---|---|
+| 0.3 | 3 | 360 | 47 | 74% |
+| 0.4 | 3 | 328 | 40 | 75% |
+| **0.5** | **3** | **272** | **31** | **81%** |
+| 0.6 | 4 | 132 | 15 | 93% |
+
+Exact agreement undercounts: many "disagreements" are correct variants (women → महिलाएं instead of महिला, traffic → ट्रैफिक, road → रोड, exam → परीक्षाएं). The real errors come from one story dominating a word (students → वृंदावन, captain → स्मित, vote → चोरी from "वोट चोरी").
+
+| | Hand dictionary only | With learned pairs |
+|---|---|---|
+| English words in our 16 needs that get a translation | 56 of 83 | 64 of 83 |
+| English vs Hindi form agreement, BM25 | 0.394 | 0.388 |
+| English vs Hindi form agreement, net score | 0.244 | 0.237 |
+
+**What it shows**
+- **The corpus can teach itself to translate.** 272 pairs with no outside data, mostly right, many of them names and places a general dictionary wouldn't have.
+- **On our needs the effect is flat**, because the hand dictionary was grown from these same needs and the new words (rahul, gandhi, uttarakhand, rajya sabha) were already reachable through Viraja's phonetic layer. The value is for English words outside the needs (airport, compensation, border, challan).
+- **Listing pages hide the gain.** For new English queries the top results are often section pages like "अंबाला की सबसे ताज़ा खबर", with or without the learned pairs.
+
+## Page-type quality: pushing listing pages down
+
+> **Frozen corpus.** 64 needs queries, no stemming, top 30 from the parser, then cut to 10.
+
+- **How to rerun:** `python -m dhvani.rank.quality`, then compare `demote()` on and off with `cross_form_agreement()`
+
+| Page type | Pages | Share |
+|---|---|---|
+| Article | 3,996 | 80% |
+| Listing (section, city, live-blog index pages) | 900 | 18% |
+| Horoscope | 104 | 2% |
+
+Listing pages were 21% of the top 10 with the net score and 33% with BM25 before this.
+
+Agreement with the Hindi form of the same need (overlap@10), before → after pushing non-articles down:
+
+| Form | Net score | BM25 |
+|---|---|---|
+| Hinglish | 0.37 → **0.44** | 0.46 → **0.55** |
+| Messy | 0.28 → **0.37** | 0.45 → **0.52** |
+| English | 0.24 → **0.36** | 0.39 → **0.49** |
+
+**What it shows**
+- **A fifth of the corpus wasn't news,** and it was crowding out real articles, most of all for English and Hinglish queries, whose words a listing page is most likely to contain somewhere.
+- **A query-independent quality score fixes most of it.** English queries agree with their Hindi form half again as often with the net score (0.24 → 0.36). This is the largest single improvement measured so far.
+- **It works without cleaning the corpus,** so every number stays on the same frozen set of articles.
+
+## Learning to rank (early)
+
+> **Partial judgments, not final.** Viraja's 459 judgments (from the first pool) and Rishit's first 23: 40 queries from 10 needs. Unjudged articles count as not relevant. To be rerun once judging is finished.
+
+- **How to rerun:** `python -m dhvani.eval.ltr` (add `--dense` for the e5 feature)
+- **Setup:** logistic regression on 10 features, leave-one-need-out, re-ranking the net score's top 30
+
+| Ranker | MAP | P@10 |
+|---|---|---|
+| Net score (hand-picked weights) | 0.687 | 0.588 |
+| Learned | **0.736** | **0.615** |
+
+Learned vs net score on per-query AP: p = 0.24 (randomization), 0.24 (t-test), so not significant yet.
+
+Average learned weights (features standardised): zone +0.98, BM25 +0.83, PageRank +0.25, cosine +0.05, proximity -0.11, real article -0.24, recency -0.35, first to publish -0.40, parser stage -0.50.
+
+**What it shows so far**
+- **Headline match and BM25 carry most of the signal**, more than the cosine the net score is built on.
+- **The hand-picked authority parts may hurt.** Recency and first to publish get negative weight, so they push relevant articles down on these needs. Worth checking again on the full judgments before changing the net score.
+- **The parser stage gets negative weight** once the other features are known, which suggests stricter stages already show up through zone and BM25.

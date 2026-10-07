@@ -33,6 +33,24 @@ def test_expand_query_does_not_duplicate_terms():
     assert len(terms) == len(set(terms))
 
 
+def test_alias_forces_the_correct_devanagari_for_hard_names():
+    # delhi -> दिल्ली (silent-h) and iyer -> अय्यर (homophone of एयर) are the
+    # curated hard cases: the alias must be the top phonetic expansion.
+    idx = KGramIndex(["दिल्ली", "देल्ही", "अय्यर", "एयर", "मौसम"], k=2)
+    _c = learn_costs([("x", "x")] * 3, iterations=2)
+    for query, want in (("delhi", "दिल्ली"), ("iyer", "अय्यर")):
+        exps = build_query(query, index=idx, costs=_c)["tokens"][0]["expansions"]
+        phonetic = [t for t, _w, s in exps if s == "phonetic"]
+        assert phonetic[0] == want, f"{query} -> {phonetic}"
+
+
+def test_alias_ignored_when_not_in_vocabulary():
+    # Don't invent a term the corpus doesn't have.
+    idx = KGramIndex(["मौसम"], k=2)
+    exps = build_query("delhi", index=idx, costs=learn_costs([("x", "x")] * 3))["tokens"][0]["expansions"]
+    assert "दिल्ली" not in [t for t, _w, _s in exps]
+
+
 def test_english_words_are_not_phonetically_expanded():
     # "farmers" is English -> no Hindi homophone -> must not get phonetic junk.
     index, costs = _index_and_costs()

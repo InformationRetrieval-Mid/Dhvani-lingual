@@ -31,6 +31,7 @@ from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_
 from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import diversify  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
+from dhvani.rank.quality import demote  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -428,6 +429,8 @@ def score_table(explain, terms, parts=None):
 
 def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     article = index.articles.get(doc_id, {"headline": doc_id, "body": ""})
+    # Some crawled text still has HTML entities (&#039;); decode them before we escape for display.
+    article = {k: html.unescape(article.get(k, "")) for k in ("headline", "body")}
     meta = index.meta[doc_id]
     terms = explain.get("terms", explain)
     place = meta.get("city") or meta.get("state") or ""
@@ -439,6 +442,8 @@ def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     kal = explain.get("kal")
     if kal and kal["boost"]:
         stage_tag += f'<span class="dv-stage">कल · {kal["intent"]}</span>'
+    if explain.get("page_type", "article") != "article":
+        stage_tag += f'<span class="dv-stage">{"Listing page" if explain["page_type"] == "listing" else "Horoscope"}</span>'
     also = ""
     if explain.get("also_in"):
         also = f'<div class="dv-also">Also in {html.escape(", ".join(explain["also_in"]))}</div>'
@@ -518,6 +523,8 @@ def main():
             use_dense = dense_available() and st.toggle(
                 "Dense re-ranking (e5)", value=False,
                 help="Re-rank the top 50 with a multilingual embedding model: half first stage, half meaning.")
+            use_demote = st.toggle("Push listing pages down", value=True,
+                                   help="Section pages and horoscopes go below real news articles.")
             use_mmr = st.toggle("Diversify results (MMR)", value=False,
                                 help="Re-order so the top results cover more different stories.")
             use_kal = st.toggle("Date-aware kal", value=True,
@@ -562,6 +569,8 @@ def main():
             results[mode] = dense_rerank(results[mode], queries[mode], load_dense(mode))
         if use_kal:
             results[mode] = apply_kal(results[mode], queries[mode], index)
+        if use_demote:
+            results[mode] = demote(results[mode], index)
         if use_mmr:
             results[mode] = diversify(results[mode], index)
         if use_collapse:

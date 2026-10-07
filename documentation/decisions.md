@@ -219,3 +219,22 @@ A running list of the choices we made and why. Newest at the bottom.
 **Judging page inside the app.** It's a second Streamlit page, so it uses the same index and setup as search, and nobody has to install anything else.
 
 **Judgment-free numbers rerun when the query side changes.** Viraja's rare-spelling fix changed which Hindi words Hinglish queries reach, so the sanity check, speed-ups and difficulty numbers were rerun on the same frozen corpus. The results file notes the before and after for agreement.
+
+**Translations learned from the corpus, under the hand-made dictionary.** Jagran's bilingual headlines give free aligned pairs. Dice 0.5 with at least 3 pairs keeps the errors low enough while still adding 272 words; the hand-made dictionary always wins, so a learned mistake can't override a known translation.
+
+**Listing pages handled in ranking, not by removing them.** The corpus is frozen, so the 900 listing pages and 104 horoscopes stay in and get a low query-independent quality score instead. They still appear when nothing else matches (a plain "news" query), but never above a real article.
+
+**Non-articles go after all articles, across parser stages.** A listing page contains almost every word somewhere, so it often reached the "all words" stage while the real articles only reached "some words". Demoting within a stage left it on top, so page type is checked before the parser stage.
+
+**Page types saved as ids, decided with the URL.** The index has no URLs, and many listing headlines are plain ("मौसम", "उम्मीदवार"), so the corpus is classified once with the URL and only the ids of non-articles are kept in the repo.
+
+**Pool rebuilt from the current runs.** The first pool came from runs made before Viraja's rare-spelling fix; 146 of today's top-10 articles weren't in it. It was rebuilt early, while only 23 pairs had been judged (all still in the new pool), so nothing was lost. Riya's per-need pooling gives the identical 641 articles.
+
+
+**The evaluation runs push listing pages down.** The report should measure the system people use, so the runs demote listing pages like the app (rank 30, demote, keep 10). The pool only grows when runs change, so judgments already made are never thrown away.
+
+**Randomization test as the main significance test.** It makes no assumption about how AP is distributed, which matters with a few dozen queries; the t-test is shown next to it for comparison.
+
+**Logistic regression for learning to rank, tested leave-one-need-out.** With a few hundred judged pairs a handful of weights is all the data supports. Holding out whole needs (not single queries) stops the four forms of a need from leaking into each other's training data.
+
+**One script for the whole part.** `scripts/rishit_results.py` runs the tests, every evaluation and a demo of the queries that show the system best (the same need in Hindi, Hinglish and English, the assignment's "kal ka mausam", date-aware kal, fusion, a low-confidence warning and one --explain run), so the results and the demo can be regenerated in one go before the report and video.
