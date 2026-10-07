@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 17:15
+Last updated: 7 Oct, around 17:50
 
 ## My novelty
 
@@ -17,7 +17,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Duplicate collapsing | A wire story carried by several papers shows once, with "also in" the others (22 story clusters in the full crawl) | ~~Done~~ |
 | BM25 | Second ranking model next to lnc.ltc and the net score | ~~Done~~ |
 | Dense re-ranking | Multilingual e5 re-scores the top 50, with Viraja's Devanagari spellings added to Hinglish queries so e5 understands them | ~~Done~~ |
-| Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | Built, not committed yet |
+| Rank fusion (RRF) | Fuses lnc.ltc, BM25, the net score and dense by rank | ~~Done~~ |
 | Speed-ups study | All five Lecture 7 speed-ups compared on the same Hindi news queries (articles scored vs top 10 kept) | ~~Done on the full crawl, before the freeze~~; rerun on the frozen corpus |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
@@ -33,6 +33,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~PageRank (damping 0.85, power iteration) and first-to-publish credit in g(d)~~
 - [x] ~~Duplicate collapsing with "also in"~~
 - [x] ~~Dense re-ranking with multilingual e5 (optional install)~~
+- [x] ~~Rank fusion (RRF) of lnc.ltc, BM25, the net score and dense~~
 
 ### Query side
 - [x] ~~Cross-lingual layer with an English to Hindi news dictionary (about 180 entries)~~
@@ -52,6 +53,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Speed-ups table (articles scored vs top 10 kept)~~
 - [x] ~~Stop words, idf and Zipf analysis with plots~~
 - [x] ~~My 8 information needs (R01 to R08), in four forms each~~
+- [x] ~~Experiment runner and corpus stats on the real index: queries read from the needs files, real query pipeline per mode, run files for pooling (64 queries x 4 modes x 4 rankers so far)~~
 
 ### App and CLI
 - [x] ~~Streamlit app: three stemming columns, highlighted snippets, match chips, filters, score breakdown, parser stage, "only here" tags~~
@@ -62,15 +64,11 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Dhrithi's index and Viraja's query layer plugged into the app and CLI, with a fallback to the sample index~~
 - [x] ~~End-to-end: Hindi, Hinglish and English versions of a need find the same articles~~
 - [x] ~~Running on Riya's full crawl: 5,000 articles, four indexes built in about 30 s, searches in under 0.1 s~~
-- [x] ~~Merged into `main` up to the plug-in work~~
-
-## In progress
-- [ ] Commit rank fusion (RRF), then merge `rishit` into `main` again (cluster pruning, impact-ordered postings, dense, the full-crawl numbers and RRF aren't on `main` yet)
+- [x] ~~Merged into `main` up to rank fusion~~
 
 ## Remaining
 
 ### Can do now
-- [ ] Point the experiment runner and the corpus stats script at the real index by default (they still load the 20-article sample unless told otherwise)
 - [ ] Embed the full crawl for dense re-ranking (one run of about 3 to 4 minutes, cached in `data/dense/`)
 - [ ] Result diversification (MMR) so the top 10 isn't one story told several ways
 - [ ] Facet counts next to each filter option, e.g. "Jagran (12)"
@@ -81,7 +79,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 ### Once the corpus is frozen
 - [ ] Rebuild the four indexes from Riya's cleaned file instead of my local copy
 - [ ] Rerun the speed-ups table, stop words, idf and Zipf on the frozen corpus
-- [ ] Run all 120 queries through every system and write the TREC run files for pooling
+- [ ] Run all 120 queries through every system and write the TREC run files for pooling (works now for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
 
 ### Once there are judgments
 - [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
@@ -95,7 +93,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | From | What | Why it matters for my part |
 |---|---|---|
 | Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
-| Riya | Pooling script CLI | Turns my run files into the pools we judge |
+| Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
 | Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
 | Viraja | Less phonetic expansion for English words ("farmers" gets हार्मोन्स, "snow" gets now) | Adds noise to English queries in the sparse rankers |
 | Everyone | Judgments | All quality numbers and learning-to-rank |

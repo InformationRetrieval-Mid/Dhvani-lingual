@@ -81,3 +81,33 @@ def test_speedup_table_has_every_method_and_sane_numbers():
         assert 0.0 < scored <= 1.0 and 0.0 <= kept <= 1.0
     big_r = dict((n, (s, k)) for n, s, k in rows)["champion lists, r=50"]
     assert big_r == (1.0, 1.0)     # r bigger than any postings list = exact search
+
+
+def test_needs_files_give_every_query_in_four_forms():
+    from dhvani.eval.experiments import read_needs
+    rows = read_needs()
+    assert len(rows) >= 64 and len({r[0] for r in rows}) == len(rows)       # qids are unique
+    r01 = [r for r in rows if r[1] == "R01"]
+    assert {r[2] for r in r01} == {"hindi", "hinglish", "messy", "english"}
+    assert all(r[3] for r in rows)
+
+
+def test_needs_reader_only_reads_tsv_blocks(tmp_path):
+    from dhvani.eval.experiments import read_needs
+    (tmp_path / "x-needs.md").write_text(
+        "| Need | What |\n|---|---|\n\n```tsv\nqid\tneed_id\tform\tquery\nX01_hi\tX01\thindi\tदिल्ली बारिश\n```\n"
+        "```python\nnot\ta\tquery\trow\n```\n", encoding="utf-8")
+    assert read_needs(tmp_path) == [("X01_hi", "X01", "hindi", "दिल्ली बारिश")]
+
+
+def test_default_loader_uses_the_sample_in_tests():
+    from dhvani.eval.experiments import default_loader
+    assert isinstance(default_loader("none"), SampleIndex)
+
+
+def test_query_builder_runs_the_analyzer_for_the_mode():
+    from dhvani.eval.experiments import build_query, build_query_no_xling
+    with_xling = build_query("delhi rain", "none")
+    without = build_query_no_xling("delhi rain", "none")
+    sources = lambda q: {s for t in q["tokens"] for _w, _x, s in t["expansions"]}
+    assert "xling" in sources(with_xling) and "xling" not in sources(without)
