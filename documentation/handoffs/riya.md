@@ -21,7 +21,8 @@ python -m dhvani.crawl.crawler --max-articles 5000
 * **Estimated Runtime:** ~2.2 hours
 * **Note:** The crawler automatically snapshots the first 300 articles to `data/news_sample_300.jsonl` upon reaching article #300 during the run.
 
-## 3. Sample Corpus Verification & Statistics Report
-A comprehensive audit and statistical breakdown of the 300-article sample deliverable (including source balance, section distribution, district-level city mapping, and vocabulary metrics) is documented at:
-* [`data/results/sample_300_stats.md`](../../data/results/sample_300_stats.md)
+## 3. Corpus Verification & Statistics Reports
+Comprehensive audits and statistical breakdowns of the crawled corpus and deduplication clustering are documented at:
+* [`data/result-documentation/sample_corpus_stats.md`](../../data/result-documentation/sample_corpus_stats.md): Source balance, section breakdown, district-level city mapping, and vocabulary metrics.
+* [`data/result-documentation/dedup_stats.md`](../../data/result-documentation/dedup_stats.md): Deduplication clustering yield, pairwise similarity spectrum, and threshold calibration.
 

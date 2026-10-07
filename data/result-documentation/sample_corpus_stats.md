@@ -1,4 +1,4 @@
-# H3 Corpus Sample Statistics Report (`data/news_sample_300.jsonl`)
+# Sample Corpus Statistics Report (H3 300 Articles)
 
 **Generated at:** 2026-10-07 05:04:50 IST  
 **Execution Command:** `python -m dhvani.crawl.crawler --sample`  
