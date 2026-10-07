@@ -8,3 +8,16 @@ R01 0 livehindustan_a18886f0 1
 R01 0 livehindustan_ef55faf7 2
 R01 0 nbt_134746226 2
 R01 0 nbt_134746338 2
+R02 0 aajtak_7b24e2f8 1
+R02 0 aajtak_7d0697d1 2
+R02 0 aajtak_a7d66dc8 1
+R02 0 amarujala_25ee3c6e 0
+R02 0 amarujala_52df031b 0
+R02 0 amarujala_fb6f0053 2
+R02 0 livehindustan_2ca1b650 1
+R02 0 livehindustan_2dd0222e 2
+R02 0 livehindustan_3754ed62 1
+R02 0 livehindustan_4e942b87 2
+R02 0 livehindustan_76aaa2e1 1
+R02 0 livehindustan_a89f325e 2
+R02 0 nbt_134755539 1
