@@ -13,14 +13,16 @@ env/
 venv/
 ENV/
 
-# Project Data (Crawled articles stay local, per policy)
-data/*.jsonl
-data/result-documentation/*.jsonl
-data/*.json
-data/sitemaps/
-data/cache/
-data/*.txt
-!data/.gitkeep
+# Project data: crawled articles, indexes, downloads and eval output stay local.
+# Only the placeholder and Riya's stats reports are kept in git.
+/data/*
+!/data/.gitkeep
+!/data/result-documentation/
+/data/result-documentation/*.jsonl
+
+# Built indexes
+indexes/
+*.pkl
 
 # IDE & OS
 .vscode/
