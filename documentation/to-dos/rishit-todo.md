@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 15:25 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -50,9 +50,10 @@ Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on
 - [x] ~~Speed-ups in the app and CLI: a speed-up choice, and how many articles were scored~~
 - [x] ~~Speed-ups results table in the experiment runner: overlap with full search and articles scored~~
 - [x] ~~My 8 information needs, picked from stories in Riya's crawl (R01 to R08)~~
-- [ ] Merge `rishit` into `main` again after those three
-- [ ] Plug the real pieces in on `main`: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text from `idx.text`
-- [ ] End-to-end check with Viraja: Hindi, Hinglish and English forms of a need all find the right articles (H12)
+- [x] ~~Merge `rishit` into `main` again after those three~~
+- [x] ~~Plug the real pieces in: Viraja's `build_query` instead of `query_stub`, Dhrithi's index instead of `SampleIndex`, headlines and text from `idx.text`~~
+- [ ] Merge the plug-in work into `main`
+- [x] ~~End-to-end check: Hindi, Hinglish and English forms of a need all find the right articles on Riya's 300 articles (H12)~~
 
 ## Next
 
@@ -133,6 +134,8 @@ Last updated: 7 Oct, around 14:50 (teammates' status read from their branches on
 - ~~**Merge clashes:** `.gitignore` files combined into one on `main`, `dhvani/eval/__init__.py` combined.~~
 - ~~**Tests that need local files:** fixed by Dhrithi; auto stemming now falls back to no stemming when the generated files are missing.~~
 - **Auto column on a fresh checkout:** without Dhrithi's generated files the auto column gives the same results as no stemming. She needs to commit the small candidates file or document how to generate it.
+- **HTML left in article bodies:** 24 of Riya's 300 articles have `<a class=backlink ...>` tags in the body, so words like "href" get indexed. Needs fixing in the crawler before the full crawl.
+- **No case folding in the normalizer:** "Iyer" and "iyer" are different index terms. The query side works around it; Dhrithi's normalizer should lowercase.
 - **Two test files share a name:** `test_build.py` and `test_scoring.py` are in both `tests/` and `partwise-tests/`, so running both folders in one pytest command errors. Run them separately, or rename Dhrithi's two files.
 - ~~**Folder layout:** Dhrithi's top-level `text/` and `index/` import fine on `main`.~~
 - ~~**idf log base:** Dhrithi moved to log10, same as this branch and the slides.~~

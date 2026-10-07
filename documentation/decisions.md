@@ -137,3 +137,15 @@ A running list of the choices we made and why. Newest at the bottom.
 **Speed-ups are judged by overlap with full search.** For each speed-up the table shows how much of the exact top k it keeps and what share of articles it scored. That's the trade-off Lecture 7 describes, and it doesn't need relevance judgments, so it can be run as soon as the corpus is frozen.
 
 **My information needs come from the real crawl.** Each of R01 to R08 is a story with at least two articles in Riya's 300-article sample, so every need has something to find. Several are the same story in many papers (the earthquake, Char Dham, Shreyas Iyer), which also tests duplicate collapsing, and the English forms test the translation step. Only the queries are in git, not the article text.
+
+**Queries go through the same analyzer as the articles.** Each column's index was built with a different stemming mode, so the query is analyzed with that mode too. The stemming column gets stemmed query terms, and the three columns stay a fair comparison.
+
+**Phonetic candidates come from the unstemmed vocabulary.** Viraja's k-gram index is built over the no-stemming index's words, so a Hinglish word is matched to a real Hindi spelling first and only then stemmed for each column.
+
+**Tiny phonetic variants are dropped.** Variants with weight under 0.05 (like भूखंड for भूकंप) can't change the ranking but would pull unrelated articles into the "any word" stage, so they're left out.
+
+**Letter case is handled on the query side for now.** The index keeps "Iyer" and "iyer" apart, so a Roman query word is matched to every spelling of it in the index. The proper fix is case folding in the normalizer.
+
+**Fallback to the sample index.** If the real indexes aren't built, the app and CLI still run on the 20-article sample, and the tests always use it so they pass the same way on every machine.
+
+**Dictionary grown from the information needs.** Words like earthquake, protest, detained, bypoll and pilgrims were added because the English forms of our needs use them. General news words only; nothing is copied from articles.

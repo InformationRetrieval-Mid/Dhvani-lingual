@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after writing my 8 information needs
+Last updated: 7 Oct, after plugging in the real index and query layer
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -23,8 +23,11 @@ Each person commits to their own branch. Riya's, Dhrithi's and Viraja's branches
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m pytest partwise-tests/rishit -q
+# copy Riya's news_sample_300.jsonl into data/ first (it isn't in git)
+.venv/bin/python -m index.build --input data/news_sample_300.jsonl
 .venv/bin/streamlit run app/streamlit_app.py
 ```
+Without the built indexes the app and CLI fall back to the 20-article sample index.
 
 **Rules for working in this repo.**
 - Commits go under the person who did the work. No AI co-author lines or tool names in commit messages.
@@ -34,10 +37,9 @@ python3 -m venv .venv
 - Article text never goes in git. Only the top-level `data/` folder is ignored, so crawled articles, indexes and downloads go there.
 - Don't change a shared format in `formats.md` without telling the group.
 
-**Where things stand right now.** Everything here runs on the 20-article sample index with exact-match queries plus English translation. The real pieces exist on teammates' branches but aren't plugged in yet:
-- Viraja's `build_query(raw, index=None, costs=None)` in `dhvani/query/build.py` is ready to replace `query_stub.exact_query`.
-- Dhrithi's `Index.load(mode)` in `index/positional.py` has modes none, light, aggr and auto (selective stemming), with `doc_norm`, `doc_len`, `links` and `city` filled in.
+**Where things stand right now.** The app and CLI run on the real pieces: Dhrithi's index built on Riya's 300 articles, Viraja's `build_query` with phonetic variants, and the cross-lingual layer, all through `dhvani/rank/real_index.py`. Hindi, Hinglish and English versions of a need find the same articles (for example भूकंप के झटके, bhukamp ke jhatke delhi and earthquake delhi). The tests stay on the 20-article sample.
 - Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`. It's kept out of git on `main`; copy it into your local `data/` folder.
+- The full crawl isn't done yet, so everything is on the 300 articles for now.
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -77,7 +79,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `e545370` renamed the to-do to rishit-todo and crossed out what's done | `documentation/to-dos/rishit-todo.md` |
 | `24b3804` speed-ups in the app and cli, with how many articles were scored | `app/streamlit_app.py`, `app/cli.py` |
 | `5feba40` speed-ups results table: how much of the top k each speed-up keeps | `dhvani/eval/experiments.py` |
-| my 8 information needs from stories in riya's crawl | `documentation/needs/rishit-needs.md` |
+| `612c363` my 8 information needs from stories in riya's crawl | `documentation/needs/rishit-needs.md` |
+| real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
 
 ## How to use it
 
@@ -211,6 +214,14 @@ from dhvani.rank.collapse import collapse_duplicates, collapse_pool
 results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 ```
 
+**Real index and query layer** (`dhvani/rank/real_index.py`)
+`load_index(mode)` loads Dhrithi's index from `indexes/<mode>.pkl` and gives it an `articles` view of its stored text, so everything that used the sample index works unchanged. If the index isn't built it falls back to the sample index, and `DHVANI_INDEX=sample` forces the sample (the tests set this). `make_query(raw, mode)` builds the query the way the articles were indexed: Viraja's `build_query` with phonetic variants from a k-gram index over the unstemmed vocabulary, then the cross-lingual layer, then every term through Dhrithi's analyzer for that mode. Phonetic variants with weight under 0.05 are dropped, and Roman words match every letter case in the index ("iyer" finds "Iyer"). The app builds one query per column, and its suggestions are real stories from the crawl.
+```python
+from dhvani.rank.real_index import load_index, make_query
+idx = load_index("light")
+rank(make_query("bhukamp ke jhatke delhi", "light"), idx, k=10)
+```
+
 ## Tests
 144 tests in `partwise-tests/rishit/`, all passing.
 ```bash
@@ -218,10 +229,10 @@ results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 ```
 
 ## What I need from others
-- **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. (`auto` mode, `doc_norm`, `doc_len`, `links`, `city` and log10 idf are done.)
+- **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. Fold letter case in the normalizer (right now "Iyer" and "iyer" are different terms), and commit the auto candidates file or say how to generate it, since without it the Auto column is the same as no stemming.
 - **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
-- **Riya:** the full crawl for the freeze. Keep article text out of git (only metadata in the repo, full text on Drive) because the repo is public.
+- **Riya:** the full crawl for the freeze. Strip leftover HTML from article bodies first: 24 of the 300 have `<a class=backlink href=...>` tags, so words like "href" get indexed. Keep article text out of git because the repo is public.
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
 
 ## Next
-Merging `rishit` into `main`, plugging in the real index and query object, and learning-to-rank after judging.
+Merging this into `main`, then the experiments on the frozen corpus, judging, and learning-to-rank.
