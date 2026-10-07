@@ -30,6 +30,9 @@ def test_devanagari_digits_are_preserved():
     text = "भारत में १२३ लोग हैं"
     assert normalize(text) == text
 
+def test_normalize_lowercases_english_text():
+    assert normalize("Delhi DELHI delhi") == "delhi delhi delhi"
+
 
 def test_normal_words_are_not_corrupted():
     words = [

@@ -31,6 +31,10 @@ REJECTED_STEMS = {
 def load_corpus_forms():
     """
     Count the actual surface forms occurring in the corpus.
+
+    The corpus is optional. If it is unavailable, return an
+    empty frequency table so AUTO can still use the committed
+    candidate configuration.
     """
     frequencies = Counter()
 
@@ -61,11 +65,11 @@ def load_corpus_forms():
 
 def load_auto_candidates():
     """
-    Load STRONG candidates from the analysis file.
+    Load STRONG candidates from the approved AUTO configuration.
 
-    If the generated candidate file is unavailable,
-    return an empty candidate set so that AUTO mode
-    behaves like no stemming instead of breaking imports.
+    The candidate file is intentionally allowed to be committed
+    because it represents the approved selective-stemming
+    configuration used by the project.
     """
     if not AUTO_CANDIDATES_PATH.exists():
         return {}
@@ -132,10 +136,13 @@ def build_auto_map(candidates, corpus_frequencies):
 
         surface form -> canonical lexical form
 
-    using the light stem as the candidate class and requiring
-    the canonical form itself to occur in the corpus.
+    from the approved selective-stemming candidates.
 
-    The canonical form is preferably the light stem itself.
+    If the development corpus is available, the canonical form
+    must also occur in that corpus.
+
+    If the development corpus is unavailable, the committed
+    candidate configuration is trusted directly.
     """
     auto_map = {}
 
@@ -147,22 +154,26 @@ def build_auto_map(candidates, corpus_frequencies):
         if len(forms) < 2:
             continue
 
-        # The proposed lexical base must actually occur
-        # in the corpus.
-        base_frequency = corpus_frequencies.get(
-            stem_word,
-            0,
-        )
+        # If the corpus is available, keep the original
+        # protection that the canonical form must occur in it.
+        #
+        # If the corpus is unavailable, the candidate file
+        # itself is the approved configuration.
+        if corpus_frequencies:
+            base_frequency = corpus_frequencies.get(
+                stem_word,
+                0,
+            )
 
-        if base_frequency == 0:
-            continue
+            if base_frequency == 0:
+                continue
 
         for surface_form in forms:
             if surface_form == stem_word:
                 continue
 
-            # Make sure this really belongs to the
-            # candidate stem class.
+            # Make sure the candidate still belongs to the
+            # expected light-stem class.
             if stem(surface_form) != stem_word:
                 continue
 
@@ -171,14 +182,6 @@ def build_auto_map(candidates, corpus_frequencies):
     return auto_map
 
 
-# These are safe to initialize even when the generated
-# AUTO files do not exist.
-#
-# On a normal development machine with the generated
-# files present, the full AUTO mapping is loaded.
-#
-# On a fresh checkout, both become empty and AUTO
-# simply performs no selective stemming.
 CORPUS_FREQUENCIES = load_corpus_forms()
 AUTO_CANDIDATES = load_auto_candidates()
 
@@ -198,9 +201,6 @@ def stem_auto(word: str) -> str:
 
         दिक्कतें -> दिक्कत
         दिक्कतों -> दिक्कत
-
-    If the generated AUTO files are unavailable,
-    the word is returned unchanged.
     """
     if not word:
         return word

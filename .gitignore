@@ -17,6 +17,7 @@ ENV/
 # Only the placeholder and Riya's stats reports are kept in git.
 /data/*
 !/data/.gitkeep
+!/data/auto_candidates.tsv
 !/data/result-documentation/
 /data/result-documentation/*.jsonl
 
