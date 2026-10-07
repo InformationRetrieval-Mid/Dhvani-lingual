@@ -17,7 +17,7 @@ ENV/
 # Only the placeholder, sample, and result documentation are kept in git.
 /data/*
 !/data/.gitkeep
-!/data/auto_candidates.tsv
+!/artifacts/auto_candidates.tsv
 !/data/news_sample_300.jsonl
 data/*.jsonl
 data/*.json

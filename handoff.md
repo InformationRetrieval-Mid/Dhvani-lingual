@@ -194,7 +194,7 @@ The candidate-generation pipeline is corpus-derived.
 
 The current AUTO implementation uses:
 
-    data/auto_candidates.tsv
+    artifacts/auto_candidates.tsv
 
 and the development corpus:
 

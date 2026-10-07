@@ -9,7 +9,7 @@ from text.stem import stem
 
 
 AUTO_CANDIDATES_PATH = Path(
-    "data/auto_candidates.tsv"
+    "artifacts/auto_candidates.tsv"
 )
 
 CORPUS_PATH = Path(
@@ -20,6 +20,7 @@ CORPUS_PATH = Path(
 # ============================================================
 # LOAD CORPUS FREQUENCIES
 # ============================================================
+
 
 def load_corpus_forms():
     """
@@ -60,6 +61,7 @@ def load_corpus_forms():
 # ============================================================
 # LOAD STRONG AUTO CANDIDATES
 # ============================================================
+
 
 def load_auto_candidates():
     """
@@ -102,6 +104,7 @@ def load_auto_candidates():
 # ============================================================
 # PARSE SURFACE FORMS
 # ============================================================
+
 
 def parse_surface_forms(surface_forms):
     """
@@ -151,6 +154,7 @@ def parse_surface_forms(surface_forms):
 # EDIT DISTANCE
 # ============================================================
 
+
 def edit_distance(a, b):
     """
     Levenshtein edit distance.
@@ -176,7 +180,9 @@ def edit_distance(a, b):
         for j, char_b in enumerate(b, 1):
 
             insert_cost = current[j - 1] + 1
+
             delete_cost = previous[j] + 1
+
             replace_cost = (
                 previous[j - 1]
                 + (char_a != char_b)
@@ -199,6 +205,7 @@ def edit_distance(a, b):
 # COMMON PREFIX
 # ============================================================
 
+
 def common_prefix_length(a, b):
     """
     Number of characters shared from the beginning.
@@ -219,6 +226,7 @@ def common_prefix_length(a, b):
 # ============================================================
 # COMMON HINDI INFLECTIONS
 # ============================================================
+
 
 def is_common_inflection(base, form):
     """
@@ -334,6 +342,7 @@ def is_common_inflection(base, form):
 # RELATED FORM CHECK
 # ============================================================
 
+
 def forms_are_related(base, form):
     """
     Decide whether two surface forms are plausible
@@ -395,6 +404,7 @@ def forms_are_related(base, form):
 # CANONICAL FORM SELECTION
 # ============================================================
 
+
 def canonical_score(
     form,
     frequency,
@@ -405,10 +415,10 @@ def canonical_score(
     We do NOT simply choose the most frequent form.
 
     Prefer forms that look like a base/lemma:
-      - ending in ा
-      - ending in ई/ी where appropriate
-      - shorter forms
-      - high frequency
+        - ending in ा
+        - ending in ई/ी where appropriate
+        - shorter forms
+        - high frequency
 
     This prevents cases such as:
 
@@ -511,6 +521,7 @@ def find_canonical_form(
 # CANDIDATE SAFETY FILTER
 # ============================================================
 
+
 def candidate_is_safe(
     stem_word,
     forms,
@@ -580,6 +591,7 @@ def candidate_is_safe(
 # ============================================================
 # BUILD AUTO MAP
 # ============================================================
+
 
 def build_auto_map(
     candidates,
@@ -726,6 +738,7 @@ def build_auto_map(
 # INITIALIZE
 # ============================================================
 
+
 CORPUS_FREQUENCIES = (
     load_corpus_forms()
 )
@@ -743,6 +756,7 @@ AUTO_MAP = build_auto_map(
 # ============================================================
 # PUBLIC API
 # ============================================================
+
 
 def stem_auto(word: str) -> str:
     """
@@ -785,6 +799,7 @@ def auto_stem_count():
 # TEST
 # ============================================================
 
+
 if __name__ == "__main__":
 
     print(
@@ -798,6 +813,7 @@ if __name__ == "__main__":
     )
 
     print()
+
     print("EXAMPLES")
     print("-" * 60)
 

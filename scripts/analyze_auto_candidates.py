@@ -9,7 +9,7 @@ from text.stem import stem
 
 
 INPUT_PATH = Path("data/news_dedup/news_dedup.jsonl")
-OUTPUT_PATH = Path("data/auto_candidates.tsv")
+OUTPUT_PATH = Path("artifacts/auto_candidates.tsv")
 
 MIN_CLASS_FREQUENCY = 5
 MIN_FORM_FREQUENCY = 2
