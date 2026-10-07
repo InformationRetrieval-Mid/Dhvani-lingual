@@ -23,30 +23,30 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 - **Corpus:** the frozen corpus, `data/news.jsonl` (Riya's `news_dedup.jsonl`, 5,001 lines, minus the one article saved twice: 5,000 articles), mostly from 5 to 7 Oct; no-stemming index, 83,560 distinct words
 - **Queries:** 64, all four forms of Rishit's R01 to R08 and Viraja's V01 to V08, through the full query pipeline (Viraja's `build_query`, phonetic variants, translation)
 - **k:** 10
-- **Date run:** 7 Oct
+- **Date run:** 7 Oct, rerun after Viraja's rare-spelling fix
 - **How to rerun:** `speedup_table()` in `dhvani/eval/experiments.py`
 
 "Scored" is the average share of the articles sharing a query word that each method actually scored (lower is faster). "Kept" is the average share of the exact lnc.ltc top 10 that the method also returned (higher is closer to exact).
 
 | Method | Scored | Kept |
 |---|---|---|
-| Index elimination | 0.02 | 0.60 |
-| Champion lists, r = 2 | 0.02 | 0.39 |
-| Champion lists, r = 5 | 0.04 | 0.71 |
-| Champion lists, r = 10 | 0.07 | 0.89 |
-| Champion lists, r = 50 | 0.21 | 1.00 |
-| Recent-news tiers | 0.95 | 0.98 |
-| Cluster pruning, b = 1 | 0.03 | 0.23 |
-| Cluster pruning, b = 3 | 0.07 | 0.35 |
-| Impact-ordered, first 20 per word | 0.11 | 0.70 |
-| Impact-ordered, first 50 per word | 0.21 | 0.83 |
-| Impact-ordered, weight at least 0.5 x best | 0.34 | 0.70 |
+| Index elimination | 0.01 | 0.73 |
+| Champion lists, r = 2 | 0.06 | 0.38 |
+| Champion lists, r = 5 | 0.03 | 0.67 |
+| Champion lists, r = 10 | 0.05 | 0.87 |
+| Champion lists, r = 50 | 0.18 | 1.00 |
+| Recent-news tiers | 0.95 | 0.97 |
+| Cluster pruning, b = 1 | 0.03 | 0.27 |
+| Cluster pruning, b = 3 | 0.07 | 0.41 |
+| Impact-ordered, first 20 per word | 0.09 | 0.65 |
+| Impact-ordered, first 50 per word | 0.18 | 0.80 |
+| Impact-ordered, weight at least 0.5 x best | 0.36 | 0.70 |
 
 **What it shows**
-- **Champion lists give the best trade-off.** With r = 50 they score a fifth of the candidates and still return exactly the full top 10. r = 10 keeps 89% while scoring only 7%.
-- **Impact-ordered postings come second.** Reading the first 50 articles of each word's list scores the same 21% as champion lists with r = 50 but keeps 83%, because the cut-off isn't tuned in advance per word.
-- **Index elimination is the cheapest that's still usable.** Dropping words like के and में and asking for most of the remaining words scores 2% and keeps 60%.
-- **Cluster pruning is fast but loses the most.** One cluster scores 3% and keeps 23%. Articles about one story end up spread across several clusters, so the closest leader only covers part of them.
+- **Champion lists give the best trade-off.** With r = 50 they score under a fifth of the candidates and still return exactly the full top 10. r = 10 keeps 87% while scoring only 5%. With r = 2 the lists are often too short for 10 results, so it falls back to the full postings more, which is why it scores more than r = 5.
+- **Impact-ordered postings come second.** Reading the first 50 articles of each word's list scores the same 18% as champion lists with r = 50 but keeps 80%, because the cut-off isn't tuned in advance per word.
+- **Index elimination is the cheapest that's still usable.** Dropping words like के and में and asking for most of the remaining words scores 1% and keeps 73%.
+- **Cluster pruning is fast but loses the most.** One cluster scores 3% and keeps 27%. Articles about one story end up spread across several clusters, so the closest leader only covers part of them.
 - **Recent-news tiers barely cut anything.** Almost all articles are from the last two days (3,150 from 7 Oct alone), so tier 0 is nearly the whole corpus.
 
 ### Earlier run on the 300-article sample
@@ -102,13 +102,13 @@ The 15 most widespread words, by document frequency (df), with collection freque
 
 | Signal | Needs queries | Vague queries |
 |---|---|---|
-| Specificity (highest per-word idf) | lowest 1.24, middle half 2.4 to 3.4 | news 0.63, kya hua 0.56, बड़ी खबर 0.81, के में 0.01, india 0.69 |
-| Clarity (bits) | 1.14 to 1.74 | news 3.02, के में 1.27 |
+| Specificity (highest per-word idf) | lowest 1.24, middle half 1.9 to 2.4 | news 0.63, kya hua 0.56, बड़ी खबर 0.81, के में 0.01, india 0.69 |
+| Clarity (bits) | 1.11 to 1.82 | news 3.02, के में 1.27 |
 
 **What it shows so far**
 - **Specificity separates them cleanly.** Every needs query has a word with idf above 1.2; every vague query stays below 1.0. The threshold sits at 1.0.
 - **Clarity doesn't work here.** It stays in a narrow band for real queries, and "news" scores highest of all because its top results are near-identical listing pages. It's kept as a reported number only.
-- **11 of the 64 needs queries are flagged**, all because only the "any word" stage matched: 10 Hinglish or messy forms of Viraja's needs and the messy form of R01. Those are the forms where the phonetic layer didn't find every word, so the flag points at real weak spots.
+- **6 of the 64 needs queries are flagged** (11 before Viraja's rare-spelling fix), all because only the "any word" stage matched: Hinglish or messy forms of V01, V02, V04, V05 and V08. Those are the forms where the phonetic layer still doesn't find every word, so the flag points at real weak spots.
 
 ## Sanity check without judgments
 
@@ -121,33 +121,36 @@ Share of the Hindi form's top 10 that each other form also returns, averaged ove
 
 | Run | Hinglish | Messy | English |
 |---|---|---|---|
-| none, lnc.ltc | 0.24 | 0.26 | 0.21 |
-| none, BM25 | 0.34 | 0.33 | 0.28 |
-| none, net score | 0.31 | 0.24 | 0.22 |
-| none, fusion | 0.34 | 0.29 | 0.19 |
-| light, BM25 | **0.38** | **0.33** | **0.32** |
-| light, net score | 0.29 | 0.22 | 0.22 |
-| auto, net score | 0.31 | 0.24 | 0.21 |
-| aggr, BM25 | 0.34 | 0.31 | 0.27 |
+| none, lnc.ltc | 0.41 | 0.41 | 0.36 |
+| none, BM25 | **0.47** | 0.45 | 0.39 |
+| none, net score | 0.38 | 0.28 | 0.24 |
+| none, fusion | **0.47** | 0.45 | 0.34 |
+| light, BM25 | 0.45 | **0.47** | **0.40** |
+| light, fusion | **0.47** | **0.47** | 0.38 |
+| light, net score | 0.36 | 0.31 | 0.24 |
+| auto, BM25 | **0.47** | 0.45 | 0.39 |
+| aggr, BM25 | 0.43 | 0.45 | 0.38 |
 
-English form with translation off vs on (no stemming, net score): **0.17 → 0.22**.
+English form with translation off vs on (no stemming, net score): **0.19 → 0.24**.
+
+Before Viraja's rare-spelling fix (same day) these were 0.24 to 0.38 for Hinglish, 0.20 to 0.33 for messy and 0.19 to 0.32 for English, so the fix lifted agreement by about 0.1 across the board.
 
 ### Do the systems agree with each other?
 Share of the same top 10 (overlap) and Kendall's tau on the order of the articles both returned.
 
 | Pair | Overlap | Tau |
 |---|---|---|
-| lnc.ltc vs BM25 | 0.78 | 0.70 |
-| lnc.ltc vs fusion | 0.81 | 0.60 |
-| BM25 vs net score | 0.49 | 0.42 |
-| lnc.ltc vs net score | 0.52 | 0.50 |
-| no stemming vs light (net) | 0.83 | 0.85 |
-| no stemming vs aggressive (net) | 0.87 | 0.87 |
+| lnc.ltc vs BM25 | 0.86 | 0.73 |
+| lnc.ltc vs fusion | 0.84 | 0.63 |
+| BM25 vs net score | 0.61 | 0.52 |
+| lnc.ltc vs net score | 0.61 | 0.51 |
+| no stemming vs light (net) | 0.88 | 0.91 |
+| no stemming vs aggressive (net) | 0.90 | 0.93 |
 | no stemming vs auto (net) | 0.99 | 0.99 |
 
 **What it shows**
-- **The forms agree much less than the demo queries suggest.** Only a quarter to a third of the Hindi form's top 10 comes back for the Hinglish, messy and English forms. Hinglish and English words that don't map to the right Hindi word (देल्ही for delhi, missing dictionary words) send the search elsewhere. This is the main limitation to report.
-- **Translation helps English queries.** Agreement with the Hindi form goes from 0.17 to 0.22 with the dictionary on.
-- **BM25 with light stemming agrees best across forms**, so it's the most robust to how the query is written.
+- **The forms agree less than the demo queries suggest.** About 40 to 47% of the Hindi form's top 10 comes back for the Hinglish and messy forms with BM25 or fusion, and up to 40% for English. Words that still don't map to the right Hindi spelling (देल्ही for delhi, एयर for iyer) or are missing from the dictionary send the search elsewhere. This is the main limitation to report.
+- **Translation helps English queries.** Agreement with the Hindi form goes from 0.19 to 0.24 with the dictionary on.
+- **BM25 and fusion agree best across forms**, so they're the most robust to how the query is written; the net score agrees least, because its zone and authority boosts favour different articles per form.
 - **lnc.ltc and BM25 mostly agree; the net score differs most**, because zones, proximity and authority reorder a lot. Judgments will say whether that's better or worse.
 - **Auto stemming is almost the same as no stemming** on the frozen corpus (0.99), because its candidates were learned on the 300-article sample and few of them apply to 5,000 articles.
