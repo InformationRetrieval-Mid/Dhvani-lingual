@@ -1,4 +1,9 @@
 __pycache__/
 *.py[cod]
-.pytest_cache/data/
+.pytest_cache/
+
+data/*
+!data/
+!data/auto_candidates.tsv
+
 indexes/*.pkl
