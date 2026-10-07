@@ -115,48 +115,40 @@ The 15 most widespread words, by document frequency (df), with collection freque
 
 ## Sanity check without judgments
 
-> **Frozen corpus, no judgments needed.** These come straight from the run files: 64 queries (R01 to R08, V01 to V08, four forms each), 4 stemming modes x 4 rankers, top 10.
+> **Final runs.** Frozen corpus, all 128 queries (32 needs, four forms each), 4 stemming modes x 4 rankers, listing pages pushed down, top 10.
 
 - **How to rerun:** `python -m dhvani.eval.experiments --out data/eval/full`, then `python -m dhvani.eval.sanity`
 
 ### Do the four forms of a need find the same articles?
-Share of the Hindi form's top 10 that each other form also returns, averaged over the 16 needs.
+Share of the Hindi form's top 10 that each other form also returns, averaged over the 32 needs.
 
 | Run | Hinglish | Messy | English |
 |---|---|---|---|
-| none, lnc.ltc | 0.41 | 0.41 | 0.36 |
-| none, BM25 | **0.47** | 0.45 | 0.39 |
-| none, net score | 0.38 | 0.28 | 0.24 |
-| none, fusion | **0.47** | 0.45 | 0.34 |
-| light, BM25 | 0.45 | **0.47** | **0.40** |
-| light, fusion | **0.47** | **0.47** | 0.38 |
-| light, net score | 0.36 | 0.31 | 0.24 |
-| auto, BM25 | **0.47** | 0.45 | 0.39 |
-| aggr, BM25 | 0.43 | 0.45 | 0.38 |
+| none, lnc.ltc | 0.47 | 0.42 | 0.40 |
+| none, BM25 | 0.51 | 0.44 | 0.42 |
+| none, fusion | **0.52** | 0.45 | 0.42 |
+| none, net score | 0.38 | 0.30 | 0.28 |
+| light, BM25 | **0.52** | 0.45 | 0.43 |
+| light, fusion | 0.51 | **0.48** | **0.44** |
+| aggr, fusion | **0.52** | 0.47 | **0.44** |
+| auto, BM25 | 0.51 | 0.44 | 0.42 |
 
-English form with translation off vs on (no stemming, net score): **0.19 → 0.24**.
+English form with translation off vs on (no stemming, net score): **0.22 → 0.28**.
 
-Before Viraja's rare-spelling fix (same day) these were 0.24 to 0.38 for Hinglish, 0.20 to 0.33 for messy and 0.19 to 0.32 for English, so the fix lifted agreement by about 0.1 across the board.
-
-### Do the systems agree with each other?
-Share of the same top 10 (overlap) and Kendall's tau on the order of the articles both returned.
+### Do the systems agree with each other? (no stemming)
 
 | Pair | Overlap | Tau |
 |---|---|---|
-| lnc.ltc vs BM25 | 0.86 | 0.73 |
-| lnc.ltc vs fusion | 0.84 | 0.63 |
-| BM25 vs net score | 0.61 | 0.52 |
-| lnc.ltc vs net score | 0.61 | 0.51 |
-| no stemming vs light (net) | 0.88 | 0.91 |
-| no stemming vs aggressive (net) | 0.90 | 0.93 |
-| no stemming vs auto (net) | 0.99 | 0.99 |
+| lnc.ltc vs BM25 | 0.88 | 0.76 |
+| lnc.ltc vs fusion | 0.83 | 0.64 |
+| BM25 vs net score | 0.56 | 0.48 |
+| lnc.ltc vs net score | 0.56 | 0.47 |
 
 **What it shows**
-- **The forms agree less than the demo queries suggest.** About 40 to 47% of the Hindi form's top 10 comes back for the Hinglish and messy forms with BM25 or fusion, and up to 40% for English. Words that still don't map to the right Hindi spelling (देल्ही for delhi, एयर for iyer) or are missing from the dictionary send the search elsewhere. This is the main limitation to report.
-- **Translation helps English queries.** Agreement with the Hindi form goes from 0.19 to 0.24 with the dictionary on.
-- **BM25 and fusion agree best across forms**, so they're the most robust to how the query is written; the net score agrees least, because its zone and authority boosts favour different articles per form.
-- **lnc.ltc and BM25 mostly agree; the net score differs most**, because zones, proximity and authority reorder a lot. Judgments will say whether that's better or worse.
-- **Auto stemming is almost the same as no stemming** on the frozen corpus (0.99), because its candidates were learned on the 300-article sample and few of them apply to 5,000 articles.
+- **About half of the Hindi form's top 10 comes back for the Hinglish form** with BM25 or fusion, and 42 to 44% for English. Words that still don't map to the right Hindi spelling (देल्ही for delhi) or are missing from the dictionary send the search elsewhere.
+- **Translation lifts English agreement** from 0.22 to 0.28.
+- **BM25 and fusion are the most consistent across forms; the net score is the least** (0.28 to 0.38), the same pattern the judged evaluation shows.
+- Earlier runs (64 queries, before listing pages were pushed down) had lower agreement (0.36 to 0.47 for Hinglish); the listing-page fix accounts for most of the gain.
 
 ## Learned translations
 
@@ -291,6 +283,9 @@ Learned vs net score: p = 0.07 (randomization), 0.08 (t-test). Average learned w
 - **Fusion matches BM25** without needing to pick one ranker, and has the best nDCG.
 
 ## Final evaluation: all 32 needs
+
+Graphs (regenerate with `python scripts/rishit_figures.py`): precision-recall curves `documentation/figures/rishit-pr-curves.png`, rankers `rishit-rankers.png`, stemming `rishit-stemming.png`, translation `rishit-translation.png`, learning to rank `rishit-ltr.png`.
+
 
 > **Final, with a limitation: 57% of the pool is judged.** All four needs files are in (R, V, Y, D: 32 needs, 128 queries), and the pool has 1,659 articles from every system on every query (including Dhrithi's fixed auto stemming). The team stopped judging at Rishit 297 of 297, Viraja 296 of 510, Riya 240 of 509 and Dhrithi 120 of 343 pooled articles (129 of her 249 judgments are for articles no system retrieves, so they don't count). Unjudged articles count as not relevant, which lowers every absolute score and makes differences between similar systems harder to detect; comparisons between systems are still fair, since every system is scored against the same judgments. Learning to rank trains only on judged pairs, so it's the result least affected.
 
