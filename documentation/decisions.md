@@ -205,3 +205,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Difficulty from specificity, not clarity.** Clarity is the classic post-retrieval predictor, but on our news crawl vague queries land on near-identical listing pages that look very focused, so clarity ranked "news" as the clearest query. The highest per-word idf separated the needs queries from vague ones cleanly, so the flag uses that plus the parser stage.
 
 **A word's idf comes from its most common strong spelling.** Roman spellings like "kya" are rare in a Devanagari corpus even when the word (क्या) is everywhere, so taking the exact spelling's idf made Hinglish filler look specific.
+
+**The k-gram index knows document frequencies.** Viraja's `KGramIndex.from_index` carries each word's df, so among sound-alike spellings the common word wins ("modi" now goes to मोदी, not मोड़). On the full crawl rare spellings can still win when they're a closer letter match (भूकम्प over भूकंप), which is on her side to tune.

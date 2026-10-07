@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the query difficulty hint
+Last updated: 7 Oct, after building the k-gram index with document frequencies
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -91,7 +91,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `a18d81e` rank fusion (rrf), and the to-do and handoff brought up to date | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
 | `1d0a6d3` experiments and corpus stats run on the real index, run files for pooling | `dhvani/eval/experiments.py`, `dhvani/eval/corpus_stats.py` |
 | `ca8c138` mmr diversification so the top results cover more stories | `dhvani/rank/diversify.py`, `app/streamlit_app.py`, `app/cli.py` |
-| query difficulty hint: low confidence when every word is common or nothing has all the words | `dhvani/rank/difficulty.py`, `app/streamlit_app.py`, `app/cli.py` |
+| `4c254e4` query difficulty hint: low confidence when every word is common or nothing has all the words | `dhvani/rank/difficulty.py`, `app/streamlit_app.py`, `app/cli.py` |
+| k-gram index built with document frequencies (from_index) | `dhvani/rank/real_index.py` |
 
 ## How to use it
 
@@ -235,7 +236,7 @@ results = collapse_duplicates(rank(q, idx, k=collapse_pool(10)), idx, k=10)
 ```
 
 **Real index and query layer** (`dhvani/rank/real_index.py`)
-`load_index(mode)` loads Dhrithi's index from `indexes/<mode>.pkl` and gives it an `articles` view of its stored text, so everything that used the sample index works unchanged. If the index isn't built it falls back to the sample index, and `DHVANI_INDEX=sample` forces the sample (the tests set this). `make_query(raw, mode)` builds the query the way the articles were indexed: Viraja's `build_query` with phonetic variants from a k-gram index over the unstemmed vocabulary, then the cross-lingual layer, then every term through Dhrithi's analyzer for that mode. Phonetic variants with weight under 0.05 are dropped, and Roman words match every letter case in the index ("iyer" finds "Iyer"). The app builds one query per column, and its suggestions are real stories from the crawl.
+`load_index(mode)` loads Dhrithi's index from `indexes/<mode>.pkl` and gives it an `articles` view of its stored text, so everything that used the sample index works unchanged. If the index isn't built it falls back to the sample index, and `DHVANI_INDEX=sample` forces the sample (the tests set this). `make_query(raw, mode)` builds the query the way the articles were indexed: Viraja's `build_query` with phonetic variants from a k-gram index over the unstemmed vocabulary (built with `KGramIndex.from_index`, so it knows each word's document frequency and prefers common words among sound-alikes, e.g. मोदी over मोड़), then the cross-lingual layer, then every term through Dhrithi's analyzer for that mode. Phonetic variants with weight under 0.05 are dropped, and Roman words match every letter case in the index ("iyer" finds "Iyer"). The app builds one query per column, and its suggestions are real stories from the crawl.
 ```python
 from dhvani.rank.real_index import load_index, make_query
 idx = load_index("light")

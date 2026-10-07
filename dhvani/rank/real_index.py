@@ -70,8 +70,9 @@ def _phonetic_tools():
     from dhvani.query.editdist import load_costs
     from dhvani.query.kgram import KGramIndex
 
-    vocab = load_index("none").vocab
-    return KGramIndex(vocab, k=2), load_costs(COSTS_PATH)
+    # from_index carries document frequencies, so among sound-alike words the
+    # common one wins (मोदी over मोड़).
+    return KGramIndex.from_index(load_index("none")), load_costs(COSTS_PATH)
 
 
 def _analyze_term(term, mode):

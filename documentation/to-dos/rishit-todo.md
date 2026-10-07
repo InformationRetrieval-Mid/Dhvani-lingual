@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 18:35
+Last updated: 7 Oct, around 18:50
 
 ## My novelty
 
@@ -98,7 +98,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Riya | Cleaned, frozen corpus: drop the article saved twice, strip HTML from 249 bodies, skip 106 astrology pages and about 50 section and live-blog pages | The listing pages ("Cricket News in Hindi", "चंडीगढ़ की सबसे ताज़ा खबर") come first for many queries in every ranker |
 | Riya | Pool by need, not by query form | Her pooling script works on my run files, but pools each form (R01_hi, R01_en, ...) separately, 1,254 pairs for 64 queries; `formats.md` and my metrics judge once per need |
 | Riya, Dhrithi | Their 8 information needs each | Needed for the full 120-query runs |
-| Viraja | "iyer" should reach अय्यर (the English-word fix is done and merged; "iyer" now gets इयर but not the spelling the articles use) | Names in Roman script miss their Devanagari spelling |
+| Viraja | Rare spellings still beat common ones: on the full crawl "bhukamp" goes to भूकम्प (1 article) instead of भूकंप (35), "delhi" to देल्ही (1) instead of दिल्ली (977), "iyer" to एयर instead of अय्यर (74). This is the bigger vocabulary, not her latest change, which fixed "modi" → मोदी | Hinglish queries with these words miss their articles (English ones still work through translation) |
 | Everyone | Judgments | All quality numbers and learning-to-rank |
 
 ## Known issues in my part
