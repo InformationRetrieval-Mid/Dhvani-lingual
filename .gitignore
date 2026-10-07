@@ -15,7 +15,9 @@ ENV/
 
 # Project Data (Crawled articles stay local, per policy)
 data/*.jsonl
+data/results/*.jsonl
 data/*.json
+!data/results/*.json
 data/sitemaps/
 data/cache/
 data/*.txt

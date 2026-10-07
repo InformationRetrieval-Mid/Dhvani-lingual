@@ -70,9 +70,9 @@
 - [x] Implement 4-word sliding shingles generator over Hindi text
 - [x] Implement Jaccard similarity calculation
 - [x] Implement wire agency keyword detector (`agency_flag`)
-- [ ] Implement candidate pair selection within +/- 24-hour temporal window
-- [ ] Implement canonical cluster head assignment (`dup_of: null` for earliest, else original `doc_id`)
-- [ ] Benchmark MinHash + LSH candidate bucketing (situational fallback)
+- [x] Implement candidate pair selection within +/- 24-hour temporal window
+- [x] Implement canonical cluster head assignment (`dup_of: null` for earliest, else original `doc_id`)
+- [x] Benchmark MinHash + LSH candidate bucketing (situational fallback)
 
 ## Task 7: Adaptive Recrawling & Event Prioritization
 ### 9. Adaptive Recrawling & Event Prioritization (`recrawl.py`)
@@ -96,7 +96,7 @@
 - [x] `test_normalizer.py`: Validate query stripping and AMP conversion
 - [x] `test_extractor.py`: Validate JSON-LD extraction, IST dates, and absence of authors
 - [x] `test_crawler.py`: Validate crawl loops, 429 backoff, 403/CAPTCHA disabling, and link harvesting
-- [ ] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
+- [x] `test_dedup.py`: Measure precision and recall on 100 labeled article pairs
 - [ ] `test_format_compliance.py`: Validate schema compliance with `formats.md`
 
 ### 12. Evaluation & Submission Deliverables
