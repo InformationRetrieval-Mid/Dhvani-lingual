@@ -73,7 +73,7 @@ def _latest_date(index):
     return max(datetime.fromisoformat(d) for d in dates)
 
 
-def rank(query, index, k=10, weights=None, now=None, doc_filter=None):
+def rank(query, index, k=10, weights=None, now=None, doc_filter=None, static=None):
     """Top k documents by net score.
 
     Returns [(doc_id, net_score, explain)] where explain holds every part of
@@ -108,7 +108,9 @@ def rank(query, index, k=10, weights=None, now=None, doc_filter=None):
         matched = max(len(by_zone[zone]) for zone in ZONES)
         prox = matched / min(windows) if windows else 0.0
 
-        g = recency(index.meta[doc_id].get("date"), now)
+        # g(d): plain recency by default, or a full static score (recency +
+        # PageRank + first to publish) when one is passed in.
+        g = static[doc_id] if static is not None else recency(index.meta[doc_id].get("date"), now)
 
         net = cosine + weights["zone"] * zone_score + weights["prox"] * prox + weights["recency"] * g
         explain = {

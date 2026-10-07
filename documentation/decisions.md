@@ -112,3 +112,9 @@ A running list of the choices we made and why. Newest at the bottom.
 
 **kal only reorders within a parser stage.** The query parser puts exact-phrase matches above looser ones on purpose. The kal boost respects that and only changes the order inside a stage, so a date boost can never push a stricter match below a looser one.
 
+**Dangling articles spread their vote evenly.** Many news articles don't link to anything else we crawled. In PageRank their score is shared equally across all articles, so it isn't lost and the scores still add up to 1.
+
+**Recency still leads in g(d).** The static score is 0.5 recency, 0.3 PageRank and 0.2 first to publish. For news, how fresh a story is matters most, and the link graph between crawled articles is sparse, so PageRank and the original flag adjust the order rather than dominate it.
+
+**The original gets the credit, not the newest copy.** When several papers run the same wire story, recency alone favoured the latest copy. First-to-publish credit gives the boost to the article the others copied, so the original ranks first.
+

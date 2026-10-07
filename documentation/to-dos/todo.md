@@ -40,6 +40,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 - [x] `requirements.txt` for the whole team
 - [x] Date-aware kal: tell yesterday from tomorrow from the query, boost articles about the right day
 - [x] Date-aware kal shown in the app (switch, tag, boost in Score details) and the CLI (`--explain` step 4c, `--no-kal`)
+- [x] PageRank and first-to-publish authority in g(d), usable by the net score and champion lists
 
 ## In progress
 
@@ -50,7 +51,7 @@ Last updated: 7 Oct, around 10:30 (teammates' status read from their branches on
 
 ### Rishit: required
 - [ ] Collapsing duplicate wire stories ("also in: ...")
-- [ ] PageRank and "first to publish" authority in g(d)
+- [ ] Use authority g(d) in the app and CLI
 - [ ] Learning-to-rank (after judging)
 - [ ] Dense re-ranker (only if there's time)
 

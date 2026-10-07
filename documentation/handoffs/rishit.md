@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after showing date-aware kal in the app and CLI
+Last updated: 7 Oct, after adding PageRank and first-to-publish authority
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -70,7 +70,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `1f6f519` recency tiers: fresh news first, older tiers as fallback | `dhvani/rank/speedups.py` |
 | `a5b7682` added requirements.txt for the whole team | `requirements.txt` |
 | `4354852` date-aware kal: tell yesterday from tomorrow and boost the right day | `dhvani/rank/kal.py` |
-| date-aware kal in the app and cli, with the boost shown in explain | `app/streamlit_app.py`, `app/cli.py`, `dhvani/rank/kal.py` |
+| `e48f17f` date-aware kal in the app and cli, with the boost shown in explain | `app/streamlit_app.py`, `app/cli.py`, `dhvani/rank/kal.py` |
+| authority ranking: pagerank and first-to-publish credit in g(d) | `dhvani/rank/authority.py`, a `static=` option in `scoring.py` |
 
 ## How to use it
 
@@ -187,8 +188,16 @@ from dhvani.rank.kal import apply_kal
 results = apply_kal(search(q, idx, k=10), q, idx)
 ```
 
+**Authority: PageRank and first to publish** (`dhvani/rank/authority.py`)
+`pagerank(link_graph(idx))` runs power iteration (damping 0.85) over the links between crawled articles from `meta["links"]`; links to articles that weren't crawled and self-links are ignored, and articles with no outgoing links spread their vote evenly, so the scores sum to 1. `originals(idx)` finds the first-to-publish article of each duplicate cluster (the one later copies point to with `dup_of`). `static_scores(idx)` combines them into g(d) = 0.5 x recency + 0.3 x PageRank (scaled to [0, 1]) + 0.2 x original flag, and returns the parts too. Pass it to the net score with `rank(q, idx, static=g)`; without `static` the net score uses plain recency as before. Champion lists take it as `static_scores=g`. Not wired into the app or CLI yet.
+```python
+from dhvani.rank.authority import static_scores
+g, parts = static_scores(idx)
+rank(q, idx, k=10, static=g)
+```
+
 ## Tests
-120 tests in `partwise-tests/rishit/`, all passing.
+131 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
