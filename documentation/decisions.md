@@ -219,3 +219,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Judging page inside the app.** It's a second Streamlit page, so it uses the same index and setup as search, and nobody has to install anything else.
 
 **Judgment-free numbers rerun when the query side changes.** Viraja's rare-spelling fix changed which Hindi words Hinglish queries reach, so the sanity check, speed-ups and difficulty numbers were rerun on the same frozen corpus. The results file notes the before and after for agreement.
+
+**Translations learned from the corpus, under the hand-made dictionary.** Jagran's bilingual headlines give free aligned pairs. Dice 0.5 with at least 3 pairs keeps the errors low enough while still adding 272 words; the hand-made dictionary always wins, so a learned mistake can't override a known translation.

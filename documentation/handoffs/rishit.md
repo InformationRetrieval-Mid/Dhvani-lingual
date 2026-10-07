@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after judging started and the judgment-free results were rerun
+Last updated: 7 Oct, after learning translations from bilingual headlines
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -100,7 +100,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `537cb56` judging link in the search page's top bar, and a way back | `app/streamlit_app.py`, `app/pages/judge.py` |
 | `5117981`, `f52476a` my relevance judgments so far (23 of 345) | `judgments/qrels_rishit.txt` |
 | `47a924f` judgment-free results rerun after viraja's spelling fix | `documentation/results/rishit-results.md` |
-| docs brought up to date | `documentation/` |
+| `b63bacc` docs brought up to date | `documentation/` |
+| translations learned from jagran's bilingual headlines | `dhvani/rank/learn_dict.py`, `dhvani/rank/data/en_hi_learned.tsv`, `dhvani/rank/xling.py` |
 
 ## How to use it
 
@@ -280,6 +281,12 @@ from dhvani.rank.difficulty import predict
 hint = predict(q, parse_and_rank(q, idx, k=10), idx)   # hint["low_confidence"], hint["reasons"]
 ```
 
+**Learned translations** (`dhvani/rank/learn_dict.py`)
+Jagran's headlines end with an English version ("भूकंप के झटकों से कांपा ... - earthquake tremors felt ..."), so the frozen corpus has 973 Hindi/English headline pairs. `learn()` aligns words across them with the Dice coefficient (2 x pairs with both / (pairs with the English word + pairs with the Hindi word)), after dropping words in more than 5% of pairs, and keeps each English word's best Hindi word when it's seen in at least 3 pairs with Dice 0.5 or more. That gives 272 pairs (airport → एयरपोर्ट, arrested → गिरफ्तार, compensation → मुआवजा, border → सीमा, and many names and places), written to `dhvani/rank/data/en_hi_learned.tsv`. The translator loads them under the hand-made dictionary, which wins wherever both have a word. About 85% are right on a spot check; the wrong ones come from a single recurring story (students → वृंदावन). Numbers are in the results file.
+```bash
+.venv/bin/python -m dhvani.rank.learn_dict      # relearn from data/news.jsonl
+```
+
 **Sanity check** (`dhvani/eval/sanity.py`)
 Evaluation that needs no judgments, from the run files. Cross-form agreement: for each need, how much of the Hindi form's top 10 its Hinglish, messy and English forms also return, plus the English form with translation off. System agreement: top-10 overlap and Kendall's tau between every pair of rankers and of stemming modes. Numbers are in the results file.
 ```bash
@@ -295,7 +302,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## Tests
-196 tests in `partwise-tests/rishit/`, all passing.
+201 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

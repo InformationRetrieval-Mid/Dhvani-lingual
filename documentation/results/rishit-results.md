@@ -13,6 +13,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
 | Sanity check without judgments | Frozen corpus (5,000 articles) |
 | Query difficulty hint | Frozen corpus (5,000 articles) |
+| Learned translations | Frozen corpus (5,000 articles) |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
 
@@ -154,3 +155,31 @@ Share of the same top 10 (overlap) and Kendall's tau on the order of the article
 - **BM25 and fusion agree best across forms**, so they're the most robust to how the query is written; the net score agrees least, because its zone and authority boosts favour different articles per form.
 - **lnc.ltc and BM25 mostly agree; the net score differs most**, because zones, proximity and authority reorder a lot. Judgments will say whether that's better or worse.
 - **Auto stemming is almost the same as no stemming** on the frozen corpus (0.99), because its candidates were learned on the 300-article sample and few of them apply to 5,000 articles.
+
+## Learned translations
+
+> **Frozen corpus.** Learned from the 973 Jagran headlines that have an English version appended.
+
+- **How to rerun:** `python -m dhvani.rank.learn_dict`
+
+Cut-off choice, checked against the 180-entry hand-made dictionary (English words both have, and how many the learned pair agrees with exactly):
+
+| Dice at least | Pairs at least | Learned | Also in hand dictionary | Agree exactly |
+|---|---|---|---|---|
+| 0.3 | 3 | 360 | 47 | 74% |
+| 0.4 | 3 | 328 | 40 | 75% |
+| **0.5** | **3** | **272** | **31** | **81%** |
+| 0.6 | 4 | 132 | 15 | 93% |
+
+Exact agreement undercounts: many "disagreements" are correct variants (women → महिलाएं instead of महिला, traffic → ट्रैफिक, road → रोड, exam → परीक्षाएं). The real errors come from one story dominating a word (students → वृंदावन, captain → स्मित, vote → चोरी from "वोट चोरी").
+
+| | Hand dictionary only | With learned pairs |
+|---|---|---|
+| English words in our 16 needs that get a translation | 56 of 83 | 64 of 83 |
+| English vs Hindi form agreement, BM25 | 0.394 | 0.388 |
+| English vs Hindi form agreement, net score | 0.244 | 0.237 |
+
+**What it shows**
+- **The corpus can teach itself to translate.** 272 pairs with no outside data, mostly right, many of them names and places a general dictionary wouldn't have.
+- **On our needs the effect is flat**, because the hand dictionary was grown from these same needs and the new words (rahul, gandhi, uttarakhand, rajya sabha) were already reachable through Viraja's phonetic layer. The value is for English words outside the needs (airport, compensation, border, challan).
+- **Listing pages hide the gain.** For new English queries the top results are often section pages like "अंबाला की सबसे ताज़ा खबर", with or without the learned pairs.

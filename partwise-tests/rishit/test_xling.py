@@ -86,7 +86,7 @@ def test_muse_format_is_read_and_news_dict_wins(tmp_path):
     muse = tmp_path / "en-hi.txt"
     muse.write_text("rain बरसात\nrain बारिश\ncar गाड़ी\n", encoding="utf-8")
     assert dict(load_muse_dict(muse)) ["car"] == [("गाड़ी", 1.0)]
-    t = Translator(muse_path=muse)
+    t = Translator(muse_path=muse, learned_path=None)
     assert dict(t.lookup("car")) == {"गाड़ी": 1.0}          # only in MUSE
     assert dict(t.lookup("rain")) == {"बारिश": 0.7, "वर्षा": 0.3}   # news dict wins
 

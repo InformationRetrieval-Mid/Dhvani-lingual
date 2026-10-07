@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 20:15
+Last updated: 7 Oct, around 20:50
 
 ## My novelty
 
@@ -23,6 +23,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Query difficulty hint | Flags "low confidence" queries from idf, scope, clarity and the parser stage, without judgments | ~~Done~~ |
 | Sanity check without judgments | Agreement between the four forms of a need and between systems, from the run files | ~~Done~~ |
 | Judging page | Per-need pooling and a page in the app to mark each article 0, 1 or 2, saved to git per person | ~~Done~~; judging in progress |
+| Learned translations | English to Hindi pairs learned from Jagran's bilingual headlines with Dice alignment, no outside data | ~~Done~~ |
 | Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
 
 ## Done
@@ -44,6 +45,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 
 ### Query side
 - [x] ~~Cross-lingual layer with an English to Hindi news dictionary (about 180 entries)~~
+- [x] ~~272 more pairs learned from Jagran's bilingual headlines (Dice alignment), under the hand-made dictionary~~
 - [x] ~~Real query pipeline: Viraja's `build_query` with phonetic variants, then translation, then Dhrithi's analyzer for each index mode~~
 - [x] ~~Weak phonetic variants dropped, letter case matched for Roman words~~
 
