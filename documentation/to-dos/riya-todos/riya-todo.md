@@ -62,7 +62,7 @@
 - [x] Add polite backoff on HTTP 403, 429, or network errors
 - [x] Implement streaming JSONL writer to `data/news.jsonl`
 - [x] Crawl and generate 300-article sample for team handoff (`data/news_sample_300.jsonl` - H3)
-- [ ] Complete full crawl to reach 5,000-12,000 articles (Corpus Freeze - H18)
+- [x] Complete full crawl to reach 5,000-12,000 articles (Corpus Freeze - H18: 5,001 articles crawled)
 
 ## Task 6: Deduplication & Story Clustering
 ### 8. Deduplication & Story Lineage (`dedup.py`)
@@ -85,7 +85,7 @@
 ## Task 8: Shared Evaluation Tooling
 ### 10. Shared Tooling & Downstream Support (`eval/pool.py`, handoffs)
 - [x] Implement TREC run pooling function (`pool_runs`)
-- [ ] Complete CLI for run file pooling and judgment template generation (`formats.md` #5)
+- [x] Complete CLI for run file pooling and judgment template generation (`formats.md` #5)
 - [ ] Document data ingestion and pre-work in `documentation/handoffs/riya.md`
 
 ## Verification & Evaluation Deliverables
@@ -100,7 +100,7 @@
 - [x] `test_format_compliance.py`: Validate schema compliance with `formats.md`
 
 ### 12. Evaluation & Submission Deliverables
-- [ ] Generate deduplication threshold precision/recall table
-- [ ] Generate crawler corpus statistics (articles per source, section distribution)
+- [x] Generate deduplication threshold precision/recall table
+- [x] Generate crawler corpus statistics (articles per source, section distribution)
 - [ ] Write report section (crawling architecture, robots.txt findings, deduplication)
 - [ ] Record video segment (crawler log, robots tests, duplicate story grouping)

@@ -149,7 +149,12 @@ class NewsCrawler:
 
         self.output_path = Path(output_path or (SAMPLE_ARTICLES_FILE if is_sample_mode else ARTICLES_FILE))
         self.sample_output_path = Path(sample_output_path or SAMPLE_ARTICLES_FILE)
-        self.stats_file = Path(stats_file or (DATA_DIR / "result-documentation" / "crawl_stats.md"))
+        if stats_file:
+            self.stats_file = Path(stats_file)
+        elif output_path and Path(output_path) not in (ARTICLES_FILE, SAMPLE_ARTICLES_FILE):
+            self.stats_file = Path(output_path).parent / "crawl_stats.md"
+        else:
+            self.stats_file = DATA_DIR / "result-documentation" / "crawl_stats.md"
 
         self.frontier = frontier or MercatorFrontier(per_host_delay=PER_HOST_DELAY)
         self.robots = robots_parser or RobotsParser(user_agent=USER_AGENT)
