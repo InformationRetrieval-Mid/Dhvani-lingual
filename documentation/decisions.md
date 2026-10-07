@@ -229,3 +229,12 @@ A running list of the choices we made and why. Newest at the bottom.
 **Page types saved as ids, decided with the URL.** The index has no URLs, and many listing headlines are plain ("मौसम", "उम्मीदवार"), so the corpus is classified once with the URL and only the ids of non-articles are kept in the repo.
 
 **Pool rebuilt from the current runs.** The first pool came from runs made before Viraja's rare-spelling fix; 146 of today's top-10 articles weren't in it. It was rebuilt early, while only 23 pairs had been judged (all still in the new pool), so nothing was lost. Riya's per-need pooling gives the identical 641 articles.
+
+
+**The evaluation runs push listing pages down.** The report should measure the system people use, so the runs demote listing pages like the app (rank 30, demote, keep 10). The pool only grows when runs change, so judgments already made are never thrown away.
+
+**Randomization test as the main significance test.** It makes no assumption about how AP is distributed, which matters with a few dozen queries; the t-test is shown next to it for comparison.
+
+**Logistic regression for learning to rank, tested leave-one-need-out.** With a few hundred judged pairs a handful of weights is all the data supports. Holding out whole needs (not single queries) stops the four forms of a need from leaking into each other's training data.
+
+**One script for the whole part.** `scripts/rishit_results.py` runs the tests, every evaluation and a demo of the queries that show the system best (the same need in Hindi, Hinglish and English, the assignment's "kal ka mausam", date-aware kal, fusion, a low-confidence warning and one --explain run), so the results and the demo can be regenerated in one go before the report and video.

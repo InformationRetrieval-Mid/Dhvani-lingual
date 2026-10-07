@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 21:45
+Last updated: 7 Oct, around 22:55
 
 ## My novelty
 
@@ -25,7 +25,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Judging page | Per-need pooling and a page in the app to mark each article 0, 1 or 2, saved to git per person | ~~Done~~; judging in progress |
 | Learned translations | English to Hindi pairs learned from Jagran's bilingual headlines with Dice alignment, no outside data | ~~Done~~ |
 | Page-type quality | Listing pages and horoscopes (20% of the corpus) recognised from URL and headline and pushed below real articles | ~~Done~~ |
-| Learning-to-rank | Learn the weights of the net score's parts from our judgments | Not started, needs judgments |
+| Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | Built and running on the judgments so far; final numbers after judging |
 
 ## Done
 
@@ -96,7 +96,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Judging page in the app, one judgments file per person in the repo, linked from the search page~~
 - [x] ~~Evaluation runs end to end on the judgments (checked with the first ones)~~
 - [x] ~~Judgment-free results rerun after Viraja's rare-spelling fix (cross-form agreement up about 0.1, 6 queries flagged instead of 11)~~
-- [ ] Judge my 8 needs (23 of 247 done: 10 for R01, 13 for R02)
+- [ ] Judge my 8 needs (23 of 297 done: 10 for R01, 13 for R02)
 - [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
 
 ### Once there are judgments
@@ -107,7 +107,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [ ] Stop word experiment: no idf vs idf vs stop words removed
 - [ ] Wins and losses per query
 - [ ] Check the difficulty hint against the judgments: do flagged queries really have lower P@10?
-- [ ] Learning-to-rank: learn the net score's weights (cosine, zone, proximity, g(d), and the dense mix) from the judgments
+- [ ] Learning-to-rank final run on the full judgments, with and without the dense feature
 
 ## What my code is waiting on
 | From | What | Why it matters for my part |
@@ -115,7 +115,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Riya, Dhrithi | Their 8 information needs each (ids starting with Y and D) | Needed for the full runs and the pool |
 | Dhrithi | Auto candidates rebuilt on the frozen corpus | Auto is 99% the same as no stemming on 5,000 articles |
 | Viraja | "delhi" still goes to देल्ही instead of दिल्ली, "iyer" to एयर instead of अय्यर (her fix sorted "bhukamp" and "modi") | Hinglish queries with these words miss their articles; English ones still work through translation |
-| Viraja | Judging V01 to V08 (394 articles) | Half of the judged needs; all quality numbers and learning-to-rank |
+| Viraja | Judging the about 210 new V articles (her 459 old-pool judgments are in) | Half of the judged needs; all quality numbers and learning-to-rank |
 | Riya, Dhrithi | Judging their needs once they're written | The rest of the judged needs |
 
 ## Known issues in my part

@@ -60,3 +60,17 @@ def test_progress_counts_judged_articles():
 def test_need_descriptions_come_from_the_needs_files():
     d = read_need_descriptions()
     assert d["R01"].startswith("Earthquake") and "V01" in d
+
+
+def test_merging_pools_keeps_everything_old_and_adds_new():
+    from dhvani.eval.judge import merge_pools
+    merged = merge_pools({"R01": ["d1", "d2"]}, {"R01": ["d2", "d3"], "R02": ["d9"]})
+    assert merged == {"R01": ["d1", "d2", "d3"], "R02": ["d9"]}
+
+
+def test_runner_pushes_listing_pages_down_by_default():
+    from dhvani.eval.experiments import run_one
+    from dhvani.rank.sample_index import SampleIndex
+    q = [("X_hi", "X", "hindi", "दिल्ली बारिश")]
+    idx = SampleIndex.load()
+    assert run_one(idx, q, "net", k=3) == run_one(idx, q, "net", k=3, demote_listings=False)   # sample has no listings

@@ -15,7 +15,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Query difficulty hint | Frozen corpus (5,000 articles) |
 | Learned translations | Frozen corpus (5,000 articles) |
 | Page-type quality | Frozen corpus (5,000 articles) |
-| Learning-to-rank | Waiting for judgments |
+| Learning-to-rank | Early run on partial judgments |
 | Wins and losses | Waiting for judgments |
 
 ## Speed-ups vs exact lnc.ltc
@@ -211,3 +211,24 @@ Agreement with the Hindi form of the same need (overlap@10), before → after pu
 - **A fifth of the corpus wasn't news,** and it was crowding out real articles, most of all for English and Hinglish queries, whose words a listing page is most likely to contain somewhere.
 - **A query-independent quality score fixes most of it.** English queries agree with their Hindi form half again as often with the net score (0.24 → 0.36). This is the largest single improvement measured so far.
 - **It works without cleaning the corpus,** so every number stays on the same frozen set of articles.
+
+## Learning to rank (early)
+
+> **Partial judgments, not final.** Viraja's 459 judgments (from the first pool) and Rishit's first 23: 40 queries from 10 needs. Unjudged articles count as not relevant. To be rerun once judging is finished.
+
+- **How to rerun:** `python -m dhvani.eval.ltr` (add `--dense` for the e5 feature)
+- **Setup:** logistic regression on 10 features, leave-one-need-out, re-ranking the net score's top 30
+
+| Ranker | MAP | P@10 |
+|---|---|---|
+| Net score (hand-picked weights) | 0.687 | 0.588 |
+| Learned | **0.736** | **0.615** |
+
+Learned vs net score on per-query AP: p = 0.24 (randomization), 0.24 (t-test), so not significant yet.
+
+Average learned weights (features standardised): zone +0.98, BM25 +0.83, PageRank +0.25, cosine +0.05, proximity -0.11, real article -0.24, recency -0.35, first to publish -0.40, parser stage -0.50.
+
+**What it shows so far**
+- **Headline match and BM25 carry most of the signal**, more than the cosine the net score is built on.
+- **The hand-picked authority parts may hurt.** Recency and first to publish get negative weight, so they push relevant articles down on these needs. Worth checking again on the full judgments before changing the net score.
+- **The parser stage gets negative weight** once the other features are known, which suggests stricter stages already show up through zone and BM25.

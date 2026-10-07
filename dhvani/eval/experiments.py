@@ -38,6 +38,8 @@ from dhvani.rank.speedups import (
     search_tiered,
 )
 from dhvani.rank import real_index
+from dhvani.rank.quality import demote
+from dhvani.eval.significance import compare
 from dhvani.rank.vsm import search
 from dhvani.rank.xling import translate
 
@@ -48,6 +50,7 @@ OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "eval"
 STEM_MODES = ("none", "light", "aggr", "yass", "auto")
 RANKERS = ("net", "lnc", "bm25", "rrf")
 METRICS_K = 10
+DEMOTE_POOL = 30      # rank this many, push listing pages down, then keep k
 
 
 def read_queries(path):
@@ -102,11 +105,17 @@ def default_loader(mode):
     return SampleIndex.load(mode)
 
 
-def run_one(index, queries, ranker, k=METRICS_K, query_builder=build_query, mode="none"):
-    """{qid: [(doc_id, score), ...]} for one index and ranker."""
+def run_one(index, queries, ranker, k=METRICS_K, query_builder=build_query, mode="none", demote_listings=True):
+    """{qid: [(doc_id, score), ...]} for one index and ranker.
+
+    Like the app, listing pages and horoscopes are pushed below real articles:
+    the top DEMOTE_POOL are ranked, demoted, then cut to k.
+    """
     out = {}
     for qid, _need, _form, text in queries:
-        results = parse_and_rank(query_builder(text, mode), index, k=k, ranker=ranker)
+        results = parse_and_rank(query_builder(text, mode), index, k=max(k, DEMOTE_POOL) if demote_listings else k, ranker=ranker)
+        if demote_listings:
+            results = demote(results, index)[:k]
         out[qid] = [(doc_id, score) for doc_id, score, _ in results]
     return out
 
@@ -205,6 +214,26 @@ def speedup_table(queries, index, k=METRICS_K, query_builder=None, champion_r=(2
             n += 1
         if n:
             rows.append((name, scored / n, kept / n))
+    return rows
+
+
+def significance_rows(per_query_ap, queries, qrels, ranker="net", baseline_ranker="lnc", baseline_mode="none"):
+    """Paired tests on per-query AP, judged queries only.
+
+    Every other ranker against lnc.ltc (no stemming), and every stemming mode
+    against no stemming (with `ranker`). Rows: (system, baseline, n, mean, baseline mean, p rand, p t).
+    """
+    judged = {qid for qid, need, _f, _t in queries if qrels.get(need)}
+    pick = lambda key: {q: ap for q, ap in per_query_ap.get(key, {}).items() if q in judged}
+    rows = []
+    pairs = [((baseline_mode, r), (baseline_mode, baseline_ranker)) for r in RANKERS if r != baseline_ranker]
+    pairs += [((m, ranker), (baseline_mode, ranker)) for m in STEM_MODES if m != baseline_mode]
+    for system, base in pairs:
+        if system in per_query_ap and base in per_query_ap:
+            c = compare(pick(system), pick(base))
+            if c["queries"]:
+                rows.append((f"{system[0]} {system[1]}", f"{base[0]} {base[1]}", c["queries"], c["mean_a"], c["mean_b"],
+                             c["p_randomization"], c["p_t"]))
     return rows
 
 
@@ -326,6 +355,11 @@ def main(argv=None):
     print(f"\nPer-query wins and losses against no stemming ({args.ranker}, by AP)")
     for mode, (wins, losses, ties, _) in wins_and_losses(per_query_ap, args.ranker).items():
         print(f"{mode:<6} {wins} better, {losses} worse, {ties} same")
+
+    sig = significance_rows(per_query_ap, queries, qrels, args.ranker)
+    if sig:
+        print("\nSignificance on per-query AP (paired randomization test and t-test, judged queries only)")
+        _print_table(["system", "baseline", "queries", "AP", "baseline AP", "p (rand)", "p (t)"], sig)
 
     xling = xling_comparison(queries, qrels, ranker=args.ranker)
     if xling:
