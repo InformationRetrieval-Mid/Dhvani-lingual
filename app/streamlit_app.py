@@ -28,6 +28,13 @@ from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
+from dhvani.rank.speedups import (  # noqa: E402
+    ChampionLists,
+    RecencyTiers,
+    search_champions,
+    search_index_elimination,
+    search_tiered,
+)
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.xling import translate  # noqa: E402
@@ -287,6 +294,30 @@ def load_static(mode):
     return static_scores(load_index(mode))
 
 
+@st.cache_resource
+def load_champions(mode):
+    index = load_index(mode)
+    return ChampionLists(index, r=max(5, index.N // 20), static_scores=load_static(mode)[0])
+
+
+@st.cache_resource
+def load_tiers(mode):
+    return RecencyTiers(load_index(mode))
+
+
+SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers"]
+
+
+def run_speedup(name, query, mode, k, doc_filter):
+    """lnc.ltc with one of the Lecture 7 speed-ups. Returns (results, stats)."""
+    index = load_index(mode)
+    if name == "Index elimination":
+        return search_index_elimination(query, index, k=k, doc_filter=doc_filter)
+    if name == "Champion lists":
+        return search_champions(query, index, load_champions(mode), k=k, doc_filter=doc_filter)
+    return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
+
+
 def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):
     if use_parser:
         return parse_and_rank(query, index, k=k, ranker=ranker, doc_filter=doc_filter, static=static)
@@ -381,6 +412,12 @@ def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     </div>"""
 
 
+def speed_note(stats):
+    if not stats:
+        return ""
+    return f" · scored {stats['scored']} of {stats['full_candidates']}"
+
+
 def use_suggestion():
     choice = st.session_state.get("suggestion")
     if choice:
@@ -427,6 +464,8 @@ def main():
                                       help="Net score uses g(d) = recency + PageRank + first-to-publish credit.")
             use_collapse = st.toggle("Collapse duplicate stories", value=True,
                                      help="Show a wire story once, with the other papers that ran it.")
+            speedup = st.selectbox("Speed-up", SPEEDUPS,
+                                   help="Score fewer articles with a Lecture 7 speed-up (lnc.ltc only).")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -453,13 +492,16 @@ def main():
         query = translate(query)
     sources_map = term_sources(query)
 
-    results = {}
+    results, speed_stats = {}, {}
     pool = collapse_pool(k) if use_collapse else k
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
         static = load_static(mode)[0] if use_authority else None
-        results[mode] = run_ranker(ranker, query, index, pool, doc_filter, use_parser, static)
+        if speedup != "Off":
+            results[mode], speed_stats[mode] = run_speedup(speedup, query, mode, pool, doc_filter)
+        else:
+            results[mode] = run_ranker(ranker, query, index, pool, doc_filter, use_parser, static)
         if use_kal:
             results[mode] = apply_kal(results[mode], query, index)
         if use_collapse:
@@ -485,7 +527,7 @@ def main():
             st.markdown(
                 f"""
                 <div class="dv-section-head"><span class="dv-section-title">{label}</span>
-                <span>{count} result{"s" if count != 1 else ""}</span></div>
+                <span>{count} result{"s" if count != 1 else ""}{speed_note(speed_stats.get(mode))}</span></div>
                 <div class="dv-group">{rows}</div>
                 """,
                 unsafe_allow_html=True,

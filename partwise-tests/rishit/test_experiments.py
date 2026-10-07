@@ -67,3 +67,15 @@ def test_stemming_comparison_and_wins_losses(tmp_path):
     wins, losses, ties, _ = wins_and_losses(per_query_ap, "net")["light"]
     assert (wins, losses, ties) == (0, 0, len(queries))
     assert len(results_rows(results)) == 2 * 4
+
+
+def test_speedup_table_has_every_method_and_sane_numbers():
+    from dhvani.eval.experiments import speedup_table
+    queries, _ = sample()
+    rows = speedup_table(queries, SampleIndex.load(), k=3, champion_r=(1, 50))
+    names = [r[0] for r in rows]
+    assert names == ["index elimination", "champion lists, r=1", "champion lists, r=50", "recent-news tiers"]
+    for _name, scored, kept in rows:
+        assert 0.0 < scored <= 1.0 and 0.0 <= kept <= 1.0
+    big_r = dict((n, (s, k)) for n, s, k in rows)["champion lists, r=50"]
+    assert big_r == (1.0, 1.0)     # r bigger than any postings list = exact search

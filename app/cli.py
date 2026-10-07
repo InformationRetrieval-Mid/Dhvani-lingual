@@ -22,6 +22,13 @@ from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, s
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
+from dhvani.rank.speedups import (  # noqa: E402
+    ChampionLists,
+    RecencyTiers,
+    search_champions,
+    search_index_elimination,
+    search_tiered,
+)
 from dhvani.rank.parser import STAGE_LABELS, parse_and_rank, stage_matches  # noqa: E402
 from dhvani.rank.query_stub import exact_query  # noqa: E402
 from dhvani.rank.xling import translate  # noqa: E402
@@ -183,6 +190,8 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
+    parser.add_argument("--speedup", choices=("elim", "champions", "tiers"),
+                        help="score fewer articles: index elimination, champion lists or recent tiers (lnc.ltc)")
     parser.add_argument("--no-authority", action="store_true",
                         help="net score uses plain recency instead of recency + PageRank + first to publish")
     parser.add_argument("--no-collapse", action="store_true",
@@ -211,7 +220,15 @@ def run(argv=None):
 
     static, parts = (None, {}) if args.no_authority else static_scores(index)
     pool = args.k if args.no_collapse else collapse_pool(args.k)
-    if not args.no_parser:
+    speed_stats = None
+    if args.speedup == "elim":
+        results, speed_stats = search_index_elimination(query, index, k=pool)
+    elif args.speedup == "champions":
+        champs = ChampionLists(index, r=max(5, index.N // 20), static_scores=static)
+        results, speed_stats = search_champions(query, index, champs, k=pool)
+    elif args.speedup == "tiers":
+        results, speed_stats = search_tiered(query, index, RecencyTiers(index), k=pool)
+    elif not args.no_parser:
         results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static)
     elif args.ranker == "net":
         results = rank(query, index, k=pool, static=static)
@@ -219,6 +236,10 @@ def run(argv=None):
         results = search(query, index, k=pool)
     else:
         results = search_bm25(query, index, k=pool)
+
+    if speed_stats:
+        heading(out, f"Speed-up: {speed_stats['method']}") if args.explain else None
+        out.append(f"Scored {speed_stats['scored']} of {speed_stats['full_candidates']} articles that share a query word.")
 
     if not args.no_kal:
         intent = kal_intent(query)
@@ -234,7 +255,8 @@ def run(argv=None):
         out.append("No matches.")
     for i, (doc_id, score, explain) in enumerate(results, start=1):
         if args.explain:
-            explain_result(out, i, doc_id, score, explain, index, args.ranker, parts.get(doc_id))
+            explain_result(out, i, doc_id, score, explain, index,
+                           "lnc" if args.speedup else args.ranker, parts.get(doc_id))
         else:
             headline = getattr(index, "articles", {}).get(doc_id, {}).get("headline", "")
             stage = explain.get("stage")
