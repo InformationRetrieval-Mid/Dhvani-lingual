@@ -45,6 +45,8 @@ tu tum aap hum wo vo ye yeh in un jo kya kaun kahan kab kaise kaisa kyun kyon ki
 aur ya bhi na nahi nahin mat phir ab abhi bas sab kuch koi
 kal aaj aj parso raat din subah shaam saal mahina hafta waqt samay
 bazaar bharat dilli sheher gaon naam kaam paani pani aag hawa ghar log aadmi raja rani dev mandir masjid roti chai dil jaan paisa khana mausam barish baarish chunav
+delhi mumbai bombay kolkata chennai bengaluru bangalore hyderabad pune nagpur lucknow kanpur patna bhopal indore jaipur surat agra varanasi kashi prayagraj allahabad ranchi raipur noida gurugram gurgaon
+bihar jharkhand punjab haryana gujarat rajasthan kerala karnataka maharashtra odisha assam bengal telangana
 """.split())
 
 # A large English vocabulary, baked into dhvani/query/english_words.txt (common
