@@ -26,8 +26,7 @@ from pathlib import Path
 
 from dhvani.eval.experiments import OUT_DIR, SAMPLE_DIR, read_queries
 from dhvani.eval.metrics import evaluate, read_qrels
-from dhvani.rank.query_stub import exact_query
-from dhvani.rank.sample_index import SampleIndex
+from dhvani.rank.real_index import make_query
 from dhvani.rank.vsm import ZONES, cosine_scores
 
 
@@ -82,7 +81,7 @@ def stopword_experiment(index, queries, qrels, stop, k=10):
     for name, score in setups.items():
         rankings = {}
         for qid, _need, _form, text in queries:
-            scores = score(exact_query(text))
+            scores = score(make_query(text, "none"))
             rankings[qid] = [d for d, _ in sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))[:k]]
         _, means = evaluate(rankings, by_query, k=k)
         out[name] = means
@@ -130,16 +129,17 @@ def plot(stats, out_dir=OUT_DIR):
 
 
 def load_index():
-    # Swap for the real no-stemming index once it's ready.
-    return SampleIndex.load("none")
+    """Dhrithi's no-stemming index if it's built, else the sample index."""
+    from dhvani.rank.real_index import load_index as load_real
+    return load_real("none")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Stop words, idf and Zipf on the corpus.")
     parser.add_argument("--top", type=int, default=20, help="how many frequent terms to list")
     parser.add_argument("--stop", type=int, default=15, help="how many top-df terms count as stop words")
-    parser.add_argument("--queries", default=SAMPLE_DIR / "queries.tsv")
-    parser.add_argument("--qrels", default=SAMPLE_DIR / "qrels.txt")
+    parser.add_argument("--queries", default=None, help="queries tsv for the stop word experiment")
+    parser.add_argument("--qrels", default=None, help="judgments for the stop word experiment")
     parser.add_argument("--out", default=OUT_DIR)
     args = parser.parse_args(argv)
 
@@ -159,11 +159,20 @@ def main(argv=None):
     sign = "-" if slope < 0 else "+"
     print(f"\nZipf fit: log10(cf) = a {sign} {abs(slope):.2f} x log10(rank), slope {slope:.2f} (natural text is close to -1)")
 
-    queries, qrels = read_queries(args.queries), read_qrels(args.qrels)
-    print("\nStop word experiment (mean over judged queries)")
-    print(f"{'setup':<22}{'P@10':>8}{'MAP':>8}{'nDCG@10':>9}")
-    for name, m in stopword_experiment(index, queries, qrels, stop).items():
-        print(f"{name:<22}{m['P@10']:>8.4f}{m['MAP']:>8.4f}{m['nDCG@10']:>9.4f}")
+    from dhvani.rank.real_index import real_index_available
+    if args.qrels:
+        queries, qrels = read_queries(args.queries or SAMPLE_DIR / "queries.tsv"), read_qrels(args.qrels)
+    elif not real_index_available("none"):
+        queries, qrels = read_queries(SAMPLE_DIR / "queries.tsv"), read_qrels(SAMPLE_DIR / "qrels.txt")
+    else:
+        queries, qrels = [], {}
+    if not qrels:
+        print("\nStop word experiment skipped: no judgments for the real index yet (pass --queries and --qrels)")
+    else:
+        print("\nStop word experiment (mean over judged queries)")
+        print(f"{'setup':<22}{'P@10':>8}{'MAP':>8}{'nDCG@10':>9}")
+        for name, m in stopword_experiment(index, queries, qrels, stop).items():
+            print(f"{name:<22}{m['P@10']:>8.4f}{m['MAP']:>8.4f}{m['nDCG@10']:>9.4f}")
 
     saved = plot(stats, args.out)
     print("\nPlots: " + ", ".join(str(p) for p in saved) if saved else "\nPlots skipped: matplotlib isn't installed")

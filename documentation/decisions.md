@@ -191,3 +191,9 @@ A running list of the choices we made and why. Newest at the bottom.
 **Dense is used once, not twice.** With Fusion and Dense both on, dense is one of the fused lists and the separate re-ranking step is skipped.
 
 **My to-do covers only my code.** Team items like the report, the video and the README, and the teammates' own task lists, are tracked by each person. My to-do keeps my code, my novelty with what's done and left, and only the outside things my code is waiting on.
+
+**Experiments use the same query pipeline as the app.** The runner builds each query with `real_index.make_query` for the mode being tested, so the numbers describe the system people actually use, with Viraja's phonetic variants, translation and the right stemming.
+
+**Queries come straight from the needs files.** Each person's needs file has a tsv block, and the runner reads those, so there's no separate query list to keep in sync.
+
+**No judgments, no metrics.** Without judgments the runner writes the run files for pooling and the speed-ups table and stops, instead of printing zeros. The stop word experiment likewise only runs with real judgments.

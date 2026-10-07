@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding rank fusion and tidying the docs
+Last updated: 7 Oct, after pointing the experiments at the real index
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -16,7 +16,7 @@ Last updated: 7 Oct, after adding rank fusion and tidying the docs
 | Viraja | `Viraja` | Hinglish phonetic layer | `dhvani/query/` |
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
-Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to the plug-in work, and the later commits (cluster pruning, impact-ordered postings, dense, the full-crawl numbers and rank fusion) go in with the next merge.
+Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to rank fusion.
 
 **Setup.**
 ```bash
@@ -88,7 +88,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `c302928` impact-ordered postings: read each word's best articles first and stop early | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
 | `1fd899d` dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
 | `2c5f883` speed-ups, stop words and zipf on riya's full crawl | `documentation/results/rishit-results.md`, two plots in `documentation/figures/` |
-| rank fusion (rrf) of lnc.ltc, bm25, net score and dense | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
+| `a18d81e` rank fusion (rrf), and the to-do and handoff brought up to date | `dhvani/rank/fusion.py`, `dhvani/rank/parser.py`, `app/streamlit_app.py`, `app/cli.py` |
+| experiments and corpus stats run on the real index, run files for pooling | `dhvani/eval/experiments.py`, `dhvani/eval/corpus_stats.py` |
 
 ## How to use it
 
@@ -173,14 +174,15 @@ per_query, means = evaluate(rankings, qrels_by_query, k=10)   # means: P@10, R@1
 ```
 
 **Experiment runner** (`dhvani/eval/experiments.py`)
-Runs every stemming mode x every ranker x every query, writes TREC run files to `data/eval/runs/`, and prints the full results table (overall and per query form), the stemming comparison, per-query wins and losses against no stemming, and English queries with translation off vs on. Modes that aren't built yet are skipped. `dhvani/eval/sample/` has made-up queries and judgments for the sample index so it runs today.
+Runs every stemming mode x every ranker (net, lnc.ltc, BM25, fusion) x every query, writes TREC run files to `<out>/runs/`, and prints the full results table (overall and per query form), the stemming comparison, per-query wins and losses against no stemming, and English queries with translation off vs on. With the real index built, it uses Dhrithi's index for each mode and the real query pipeline (`real_index.make_query`), reads the queries from the tsv blocks in `documentation/needs/*.md` (`read_needs()`), and skips modes that aren't built (yass). Without judgments it writes the run files for pooling and the speed-ups table and stops there. Without the real index it falls back to the sample index and the made-up queries and judgments in `dhvani/eval/sample/`. On the full crawl, 64 queries x 4 modes x 4 rankers take about 6 minutes.
 ```bash
-.venv/bin/python -m dhvani.eval.experiments
-.venv/bin/python -m dhvani.eval.experiments --queries eval/queries.tsv --qrels eval/qrels_news.txt
+.venv/bin/python -m dhvani.eval.experiments --out data/eval/full                        # run files for pooling
+.venv/bin/python -m dhvani.eval.experiments --qrels data/qrels.txt --out data/eval/full  # once there are judgments
+.venv/bin/python -m dhvani.eval.pool --runs data/eval/full/runs/*.txt --top-k 10         # Riya's pooling script
 ```
 
 **Stop words, idf and Zipf** (`dhvani/eval/corpus_stats.py`)
-df, collection frequency and idf for every term, the most frequent terms (Hindi function words like में, का, की come out at the top with idf near 0), a stop word list taken from the data, Zipf's law with a fitted slope, and a stop word experiment: no idf (lnc.lnc) vs idf (lnc.ltc) vs stop words removed. Plots go to `data/eval/` when matplotlib is installed; the ones for the report are copied to `documentation/figures/`, and the numbers on the full crawl are in `documentation/results/rishit-results.md`.
+df, collection frequency and idf for every term, the most frequent terms (Hindi function words like में, का, की come out at the top with idf near 0), a stop word list taken from the data, Zipf's law with a fitted slope, and a stop word experiment: no idf (lnc.lnc) vs idf (lnc.ltc) vs stop words removed. It uses Dhrithi's no-stemming index when it's built, and the experiment runs only when judgments are passed with `--queries` and `--qrels` (on the sample index it uses the made-up ones). Plots go to `data/eval/` when matplotlib is installed; the ones for the report are copied to `documentation/figures/`, and the numbers on the full crawl are in `documentation/results/rishit-results.md`.
 ```bash
 .venv/bin/python -m dhvani.eval.corpus_stats
 ```
@@ -254,7 +256,7 @@ results = search_rrf(q, idx, k=10)
 ```
 
 ## Tests
-168 tests in `partwise-tests/rishit/`, all passing.
+172 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
@@ -266,4 +268,4 @@ results = search_rrf(q, idx, k=10)
 - **Everyone:** judgments, once the runs are pooled.
 
 ## Next
-Commit rank fusion and merge `rishit` into `main`, point the experiment runner at the real index, then MMR and the other extras while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.
+Embed the full crawl for dense, then MMR and the other extras while waiting for the frozen corpus and the judgments. Learning-to-rank after judging. The full list is in `documentation/to-dos/rishit-todo.md`.

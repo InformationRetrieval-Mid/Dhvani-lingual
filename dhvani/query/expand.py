@@ -14,19 +14,22 @@ never overwrite entries another source already added.
 from dhvani.query import match as M
 
 
-def expand_token(token, index, costs, k=5, en_cutoff=0.6):
+def expand_token(token, index, costs, k=5):
     """Append up to ``k`` phonetic variants to one token's ``expansions`` list.
 
-    Skips words that are confidently English (``lang["en"] >= en_cutoff``): a word
-    like "farmers" or "earthquake" has no real Hindi homophone, so expanding it
-    only injects junk (farmers -> हामॉन्स). English words are the cross-lingual
-    layer's job, not the phonetic layer's. Variants already present (the exact
+    We no longer skip "English" words up front: a name like "modi" or "kohli" is
+    in any English wordlist yet must still reach मोदी / कोहली. Instead the matcher
+    only returns Devanagari homophones that pass the quality gate, so a true
+    English word with no Hindi homophone (farmers, weather) expands to nothing on
+    its own, while names still reach their Devanagari form. Pure numbers and
+    single characters have nothing to expand. Variants already present (the exact
     surface, or one added earlier) are skipped so weights never double up.
     """
-    if token["lang"].get("en", 0.0) >= en_cutoff:
+    surface = token["surface"]
+    if len(surface) < 2 or surface.isdigit():
         return token
     seen = {term for term, _w, _src in token["expansions"]}
-    for term, weight, source in M.weighted_variants(token["surface"], index, costs, k=k):
+    for term, weight, source in M.weighted_variants(surface, index, costs, k=k):
         if term not in seen:
             token["expansions"].append((term, round(weight, 4), source))
             seen.add(term)

@@ -24,7 +24,6 @@ from pathlib import Path
 
 from dhvani.eval.metrics import average_11_point, average_precision, evaluate, read_qrels, read_run, write_run
 from dhvani.rank.parser import parse_and_rank
-from dhvani.rank.query_stub import exact_query
 from dhvani.rank.sample_index import SampleIndex
 from dhvani.rank.speedups import (
     ChampionLists,
@@ -38,14 +37,16 @@ from dhvani.rank.speedups import (
     search_index_elimination,
     search_tiered,
 )
+from dhvani.rank import real_index
 from dhvani.rank.vsm import search
 from dhvani.rank.xling import translate
 
 SAMPLE_DIR = Path(__file__).resolve().parent / "sample"
+NEEDS_DIR = Path(__file__).resolve().parents[2] / "documentation" / "needs"
 OUT_DIR = Path(__file__).resolve().parents[2] / "data" / "eval"
 
 STEM_MODES = ("none", "light", "aggr", "yass", "auto")
-RANKERS = ("net", "lnc", "bm25")
+RANKERS = ("net", "lnc", "bm25", "rrf")
 METRICS_K = 10
 
 
@@ -61,25 +62,51 @@ def read_queries(path):
     return rows
 
 
-def build_query(text):
-    """Query object the experiments use: exact matches plus English translations.
+def read_needs(needs_dir=NEEDS_DIR):
+    """Queries from the tsv blocks in documentation/needs/*.md: [(qid, need_id, form, text)]."""
+    rows = []
+    for path in sorted(Path(needs_dir).glob("*.md")):
+        in_block = False
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("```"):
+                in_block = line.strip() == "```tsv"
+                continue
+            parts = line.split("\t")
+            if in_block and len(parts) == 4 and parts[0] != "qid":
+                rows.append(tuple(p.strip() for p in parts))
+    return rows
 
-    Swap exact_query for Viraja's query layer once it's ready.
+
+def build_query(text, mode="none"):
+    """The query the system really uses for this index mode.
+
+    With the real index that's Viraja's build_query with phonetic variants,
+    then translation, then Dhrithi's analyzer for the mode; with the sample
+    index it's exact words plus translation.
     """
-    return translate(exact_query(text))
+    return real_index.make_query(text, mode)
+
+
+def build_query_no_xling(text, mode="none"):
+    """Same as build_query but with translation switched off."""
+    return real_index.make_query(text, mode, xling=False)
 
 
 def default_loader(mode):
-    # Swap for the real index once it's ready: return Index.load(mode), or
-    # None for a mode that hasn't been built yet so it gets skipped.
+    """Dhrithi's index for this mode, or the sample index if none are built.
+
+    Returns None for a mode that isn't built yet, so it gets skipped.
+    """
+    if real_index.real_index_available("none"):
+        return real_index.load_index(mode) if real_index.real_index_available(mode) else None
     return SampleIndex.load(mode)
 
 
-def run_one(index, queries, ranker, k=METRICS_K, query_builder=build_query):
+def run_one(index, queries, ranker, k=METRICS_K, query_builder=build_query, mode="none"):
     """{qid: [(doc_id, score), ...]} for one index and ranker."""
     out = {}
     for qid, _need, _form, text in queries:
-        results = parse_and_rank(query_builder(text), index, k=k, ranker=ranker)
+        results = parse_and_rank(query_builder(text, mode), index, k=k, ranker=ranker)
         out[qid] = [(doc_id, score) for doc_id, score, _ in results]
     return out
 
@@ -119,7 +146,7 @@ def run_experiments(queries, qrels, loader=default_loader, modes=STEM_MODES, ran
             skipped.append(mode)
             continue
         for ranker in rankers:
-            run = run_one(index, queries, ranker, k=k, query_builder=query_builder)
+            run = run_one(index, queries, ranker, k=k, query_builder=query_builder, mode=mode)
             write_run(out_dir / "runs" / f"{mode}_{ranker}.txt", run, f"{mode}_{ranker}")
             results[(mode, ranker)], per_query_ap[(mode, ranker)] = score_run(run, queries, qrels, k=k)
     return results, per_query_ap, skipped
@@ -132,7 +159,7 @@ def xling_comparison(queries, qrels, loader=default_loader, ranker="net", k=METR
         return {}
     index = loader("none")
     out = {}
-    for name, builder in (("translation off", exact_query), ("dictionary translation", build_query)):
+    for name, builder in (("translation off", build_query_no_xling), ("dictionary translation", build_query)):
         run = run_one(index, english, ranker, k=k, query_builder=builder)
         table, _ = score_run(run, english, qrels, k=k)
         out[name] = table.get("all", {})
@@ -252,20 +279,36 @@ def _print_table(headers, rows):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Run every stemming mode and ranker, then evaluate.")
-    parser.add_argument("--queries", default=SAMPLE_DIR / "queries.tsv")
-    parser.add_argument("--qrels", default=SAMPLE_DIR / "qrels.txt")
+    parser.add_argument("--queries", default=None,
+                        help="queries tsv; default: every need in documentation/needs/ with the real index, "
+                             "the made-up sample queries with the sample index")
+    parser.add_argument("--qrels", default=None, help="judgments file; default: none with the real index")
     parser.add_argument("--out", default=OUT_DIR)
     parser.add_argument("--ranker", default="net", help="ranker for the stemming comparison table")
     args = parser.parse_args(argv)
 
-    queries = read_queries(args.queries)
-    qrels = read_qrels(args.qrels)
+    real = real_index.real_index_available("none")
+    if args.queries:
+        queries = read_queries(args.queries)
+    else:
+        queries = read_needs() if real else read_queries(SAMPLE_DIR / "queries.tsv")
+    if args.qrels:
+        qrels = read_qrels(args.qrels)
+    else:
+        qrels = {} if real else read_qrels(SAMPLE_DIR / "qrels.txt")
+    print(f"Index: {'real' if real else 'sample'}")
     results, per_query_ap, skipped = run_experiments(queries, qrels, out_dir=args.out)
 
     k = METRICS_K
     print(f"{len(queries)} queries, {len(qrels)} judged information needs")
     if skipped:
         print("Skipped (not built yet):", ", ".join(skipped))
+    print(f"Run files for pooling: {Path(args.out) / 'runs'}")
+    if not qrels:
+        print("No judgments yet, so only the run files and the speed-ups table are produced.")
+        speed = speedup_table(queries, default_loader("none"))
+        _print_table(["method", "share scored", f"top-{k} kept"], speed)
+        return
 
     print("\nAll results")
     rows = results_rows(results)
