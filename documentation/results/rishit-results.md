@@ -9,6 +9,7 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Translation off vs on | Waiting for judgments |
 | lnc.ltc vs BM25 vs net score | Waiting for judgments |
 | Stop words, idf and Zipf | Waiting for the full crawl |
+| Dense re-ranking vs sparse only | Waiting for judgments |
 | Learning-to-rank | Waiting for judgments |
 | Wins and losses | Waiting for judgments |
 

@@ -27,6 +27,7 @@ from dhvani.rank.bm25 import search_bm25  # noqa: E402
 from dhvani.rank.filters import field_values, make_filter  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
+from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -308,6 +309,16 @@ def load_tiers(mode):
 
 
 @st.cache_resource
+def load_encoder():
+    return SentenceEncoder()
+
+
+@st.cache_resource
+def load_dense(mode):
+    return DenseIndex(load_index(mode), load_encoder())
+
+
+@st.cache_resource
 def load_clusters(mode):
     return ClusterPruning(load_index(mode))
 
@@ -388,6 +399,10 @@ def score_table(explain, terms, parts=None):
         rows.append(f"<tr><td>{html.escape(term)}</td><td>{value:.4f}</td></tr>")
     if "net" in explain:
         rows.append(f'<tr class="total"><td>Net score</td><td>{explain["net"]:.4f}</td></tr>')
+    dense = explain.get("dense")
+    if dense:
+        rows.append(f"<tr><td>Dense (e5) cosine</td><td>{dense['cosine']:.4f}</td></tr>")
+        rows.append(f'<tr class="total"><td>After dense re-rank</td><td>{dense["score"]:.4f}</td></tr>')
     kal = explain.get("kal")
     if kal:
         rows.append(f'<tr><td>कल boost ({kal["intent"]})</td><td>x {1 + kal["weight"] * kal["boost"]:.2f}</td></tr>')
@@ -482,6 +497,9 @@ def main():
                                      help="Show a wire story once, with the other papers that ran it.")
             speedup = st.selectbox("Speed-up", SPEEDUPS,
                                    help="Score fewer articles with a Lecture 7 speed-up (lnc.ltc only).")
+            use_dense = dense_available() and st.toggle(
+                "Dense re-ranking (e5)", value=False,
+                help="Re-rank the top 50 with a multilingual embedding model: half first stage, half meaning.")
             use_kal = st.toggle("Date-aware kal", value=True,
                                 help="Work out whether कल means yesterday or tomorrow and favour that day.")
             use_xling = st.toggle("Translate English words", value=True,
@@ -509,6 +527,8 @@ def main():
 
     results, speed_stats = {}, {}
     pool = collapse_pool(k) if use_collapse else k
+    if use_dense:
+        pool = max(pool, DEFAULT_DEPTH)
     for mode, _label in MODES:
         index = load_index(mode)
         doc_filter = make_filter(index, sources, sections, states, date_from, date_to)
@@ -517,6 +537,8 @@ def main():
             results[mode], speed_stats[mode] = run_speedup(speedup, queries[mode], mode, pool, doc_filter)
         else:
             results[mode] = run_ranker(ranker, queries[mode], index, pool, doc_filter, use_parser, static)
+        if use_dense:
+            results[mode] = dense_rerank(results[mode], queries[mode], load_dense(mode))
         if use_kal:
             results[mode] = apply_kal(results[mode], queries[mode], index)
         if use_collapse:

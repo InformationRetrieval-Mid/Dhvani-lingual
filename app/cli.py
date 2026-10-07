@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dhvani.rank.bm25 import B, K1, bm25_scores, doc_lengths, idf as bm25_idf, search_bm25  # noqa: E402
 from dhvani.rank.authority import static_scores  # noqa: E402
 from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E402
+from dhvani.rank.dense import DEFAULT_ALPHA, DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
 from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
@@ -173,6 +174,9 @@ def explain_result(out, i, doc_id, score, explain, index, ranker, parts=None):
         label = "BM25 contribution" if ranker == "bm25" else "cosine contribution"
         for term, part in terms.items():
             out.append(f"      {term:<14}  {part:.4f}  ({label})")
+    dense = explain.get("dense")
+    if dense:
+        out.append(f"    dense: e5 cosine {dense['cosine']:.4f}, first stage {dense['first_stage']:.4f} -> {dense['score']:.4f}")
     kal = explain.get("kal")
     if kal:
         out.append(f"    x kal boost ({kal['intent']}): x {1 + kal['weight'] * kal['boost']:.2f} = {score:.4f}")
@@ -193,6 +197,8 @@ def run(argv=None):
                         help="net score uses plain recency instead of recency + PageRank + first to publish")
     parser.add_argument("--no-collapse", action="store_true",
                         help="don't merge copies of the same wire story")
+    parser.add_argument("--dense", action="store_true",
+                        help="re-rank the top 50 with the multilingual e5 model (needs sentence-transformers)")
     parser.add_argument("--no-kal", action="store_true",
                         help="don't re-rank kal queries by date")
     parser.add_argument("--no-xling", action="store_true",
@@ -215,6 +221,8 @@ def run(argv=None):
 
     static, parts = (None, {}) if args.no_authority else static_scores(index)
     pool = args.k if args.no_collapse else collapse_pool(args.k)
+    if args.dense:
+        pool = max(pool, DEFAULT_DEPTH)
     speed_stats = None
     if args.speedup == "elim":
         results, speed_stats = search_index_elimination(query, index, k=pool)
@@ -239,6 +247,15 @@ def run(argv=None):
     if speed_stats:
         heading(out, f"Speed-up: {speed_stats['method']}") if args.explain else None
         out.append(f"Scored {speed_stats['scored']} of {speed_stats['full_candidates']} articles that share a query word.")
+
+    if args.dense:
+        if not dense_available():
+            out.append("Dense re-ranking needs sentence-transformers: pip install -r requirements-dense.txt")
+        else:
+            if args.explain:
+                heading(out, "4b. Dense re-ranking")
+                out.append(f"Top {DEFAULT_DEPTH} re-scored: {1 - DEFAULT_ALPHA} x first stage + {DEFAULT_ALPHA} x e5 cosine (both scaled to 0 to 1).")
+            results = dense_rerank(results, query, DenseIndex(index, SentenceEncoder()))
 
     if not args.no_kal:
         intent = kal_intent(query)

@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 17:15 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -64,7 +64,7 @@ Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on
 - [ ] Learning-to-rank (after judging)
 - [ ] My results tables, report section and video segment
 - [ ] Put the final report and video together (H28 to H34)
-- [ ] Dense re-ranker (only if there's time)
+- [x] ~~Dense re-ranker (multilingual e5, optional install)~~
 
 ### Rishit: extras (in rough order)
 - [ ] Rank fusion (RRF) of lnc.ltc, BM25 and dense
@@ -139,6 +139,7 @@ Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on
 - **No case folding in the normalizer:** "Iyer" and "iyer" are different index terms. The query side works around it; Dhrithi's normalizer should lowercase.
 - **Riya's test writes a report into `data/`:** `test_crawler_recrawl_integration` writes `data/result-documentation/crawl_stats.md` for a fake 2-article crawl on every test run. It should write to the test's temporary folder.
 - **अय्यर gets almost no weight for "iyer":** Viraja's Dhvani-code fix brings अय्यर into the candidates, but "iyer" is also an English word in the index and takes 97% of the weight, and एयर and ईयर rank above अय्यर.
+- **English words get phonetic expansions:** Viraja's language ID gives almost every Roman word 0.9 Hinglish, so "farmers worried about snow" also searches हार्मोन्स, world and now. Dense re-ranking ignores weak phonetic guesses, but the sparse query still has them.
 - **Two test files share a name:** `test_build.py` and `test_scoring.py` are in both `tests/` and `partwise-tests/`, so running both folders in one pytest command errors. Run them separately, or rename Dhrithi's two files.
 - ~~**Folder layout:** Dhrithi's top-level `text/` and `index/` import fine on `main`.~~
 - ~~**idf log base:** Dhrithi moved to log10, same as this branch and the slides.~~

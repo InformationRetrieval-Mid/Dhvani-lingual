@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding impact-ordered postings
+Last updated: 7 Oct, after adding dense re-ranking
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -27,7 +27,7 @@ python3 -m venv .venv
 .venv/bin/python -m index.build --input data/news_sample_300.jsonl
 .venv/bin/streamlit run app/streamlit_app.py
 ```
-Without the built indexes the app and CLI fall back to the 20-article sample index.
+Without the built indexes the app and CLI fall back to the 20-article sample index. Dense re-ranking is optional: `.venv/bin/pip install -r requirements-dense.txt` (sentence-transformers and torch, about 500 MB); the model, about 470 MB, downloads on first use.
 
 **Rules for working in this repo.**
 - Commits go under the person who did the work. No AI co-author lines or tool names in commit messages.
@@ -83,7 +83,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `3714640` real index and viraja's query layer plugged into the app and cli | `dhvani/rank/real_index.py`, `app/streamlit_app.py`, `app/cli.py`, more words in the news dictionary |
 | `8e75d5a` cluster pruning: leaders and followers, compared with the other speed-ups | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
 | `21dd828` results file with early speed-ups numbers on riya's 300 articles | `documentation/results/rishit-results.md` |
-| impact-ordered postings: read each word's best articles first and stop early | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
+| `c302928` impact-ordered postings: read each word's best articles first and stop early | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
+| dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
 
 ## How to use it
 
@@ -233,15 +234,23 @@ idx = load_index("light")
 rank(make_query("bhukamp ke jhatke delhi", "light"), idx, k=10)
 ```
 
+**Dense re-ranking** (`dhvani/rank/dense.py`, optional)
+Re-scores the top 50 of any ranker with `intfloat/multilingual-e5-small`: score = 0.5 x first-stage score + 0.5 x e5 cosine, both min-max scaled over the 50 first (e5's cosines sit in a narrow 0.75 to 0.85 band, so unscaled they'd never change anything). The sparse ranker still picks the candidates. e5 handles Hindi and English but not Roman Hindi, so `dense_query_text()` sends the raw query plus the best Devanagari spelling of each Roman word: translations always, phonetic spellings only with weight 0.4 or more. "kal ka mausam" becomes "kal ka mausam कल का मौसम". Article vectors are computed once and cached in `data/dense/` (12.8 s for 300 articles). Like kal, it only reorders within a parser stage. In the app it's the "Dense re-ranking (e5)" switch, off by default and only shown if sentence-transformers is installed; Score details shows the e5 cosine. In the CLI it's `--dense`, and `--explain` adds a step 4b. Tests use a fake encoder, so they don't need the model.
+```python
+from dhvani.rank.dense import DenseIndex, SentenceEncoder, dense_rerank
+dense = DenseIndex(idx, SentenceEncoder())
+results = dense_rerank(rank(q, idx, k=50), q, dense)
+```
+
 ## Tests
-153 tests in `partwise-tests/rishit/`, all passing.
+160 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```
 
 ## What I need from others
 - **Dhrithi:** build the none, light and auto indexes on the full crawl once it's frozen. Fold letter case in the normalizer (right now "Iyer" and "iyer" are different terms), and commit the auto candidates file or say how to generate it, since without it the Auto column is the same as no stemming.
-- **Viraja:** point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
+- **Viraja:** language ID calls almost every Roman word Hinglish ("farmers", "snow" and "earthquake" all get 0.9 Hinglish), so English words get phonetic guesses like farmers → हार्मोन्स and snow → now. English words should get little or no phonetic expansion. Also point `KGramIndex` at Dhrithi's `idx.vocab` once her index is built. Agree the split with the cross-lingual layer: her language ID gives `en` weight only to real English words, and names like "delhi" match through both layers. Her Rocchio terms use the `prf` tag, which the app and parser already handle.
 - **Riya:** the full crawl for the freeze. Strip leftover HTML from article bodies first: 24 of the 300 have `<a class=backlink href=...>` tags, so words like "href" get indexed. Keep article text out of git because the repo is public.
 - **Everyone:** 8 information needs each (Hindi, Hinglish and English forms).
 
