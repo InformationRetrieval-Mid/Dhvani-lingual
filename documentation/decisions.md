@@ -242,3 +242,5 @@ A running list of the choices we made and why. Newest at the bottom.
 **Rocchio with idf-weighted vectors from real articles only.** Plain tf vectors made function words the top feedback terms, and listing pages in the feedback set pulled in unrelated words, so the feedback articles are the top real articles and their vectors are tf x idf.
 
 **Feedback is off by default.** It helps queries whose first results are already right and hurts the rest; on our needs it lowered P@10 slightly, so it's a switch rather than part of the default pipeline.
+
+**The report shows the net score losing to lnc.ltc.** The final evaluation found the hand-tuned net score significantly worse than plain lnc.ltc; we report it as found, and learning to rank shows which of its parts were miscalibrated (recency, proximity, parser stage).

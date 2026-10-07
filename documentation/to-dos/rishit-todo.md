@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 23:20
+Last updated: 7 Oct, around 23:55
 
 ## My novelty
 
@@ -26,7 +26,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Learned translations | English to Hindi pairs learned from Jagran's bilingual headlines with Dice alignment, no outside data | ~~Done~~ |
 | Page-type quality | Listing pages and horoscopes (20% of the corpus) recognised from URL and headline and pushed below real articles | ~~Done~~ |
 | Rocchio feedback switch | Viraja's Rocchio wired into search with idf-weighted article vectors from real articles only | ~~Done~~; off by default (it drifts as often as it helps) |
-| Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | Built and running on the judgments so far; final numbers after judging |
+| Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | ~~Done~~: MAP 0.835 vs 0.792 for the net score |
 
 ## Done
 
@@ -102,13 +102,13 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
 
 ### Once there are judgments
-- [ ] Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)
-- [ ] Translation off vs on for the English queries
-- [ ] lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off
+- [x] ~~Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)~~
+- [x] ~~Translation off vs on for the English queries~~
+- [x] ~~lnc.ltc vs BM25 vs net score vs fusion, and dense on vs off~~
 - [ ] Stop word experiment: no idf vs idf vs stop words removed
-- [ ] Wins and losses per query
+- [x] ~~Wins and losses per query~~
 - [ ] Check the difficulty hint against the judgments: do flagged queries really have lower P@10?
-- [ ] Learning-to-rank final run on the full judgments, with and without the dense feature
+- [x] ~~Learning-to-rank final run on the full judgments, with and without the dense feature~~
 
 ## What my code is waiting on
 | From | What | Why it matters for my part |

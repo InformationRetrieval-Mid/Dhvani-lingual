@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the Rocchio switch
+Last updated: 7 Oct, after the final evaluation
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -113,7 +113,9 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `06800e3` evaluation runs push listing pages down, pool extended (802 articles) | `dhvani/eval/experiments.py`, `dhvani/eval/judge.py`, `judgments/pool.tsv` |
 | `b798dc3` significance tests and learning-to-rank | `dhvani/eval/significance.py`, `dhvani/eval/ltr.py`, `dhvani/eval/experiments.py` |
 | `0f9211c` one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
-| rocchio pseudo-relevance feedback switch | `dhvani/rank/feedback.py`, `app/streamlit_app.py`, `app/cli.py` |
+| `380926e` rocchio pseudo-relevance feedback switch | `dhvani/rank/feedback.py`, `app/streamlit_app.py`, `app/cli.py` |
+| `9e54c6a` all my relevance judgments (297) | `judgments/qrels_rishit.txt` |
+| final evaluation results | `documentation/results/rishit-results.md` |
 
 ## How to use it
 
