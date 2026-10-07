@@ -429,6 +429,8 @@ def score_table(explain, terms, parts=None):
 
 def result_row(doc_id, score, explain, index, sources, only_here, parts=None):
     article = index.articles.get(doc_id, {"headline": doc_id, "body": ""})
+    # Some crawled text still has HTML entities (&#039;); decode them before we escape for display.
+    article = {k: html.unescape(article.get(k, "")) for k in ("headline", "body")}
     meta = index.meta[doc_id]
     terms = explain.get("terms", explain)
     place = meta.get("city") or meta.get("state") or ""
