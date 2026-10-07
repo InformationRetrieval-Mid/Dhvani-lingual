@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 17:15 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -59,6 +59,7 @@ Last updated: 7 Oct, around 17:15 (teammates' status read from their branches on
 
 ### Rishit: required
 - [x] ~~Results file started (`documentation/results/rishit-results.md`), with early speed-ups numbers on the 300 articles~~
+- [x] ~~Speed-ups table, stop words, idf and Zipf on Riya's full crawl (5,000 articles, before the freeze), with plots~~
 - [ ] Run every experiment on the frozen corpus: lnc.ltc vs BM25, translation off vs on, stemming modes, speed-ups, wins and losses, and the plots
 - [ ] Judging the pooled results with the team
 - [ ] Learning-to-rank (after judging)
@@ -140,6 +141,7 @@ Last updated: 7 Oct, around 17:15 (teammates' status read from their branches on
 - **Riya's test writes a report into `data/`:** `test_crawler_recrawl_integration` writes `data/result-documentation/crawl_stats.md` for a fake 2-article crawl on every test run. It should write to the test's temporary folder.
 - **अय्यर gets almost no weight for "iyer":** Viraja's Dhvani-code fix brings अय्यर into the candidates, but "iyer" is also an English word in the index and takes 97% of the weight, and एयर and ईयर rank above अय्यर.
 - **English words get phonetic expansions:** Viraja's language ID gives almost every Roman word 0.9 Hinglish, so "farmers worried about snow" also searches हार्मोन्स, world and now. Dense re-ranking ignores weak phonetic guesses, but the sparse query still has them.
+- **Riya's full crawl needs cleaning before the freeze:** one article saved twice (`jagran_40397148`, which stops Dhrithi's index builder), HTML in 249 bodies, 106 astrology pages, about 50 section and live-blog pages saved as articles (for example `amarujala.com/technology`, which now shows up in results), and 103 bodies under 30 words.
 - **Two test files share a name:** `test_build.py` and `test_scoring.py` are in both `tests/` and `partwise-tests/`, so running both folders in one pytest command errors. Run them separately, or rename Dhrithi's two files.
 - ~~**Folder layout:** Dhrithi's top-level `text/` and `index/` import fine on `main`.~~
 - ~~**idf log base:** Dhrithi moved to log10, same as this branch and the slides.~~

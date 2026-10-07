@@ -173,3 +173,11 @@ A running list of the choices we made and why. Newest at the bottom.
 **Dense gets the query with Devanagari spellings added.** e5 does well with Hindi and English but not Roman Hindi: on its own "kal ka mausam" scored a cricket article above a weather one. Adding Viraja's confident Devanagari spellings and the translations fixes that. Phonetic spellings under 0.4 are left out because for English words they're often unrelated (farmers → हार्मोन्स).
 
 **Dense is optional.** It needs torch and a model download, so it lives in `requirements-dense.txt`, and the app and CLI hide it when it isn't installed. Nobody else on the team has to install it.
+
+**Working copy of the full crawl without the repeat.** Riya's file has one article saved twice, and Dhrithi's index builder stops on a repeated id. Rather than wait, we build from a local copy that keeps the later of the two. It stays out of git, and the indexes get rebuilt from Riya's cleaned file once she sends it.
+
+**Speed-up numbers redone on the full crawl.** On 300 articles every speed-up looked close to exact because there was so little to skip. On 5,000 the differences are clear, so the full-crawl table is the main one and the 300-article table is kept only for comparison.
+
+**Function words stay in the index.** The top-df words are all Hindi function words with idf near 0, so lnc.ltc already ignores them in practice. Keeping them means phrase queries like "भूकंप के झटके" still match exactly.
+
+**Zipf slope reported over the frequent words.** The fit over every word is pulled down by the 40,255 words that appear once, so the report quotes the slope over the top 1,000 words (-0.90) next to the overall one (-1.45).

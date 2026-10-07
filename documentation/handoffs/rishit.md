@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding dense re-ranking
+Last updated: 7 Oct, after the first numbers on Riya's full crawl
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -39,7 +39,7 @@ Without the built indexes the app and CLI fall back to the 20-article sample ind
 
 **Where things stand right now.** The app and CLI run on the real pieces: Dhrithi's index built on Riya's 300 articles, Viraja's `build_query` with phonetic variants, and the cross-lingual layer, all through `dhvani/rank/real_index.py`. Hindi, Hinglish and English versions of a need find the same articles (for example भूकंप के झटके, bhukamp ke jhatke delhi and earthquake delhi). The tests stay on the 20-article sample.
 - Riya's 300-article sample is `data/news_sample_300.jsonl` on her branch, with every field in `formats.md`. It's kept out of git on `main`; copy it into your local `data/` folder.
-- The full crawl isn't done yet, so everything is on the 300 articles for now.
+- Riya's full crawl is `data/news_dedup.jsonl` (5,001 lines, not in git). One article is in it twice, which Dhrithi's builder refuses, so for now build from a local copy without the repeat: `data/news.jsonl`, 5,000 articles. The four indexes build in about 30 s.
 
 ## My part
 Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani/rank/`, `dhvani/eval/` and `app/`, tests in `partwise-tests/rishit/`.
@@ -84,7 +84,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `8e75d5a` cluster pruning: leaders and followers, compared with the other speed-ups | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
 | `21dd828` results file with early speed-ups numbers on riya's 300 articles | `documentation/results/rishit-results.md` |
 | `c302928` impact-ordered postings: read each word's best articles first and stop early | `dhvani/rank/speedups.py`, `app/streamlit_app.py`, `app/cli.py`, `dhvani/eval/experiments.py` |
-| dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
+| `1fd899d` dense re-ranking with multilingual e5, optional | `dhvani/rank/dense.py`, `app/streamlit_app.py`, `app/cli.py`, `requirements-dense.txt` |
+| speed-ups, stop words and zipf on riya's full crawl | `documentation/results/rishit-results.md`, two plots in `documentation/figures/` |
 
 ## How to use it
 
@@ -197,12 +198,12 @@ results, stats = search_index_elimination(q, idx, k=10)
 **Cluster pruning** (`dhvani/rank/speedups.py`)
 `ClusterPruning(index, n_leaders=None, seed=0)` picks sqrt(N) random leaders (17 for 300 articles) and puts every other article in the cluster of its most similar leader, by cosine of their lnc vectors. `search_clusters(q, idx, clusters, k, b=1)` compares the query with the leaders only and scores the clusters of the b closest; if that gives fewer than k results it adds the next-closest leader. Returns `(results, stats)` with the leaders used. A fixed seed keeps the clusters the same between runs.
 
-Early numbers comparing all the speed-ups on Riya's 300 articles are in `documentation/results/rishit-results.md`.
+Numbers comparing all the speed-ups on Riya's full crawl (5,000 articles, before the freeze) are in `documentation/results/rishit-results.md`.
 
 **Impact-ordered postings** (`dhvani/rank/speedups.py`)
 `ImpactOrdered(index)` sorts each word's postings by the word's lnc weight in the article, highest first. `search_impact(q, idx, impact, k, max_docs=20, min_share=0.0)` goes through the query words in decreasing idf and reads each list from the top, stopping after `max_docs` articles or once the weight drops below `min_share` x the list's best weight. Articles past the cut-off just miss that word's small contribution. Returns `(results, stats)` with postings read against the total. The app and CLI use `max_docs` = N / 15 (at least 20).
 
-All five speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions`, `--speedup tiers`, `--speedup clusters` or `--speedup impact`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50 cluster pruning at b = 1 and 3, and impact-ordered postings stopping after 20 or 50 articles or below half the best weight. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; early numbers on Riya's 300 articles are in `documentation/results/rishit-results.md`. They all use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
+All five speed-ups are in the app and the CLI. In the app, the "Speed-up" menu in Filters picks one (off by default) and each column shows "scored X of Y". In the CLI it's `--speedup elim`, `--speedup champions`, `--speedup tiers`, `--speedup clusters` or `--speedup impact`, and the output says how many of the candidate articles were scored. `speedup_table()` in `dhvani/eval/experiments.py` compares each one with full lnc.ltc over all queries: average overlap of the top k and average share of articles scored, with champion lists at r = 2, 5, 10 and 50 cluster pruning at b = 1 and 3, and impact-ordered postings stopping after 20 or 50 articles or below half the best weight. The experiment runner prints it and writes `data/eval/speedups.csv`. On the 20-article sample every row is 1.0 because there's too little to skip; numbers on Riya's full crawl are in `documentation/results/rishit-results.md`. They all use lnc.ltc, since that's what the speed-ups approximate, and champion lists use r = N / 20 (at least 5) ordered by weight + g(d).
 
 **Date-aware kal** (`dhvani/rank/kal.py`)
 कल means both yesterday and tomorrow. `kal_intent(q)` works it out from the query: English "tomorrow"/"yesterday" decide directly; otherwise future cues (होगा, रहेगा, alert, forecast, weather words) mean tomorrow and past cues (हुआ, था, result) mean yesterday, defaulting to yesterday. `apply_kal(results, q, idx)` re-ranks any ranker's results: yesterday favours articles from the day before, tomorrow favours the newest articles written in the future tense. The boost multiplies the score, score x (1 + 0.5 x boost), and is recorded in `explain["kal"]`. It only reorders within a query-parser stage, so a stricter match stays above a looser one. In the app it's the "Date-aware kal" switch (on by default), boosted results get a "कल · tomorrow" or "कल · yesterday" tag, and Score details shows the boost. In the CLI, results show `[kal: tomorrow]`, `--explain` adds a step 4c, and `--no-kal` turns it off.
