@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the run-everything script
+Last updated: 7 Oct, after adding the Rocchio switch
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -112,7 +112,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `726bce6` decode html entities in headlines before showing them | `app/streamlit_app.py` |
 | `06800e3` evaluation runs push listing pages down, pool extended (802 articles) | `dhvani/eval/experiments.py`, `dhvani/eval/judge.py`, `judgments/pool.tsv` |
 | `b798dc3` significance tests and learning-to-rank | `dhvani/eval/significance.py`, `dhvani/eval/ltr.py`, `dhvani/eval/experiments.py` |
-| one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
+| `0f9211c` one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
+| rocchio pseudo-relevance feedback switch | `dhvani/rank/feedback.py`, `app/streamlit_app.py`, `app/cli.py` |
 
 ## How to use it
 
@@ -180,7 +181,7 @@ Searches from the terminal. With `--explain` it prints every step: the query obj
 .venv/bin/python app/cli.py "दिल्ली बारिश" --explain
 .venv/bin/python app/cli.py "कोहली शतक" --ranker bm25 --k 3 --explain
 ```
-With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--keep-listings`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
+With `--explain` there's also a parser step showing how many articles each stage found and where it stopped. Other flags: `--ranker net|lnc|bm25|rrf`, `--stem none|light|aggr|auto`, `--speedup elim|champions|tiers|clusters|impact`, `--dense`, `--diversify`, `--prf`, `--keep-listings`, `--no-parser`, `--no-xling`, `--no-kal`, `--no-authority` and `--no-collapse`.
 
 **Cross-lingual layer** (`dhvani/rank/xling.py`)
 English query words become weighted Hindi terms inside the query vector, so "weather tomorrow" is scored against the same Hindi terms as "कल का मौसम". A word's weight is split across its translations, multi-word entries like "prime minister" are matched as phrases, and English stop words are dropped. The dictionary is `dhvani/rank/data/en_hi_news.tsv`; if the MUSE English-Hindi dictionary is saved at `data/muse/en-hi.txt` it's merged in too.
@@ -313,6 +314,9 @@ Every judged query-article pair becomes a row of 10 features (cosine, BM25, zone
 .venv/bin/python -m dhvani.eval.ltr            # add --dense to include the e5 cosine
 ```
 
+**Pseudo-relevance feedback** (`dhvani/rank/feedback.py`)
+`feedback_query(q, idx, mode)` searches once, takes the top 5 real articles (after listing pages are pushed down), and folds their strongest words back into the query with Viraja's Rocchio update (alpha 1.0, beta 0.75), adding the top 5 new terms with source "prf"; the search then runs again. Article vectors are tf x idf from each article's own text: with plain tf the best new terms were के, में, की, and building from the text avoids scanning the whole vocabulary (0.03 to 0.05 s per query). In the app it's the "Pseudo-relevance feedback (Rocchio)" switch (off by default) and added words show as "Feedback" chips; in the CLI it's `--prf`, which prints the added terms. It helps when the first results are right ("iyer century" adds श्रेयस) and drifts when they're mixed, so it's off by default; numbers are in the results file.
+
 **Sanity check** (`dhvani/eval/sanity.py`)
 Evaluation that needs no judgments, from the run files. Cross-form agreement: for each need, how much of the Hindi form's top 10 its Hinglish, messy and English forms also return, plus the English form with translation off. System agreement: top-10 overlap and Kendall's tau between every pair of rankers and of stemming modes. Numbers are in the results file.
 ```bash
@@ -328,7 +332,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## Tests
-215 tests in `partwise-tests/rishit/`, all passing.
+219 tests in `partwise-tests/rishit/`, all passing.
 ```bash
 .venv/bin/python -m pytest partwise-tests/rishit -q
 ```

@@ -30,6 +30,7 @@ from dhvani.rank.collapse import collapse_duplicates, collapse_pool  # noqa: E40
 from dhvani.rank.dense import DEFAULT_DEPTH, DenseIndex, SentenceEncoder, dense_available, dense_rerank  # noqa: E402
 from dhvani.rank.difficulty import predict  # noqa: E402
 from dhvani.rank.diversify import diversify  # noqa: E402
+from dhvani.rank.feedback import feedback_query  # noqa: E402
 from dhvani.rank.fusion import search_rrf  # noqa: E402
 from dhvani.rank.quality import demote  # noqa: E402
 from dhvani.rank.kal import apply_kal  # noqa: E402
@@ -525,6 +526,8 @@ def main():
                 help="Re-rank the top 50 with a multilingual embedding model: half first stage, half meaning.")
             use_demote = st.toggle("Push listing pages down", value=True,
                                    help="Section pages and horoscopes go below real news articles.")
+            use_prf = st.toggle("Pseudo-relevance feedback (Rocchio)", value=False,
+                                help="Search once, take words from the top 5 articles, and search again.")
             use_mmr = st.toggle("Diversify results (MMR)", value=False,
                                 help="Re-order so the top results cover more different stories.")
             use_kal = st.toggle("Date-aware kal", value=True,
@@ -549,6 +552,9 @@ def main():
         return
 
     queries = {mode: real_index.make_query(raw, mode, xling=use_xling) for mode, _label in MODES}
+    if use_prf:
+        queries = {mode: feedback_query(q, load_index(mode), mode, ranker if ranker != "rrf" else "net")[0]
+                   for mode, q in queries.items()}
     # Stemmed columns match stemmed terms; the unstemmed ones are still needed to highlight the text.
     sources_map = {mode: {**term_sources(queries["none"]), **term_sources(queries[mode])} for mode, _label in MODES}
 

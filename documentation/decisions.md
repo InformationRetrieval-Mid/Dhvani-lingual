@@ -238,3 +238,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Logistic regression for learning to rank, tested leave-one-need-out.** With a few hundred judged pairs a handful of weights is all the data supports. Holding out whole needs (not single queries) stops the four forms of a need from leaking into each other's training data.
 
 **One script for the whole part.** `scripts/rishit_results.py` runs the tests, every evaluation and a demo of the queries that show the system best (the same need in Hindi, Hinglish and English, the assignment's "kal ka mausam", date-aware kal, fusion, a low-confidence warning and one --explain run), so the results and the demo can be regenerated in one go before the report and video.
+
+**Rocchio with idf-weighted vectors from real articles only.** Plain tf vectors made function words the top feedback terms, and listing pages in the feedback set pulled in unrelated words, so the feedback articles are the top real articles and their vectors are tf x idf.
+
+**Feedback is off by default.** It helps queries whose first results are already right and hurts the rest; on our needs it lowered P@10 slightly, so it's a switch rather than part of the default pipeline.
