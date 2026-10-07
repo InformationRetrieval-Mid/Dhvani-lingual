@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 8 Oct, around 01:00
+Last updated: 8 Oct, around 01:20 (code and results complete)
 
 ## My novelty
 
@@ -102,6 +102,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Pool extended with Riya's and Dhrithi's needs and the fixed auto stemming (1,659 articles)~~
 - [x] ~~Evaluation and learning-to-rank on all 32 needs (57% of the pool judged)~~
 - [x] ~~Judging stopped by the team at 57% of the pool; the 32-need evaluation is reported as final with that limitation~~
+- [x] ~~Graphs for every result (PR curves, rankers, stemming, translation, learning to rank) and the sanity check on the final runs~~
 
 ### Once there are judgments
 - [x] ~~Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)~~

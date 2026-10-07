@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 8 Oct, after the final evaluation on all 32 needs
+Last updated: 8 Oct, final: graphs and the sanity check on the final runs
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -17,6 +17,8 @@ Last updated: 8 Oct, after the final evaluation on all 32 needs
 | Rishit | `rishit` | Ranking, cross-lingual layer, evaluation, app | `dhvani/rank/`, `dhvani/eval/` (except `pool.py`), `app/` |
 
 Each person commits to their own branch. All four branches are merged into `main`; `rishit` is on `main` up to rank fusion.
+
+**Regenerate the graphs** (PR curves, rankers, stemming, translation, learning to rank) into `documentation/figures/`: `.venv/bin/python scripts/rishit_figures.py`.
 
 **Run everything in my part at once** (tests, every evaluation, then a demo of the best queries; about 3 minutes):
 ```bash
@@ -118,7 +120,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `247c889` final evaluation results | `documentation/results/rishit-results.md` |
 | `15f2652` judging pool extended with riya's needs and the new auto-stemming runs | `judgments/pool.tsv` |
 | `c5bd88d` evaluation on all 32 needs (provisional), dhrithi's needs and judgments added | `documentation/needs/dhriti-needs.md`, `judgments/`, `documentation/` |
-| final results on all 32 needs, stop word experiment and difficulty check | `documentation/` |
+| `2091dee` final results on all 32 needs, stop word experiment and difficulty check | `documentation/` |
+| graphs for the results, sanity check on the final runs | `scripts/rishit_figures.py`, `documentation/figures/rishit-*.png`, `documentation/results/rishit-results.md` |
 
 ## How to use it
 
