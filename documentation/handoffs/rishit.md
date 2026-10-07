@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after adding the listing-page quality score
+Last updated: 7 Oct, after refreshing the judging pool
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -102,7 +102,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `47a924f` judgment-free results rerun after viraja's spelling fix | `documentation/results/rishit-results.md` |
 | `b63bacc` docs brought up to date | `documentation/` |
 | `e3f1762` translations learned from jagran's bilingual headlines | `dhvani/rank/learn_dict.py`, `dhvani/rank/data/en_hi_learned.tsv`, `dhvani/rank/xling.py` |
-| listing pages and horoscopes pushed below real articles | `dhvani/rank/quality.py`, `dhvani/rank/data/page_types.tsv`, `app/streamlit_app.py`, `app/cli.py` |
+| `8ce491a` listing pages and horoscopes pushed below real articles | `dhvani/rank/quality.py`, `dhvani/rank/data/page_types.tsv`, `app/streamlit_app.py`, `app/cli.py` |
+| judging pool rebuilt from the current runs (641 articles) | `judgments/pool.tsv`, `documentation/` |
 
 ## How to use it
 
@@ -301,7 +302,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 **Judging** (`dhvani/eval/judge.py`, `app/pages/judge.py`, `judgments/`)
-`python -m dhvani.eval.judge` pools the top 10 of every run for every form of a need into one list per need (`judgments/pool.tsv`, 804 articles for the 16 needs, about 50 each), so each article is judged once per need, as `formats.md` says. The "judge" page in the app's sidebar shows the need, then each pooled article (paper, date, headline and the start of the body, with the Hindi query words highlighted), with buttons for 0 not relevant, 1 partly, 2 fully, and Skip. It's reached from the "Judging" link in the search page's top bar, and has a link back. It picks your needs by name (R for Rishit, V for Viraja), shows progress, and saves after every click to `judgments/qrels_<person>.txt` in the `formats.md` judgment format. One file per person, all in git (ids and grades only, no article text), so four people can judge at once without conflicts. `all_judgments()` merges the files, keeping the higher grade if two people judged the same pair, and the experiment runner uses them by default.
+`python -m dhvani.eval.judge` pools the top 10 of every run for every form of a need into one list per need (`judgments/pool.tsv`, 641 articles for the 16 needs, about 40 each; Riya's `dhvani/eval/pool.py` now pools per need too and gives exactly the same set), so each article is judged once per need, as `formats.md` says. The "judge" page in the app's sidebar shows the need, then each pooled article (paper, date, headline and the start of the body, with the Hindi query words highlighted), with buttons for 0 not relevant, 1 partly, 2 fully, and Skip. It's reached from the "Judging" link in the search page's top bar, and has a link back. It picks your needs by name (R for Rishit, V for Viraja), shows progress, and saves after every click to `judgments/qrels_<person>.txt` in the `formats.md` judgment format. One file per person, all in git (ids and grades only, no article text), so four people can judge at once without conflicts. `all_judgments()` merges the files, keeping the higher grade if two people judged the same pair, and the experiment runner uses them by default.
 ```bash
 .venv/bin/python -m dhvani.eval.judge --runs data/eval/full/runs   # rebuild the pool
 .venv/bin/streamlit run app/streamlit_app.py                         # then open "judge" in the sidebar
@@ -315,10 +316,11 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## What I need from others
-- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them). Pooling per need is now done in `dhvani/eval/judge.py`.
+- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them).
 - **Dhrithi:** her 8 information needs (need ids starting with D). Also: auto stemming is 99% the same as no stemming on the frozen corpus, because its candidates came from the 300-article sample; rebuilding them on the 5,000 would make the third column count.
-- **Viraja:** her rare-spelling fix works for "bhukamp" (now भूकंप) and "modi" (मोदी), and lifted cross-form agreement by about 0.1. Still wrong: "delhi" → देल्ही instead of दिल्ली (977 articles) and "iyer" → एयर instead of अय्यर (74). Also her V01 to V08 judgments (459 articles in the pool).
+- **Riya:** her pooling script now pools per need and matches `judge.py` exactly (641 articles from the current runs).
+- **Viraja:** her rare-spelling fix works for "bhukamp" (now भूकंप) and "modi" (मोदी), and lifted cross-form agreement by about 0.1. Still wrong: "delhi" → देल्ही instead of दिल्ली (977 articles) and "iyer" → एयर instead of अय्यर (74). Also her V01 to V08 judgments (394 articles in the pool).
 - **Everyone:** judge your own 8 needs on the judging page ("Judging" in the top bar) and push your `judgments/qrels_<name>.txt`.
 
 ## Next
-Finish judging my 8 needs (23 of 345 done). The evaluation already runs end to end on the judgments (checked with the first ones); once mine and Viraja's are in, rerun it and fill in the results file, then significance tests and learning-to-rank. Learning translations from Jagran's bilingual headlines can be done meanwhile. The full list is in `documentation/to-dos/rishit-todo.md`.
+Finish judging my 8 needs (23 of 247 done). The evaluation already runs end to end on the judgments (checked with the first ones); once mine and Viraja's are in, rerun it and fill in the results file, then significance tests and learning-to-rank. Learning translations from Jagran's bilingual headlines can be done meanwhile. The full list is in `documentation/to-dos/rishit-todo.md`.

@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 21:20
+Last updated: 7 Oct, around 21:45
 
 ## My novelty
 
@@ -92,11 +92,11 @@ What my part adds beyond the lecture basics, and where each one stands.
 
 ### Judging
 - [x] ~~Sanity check without judgments: cross-form agreement and system agreement on the frozen corpus~~
-- [x] ~~Pool per need from the run files (804 articles for 16 needs)~~
+- [x] ~~Pool per need from the run files (641 articles for 16 needs, rebuilt after Viraja's spelling fix; Riya's pooling script gives the same set)~~
 - [x] ~~Judging page in the app, one judgments file per person in the repo, linked from the search page~~
 - [x] ~~Evaluation runs end to end on the judgments (checked with the first ones)~~
 - [x] ~~Judgment-free results rerun after Viraja's rare-spelling fix (cross-form agreement up about 0.1, 6 queries flagged instead of 11)~~
-- [ ] Judge my 8 needs (23 of 345 done: 10 for R01, 13 for R02)
+- [ ] Judge my 8 needs (23 of 247 done: 10 for R01, 13 for R02)
 - [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
 
 ### Once there are judgments
@@ -115,7 +115,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Riya, Dhrithi | Their 8 information needs each (ids starting with Y and D) | Needed for the full runs and the pool |
 | Dhrithi | Auto candidates rebuilt on the frozen corpus | Auto is 99% the same as no stemming on 5,000 articles |
 | Viraja | "delhi" still goes to देल्ही instead of दिल्ली, "iyer" to एयर instead of अय्यर (her fix sorted "bhukamp" and "modi") | Hinglish queries with these words miss their articles; English ones still work through translation |
-| Viraja | Judging V01 to V08 (459 articles) | Half of the judged needs; all quality numbers and learning-to-rank |
+| Viraja | Judging V01 to V08 (394 articles) | Half of the judged needs; all quality numbers and learning-to-rank |
 | Riya, Dhrithi | Judging their needs once they're written | The rest of the judged needs |
 
 ## Known issues in my part
