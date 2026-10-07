@@ -11,6 +11,7 @@ REQUIRED_FIELDS = (
     "body",
 )
 
+
 METADATA_FIELDS = (
     "source",
     "date",
@@ -21,16 +22,16 @@ METADATA_FIELDS = (
     "links",
 )
 
+
 SUPPORTED_MODES = (
     "none",
     "light",
     "aggr",
+    "auto",
 )
 
 
 def iter_articles(path):
-    """Read articles from a JSONL file one article at a time."""
-
     path = Path(path)
 
     if not path.exists():
@@ -38,22 +39,32 @@ def iter_articles(path):
             f"Article file not found: {path}"
         )
 
-    with path.open("r", encoding="utf-8") as file:
-        for line_number, line in enumerate(file, start=1):
-
+    with path.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+        for line_number, line in enumerate(
+            file,
+            start=1,
+        ):
             if not line.strip():
                 continue
 
             try:
                 article = json.loads(line)
+
             except json.JSONDecodeError as exc:
                 raise ValueError(
                     f"Line {line_number}: invalid JSON"
                 ) from exc
 
-            if not isinstance(article, dict):
+            if not isinstance(
+                article,
+                dict,
+            ):
                 raise ValueError(
-                    f"Line {line_number}: article must be a JSON object"
+                    f"Line {line_number}: "
+                    "article must be a JSON object"
                 )
 
             for field in REQUIRED_FIELDS:
@@ -63,30 +74,41 @@ def iter_articles(path):
                         f"missing required field '{field}'"
                     )
 
-            if not isinstance(article["doc_id"], str):
+            if not isinstance(
+                article["doc_id"],
+                str,
+            ):
                 raise ValueError(
                     f"Line {line_number}: "
-                    f"'doc_id' must be a string"
+                    "'doc_id' must be a string"
                 )
 
-            if not isinstance(article["headline"], str):
+            if not isinstance(
+                article["headline"],
+                str,
+            ):
                 raise ValueError(
                     f"Line {line_number}: "
-                    f"'headline' must be a string"
+                    "'headline' must be a string"
                 )
 
-            if not isinstance(article["body"], str):
+            if not isinstance(
+                article["body"],
+                str,
+            ):
                 raise ValueError(
                     f"Line {line_number}: "
-                    f"'body' must be a string"
+                    "'body' must be a string"
                 )
 
             yield article
 
 
-def build_index(input_path, mode, output_path=None):
-    """Build one positional index from the JSONL corpus."""
-
+def build_index(
+    input_path,
+    mode,
+    output_path=None,
+):
     if mode not in SUPPORTED_MODES:
         raise ValueError(
             f"Unsupported index mode: {mode}. "
@@ -96,8 +118,9 @@ def build_index(input_path, mode, output_path=None):
 
     index = Index(mode)
 
-    for article in iter_articles(input_path):
-
+    for article in iter_articles(
+        input_path
+    ):
         metadata = {
             field: article.get(field)
             for field in METADATA_FIELDS
@@ -112,20 +135,27 @@ def build_index(input_path, mode, output_path=None):
 
     if output_path is None:
         index.save()
+
     else:
-        output_path = Path(output_path)
+        output_path = Path(
+            output_path
+        )
+
         output_path.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
-        index.save(output_path)
+
+        index.save(
+            output_path
+        )
 
     return index
 
 
-def build_indexes(input_path="data/news.jsonl"):
-    """Build all currently supported index variants."""
-
+def build_indexes(
+    input_path="data/news.jsonl",
+):
     indexes = {}
 
     for mode in SUPPORTED_MODES:
@@ -138,7 +168,6 @@ def build_indexes(input_path="data/news.jsonl"):
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description=(
             "Build a Dhvani positional index "
@@ -154,8 +183,11 @@ def main():
 
     parser.add_argument(
         "--mode",
-        choices=(*SUPPORTED_MODES, "both"),
-        default="both",
+        choices=(
+            *SUPPORTED_MODES,
+            "all",
+        ),
+        default="all",
         help="Indexing mode to build.",
     )
 
@@ -170,15 +202,16 @@ def main():
 
     args = parser.parse_args()
 
-    if args.mode == "both":
-
+    if args.mode == "all":
         if args.output is not None:
             parser.error(
                 "--output can only be used "
                 "with a single index mode"
             )
 
-        indexes = build_indexes(args.input)
+        indexes = build_indexes(
+            args.input
+        )
 
         for mode, index in indexes.items():
             print(
@@ -188,7 +221,6 @@ def main():
             )
 
     else:
-
         index = build_index(
             input_path=args.input,
             mode=args.mode,

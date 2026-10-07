@@ -6,11 +6,19 @@ from pathlib import Path
 from text.analyzer import analyze
 
 
-SUPPORTED_MODES = {"none", "light", "aggr"}
+SUPPORTED_MODES = {
+    "none",
+    "light",
+    "aggr",
+    "auto",
+}
 
 
 def _zone_postings():
-    return {"headline": [], "body": []}
+    return {
+        "headline": [],
+        "body": [],
+    }
 
 
 class Index:
@@ -24,33 +32,31 @@ class Index:
             )
 
         self.mode = mode
-        self._postings = defaultdict(_zone_postings)
+        self._postings = defaultdict(
+            _zone_postings
+        )
 
-        # Document metadata
         self.meta = {}
-
-        # Original article text for snippets/highlighting
         self.text = {}
-
-        # Number of documents
         self.N = 0
-
-        # Vocabulary
         self.vocab = set()
-
-        # VSM document normalization
         self.doc_norm = {}
-
-        # Document length
         self.doc_len = {}
 
-    def add_document(self, doc_id, headline, body, metadata):
+    def add_document(
+        self,
+        doc_id,
+        headline,
+        body,
+        metadata,
+    ):
         if doc_id in self.meta:
-            raise ValueError(f"Document already exists: {doc_id}")
+            raise ValueError(
+                f"Document already exists: {doc_id}"
+            )
 
         self.meta[doc_id] = metadata
 
-        # Keep original article text for result snippets.
         self.text[doc_id] = {
             "headline": headline,
             "body": body,
@@ -70,33 +76,18 @@ class Index:
             "body",
         )
 
-        # ---------------------------------------------------------
-        # Document length
-        # ---------------------------------------------------------
-        #
-        # Count analyzed tokens across headline + body.
-        #
         self.doc_len[doc_id] = (
-            sum(len(positions) for positions in headline_terms.values())
-            + sum(len(positions) for positions in body_terms.values())
+            sum(
+                len(positions)
+                for positions in headline_terms.values()
+            )
+            +
+            sum(
+                len(positions)
+                for positions in body_terms.values()
+            )
         )
 
-        # ---------------------------------------------------------
-        # Document normalization for lnc.ltc
-        # ---------------------------------------------------------
-        #
-        # lnc document weighting:
-        #
-        #     w(t,d) = 1 + log10(tf)
-        #
-        # No IDF is applied to the document side.
-        #
-        # The cosine normalization factor is:
-        #
-        #     sqrt(sum(w(t,d)^2))
-        #
-        # Term frequency is aggregated across headline + body.
-        #
         term_frequencies = defaultdict(int)
 
         for term, positions in headline_terms.items():
@@ -111,81 +102,163 @@ class Index:
             weight = 1.0 + math.log10(tf)
             norm_squared += weight * weight
 
-        self.doc_norm[doc_id] = math.sqrt(norm_squared)
+        self.doc_norm[doc_id] = math.sqrt(
+            norm_squared
+        )
 
-    def _add_zone(self, doc_id, text, zone):
-        if zone not in {"headline", "body"}:
-            raise ValueError(f"Unsupported zone: {zone}")
+    def _add_zone(
+        self,
+        doc_id,
+        text,
+        zone,
+    ):
+        if zone not in {
+            "headline",
+            "body",
+        }:
+            raise ValueError(
+                f"Unsupported zone: {zone}"
+            )
 
-        analyzed = analyze(text, self.mode)
+        analyzed = analyze(
+            text,
+            self.mode,
+        )
 
         term_positions = defaultdict(list)
 
         for term, position in analyzed:
-            term_positions[term].append(position)
+            term_positions[term].append(
+                position
+            )
 
         for term, positions in term_positions.items():
             self._postings[term][zone].append(
-                (doc_id, len(positions), positions)
+                (
+                    doc_id,
+                    len(positions),
+                    positions,
+                )
             )
 
             self.vocab.add(term)
 
         return term_positions
 
-    def postings_for(self, term, zone):
-        return self.postings(term, zone)
+    def postings_for(
+        self,
+        term,
+        zone,
+    ):
+        return self.postings(
+            term,
+            zone,
+        )
 
-    def postings(self, term, zone):
-        if zone not in {"headline", "body"}:
-            raise ValueError(f"Unsupported zone: {zone}")
+    def postings(
+        self,
+        term,
+        zone,
+    ):
+        if zone not in {
+            "headline",
+            "body",
+        }:
+            raise ValueError(
+                f"Unsupported zone: {zone}"
+            )
 
-        return self._postings.get(term, {}).get(zone, [])
+        return self._postings.get(
+            term,
+            {},
+        ).get(
+            zone,
+            [],
+        )
 
     def df(self, term):
         doc_ids = set()
 
-        for zone in ("headline", "body"):
-            for doc_id, _, _ in self.postings(term, zone):
+        for zone in (
+            "headline",
+            "body",
+        ):
+            for doc_id, _, _ in self.postings(
+                term,
+                zone,
+            ):
                 doc_ids.add(doc_id)
 
         return len(doc_ids)
 
     def save(self, path=None):
         if path is None:
-            self.INDEX_DIR.mkdir(parents=True, exist_ok=True)
-            path = self.INDEX_DIR / f"{self.mode}.pkl"
+            self.INDEX_DIR.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            path = (
+                self.INDEX_DIR
+                / f"{self.mode}.pkl"
+            )
+
         else:
             path = Path(path)
-            path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(path, "wb") as file:
-            pickle.dump(self, file)
+            path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+        with open(
+            path,
+            "wb",
+        ) as file:
+            pickle.dump(
+                self,
+                file,
+            )
 
     @classmethod
-    def load(cls, mode):
+    def load(
+        cls,
+        mode,
+    ):
         if mode not in SUPPORTED_MODES:
             raise ValueError(
-                f"Unsupported index mode: {mode}. "
+                f"Unsupported analysis mode: {mode}. "
                 f"Supported modes: {sorted(SUPPORTED_MODES)}"
             )
 
-        path = cls.INDEX_DIR / f"{mode}.pkl"
+        path = (
+            cls.INDEX_DIR
+            / f"{mode}.pkl"
+        )
 
         if not path.exists():
             raise FileNotFoundError(
                 f"Index file not found: {path}"
             )
 
-        with open(path, "rb") as file:
+        with open(
+            path,
+            "rb",
+        ) as file:
             index = pickle.load(file)
 
-        if not isinstance(index, cls):
-            raise TypeError("Loaded object is not an Index")
+        if not isinstance(
+            index,
+            cls,
+        ):
+            raise TypeError(
+                "Loaded object is not an Index"
+            )
 
         if index.mode != mode:
             raise ValueError(
-                f"Index mode mismatch: expected {mode}, "
+                f"Index mode mismatch: "
+                f"expected {mode}, "
                 f"found {index.mode}"
             )
 
