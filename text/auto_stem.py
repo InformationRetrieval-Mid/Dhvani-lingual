@@ -1,6 +1,6 @@
 import csv
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 from text.normalize import normalize
@@ -35,9 +35,7 @@ def load_corpus_forms():
     frequencies = Counter()
 
     if not CORPUS_PATH.exists():
-        raise FileNotFoundError(
-            f"Corpus not found: {CORPUS_PATH}"
-        )
+        return frequencies
 
     with CORPUS_PATH.open(
         "r",
@@ -64,13 +62,13 @@ def load_corpus_forms():
 def load_auto_candidates():
     """
     Load STRONG candidates from the analysis file.
+
+    If the generated candidate file is unavailable,
+    return an empty candidate set so that AUTO mode
+    behaves like no stemming instead of breaking imports.
     """
     if not AUTO_CANDIDATES_PATH.exists():
-        raise FileNotFoundError(
-            f"Auto candidate file not found: "
-            f"{AUTO_CANDIDATES_PATH}. "
-            "Run: python -m scripts.analyze_auto_candidates"
-        )
+        return {}
 
     candidates = {}
 
@@ -149,8 +147,7 @@ def build_auto_map(candidates, corpus_frequencies):
         if len(forms) < 2:
             continue
 
-        # The most important protection:
-        # the proposed lexical base must actually occur
+        # The proposed lexical base must actually occur
         # in the corpus.
         base_frequency = corpus_frequencies.get(
             stem_word,
@@ -174,6 +171,14 @@ def build_auto_map(candidates, corpus_frequencies):
     return auto_map
 
 
+# These are safe to initialize even when the generated
+# AUTO files do not exist.
+#
+# On a normal development machine with the generated
+# files present, the full AUTO mapping is loaded.
+#
+# On a fresh checkout, both become empty and AUTO
+# simply performs no selective stemming.
 CORPUS_FREQUENCIES = load_corpus_forms()
 AUTO_CANDIDATES = load_auto_candidates()
 
@@ -193,6 +198,9 @@ def stem_auto(word: str) -> str:
 
         दिक्कतें -> दिक्कत
         दिक्कतों -> दिक्कत
+
+    If the generated AUTO files are unavailable,
+    the word is returned unchanged.
     """
     if not word:
         return word
