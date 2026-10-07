@@ -33,6 +33,13 @@ def test_expand_query_does_not_duplicate_terms():
     assert len(terms) == len(set(terms))
 
 
+def test_english_words_are_not_phonetically_expanded():
+    # "farmers" is English -> no Hindi homophone -> must not get phonetic junk.
+    index, costs = _index_and_costs()
+    q = build_query("farmers", index=index, costs=costs)
+    assert q["tokens"][0]["expansions"] == [("farmers", 1.0, "exact")]
+
+
 def test_expand_is_idempotent():
     index, costs = _index_and_costs()
     q = build_query("mosam", index=index, costs=costs)
