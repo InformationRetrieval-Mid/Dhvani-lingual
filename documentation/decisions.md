@@ -244,3 +244,7 @@ A running list of the choices we made and why. Newest at the bottom.
 **Feedback is off by default.** It helps queries whose first results are already right and hurts the rest; on our needs it lowered P@10 slightly, so it's a switch rather than part of the default pipeline.
 
 **The report shows the net score losing to lnc.ltc.** The final evaluation found the hand-tuned net score significantly worse than plain lnc.ltc; we report it as found, and learning to rank shows which of its parts were miscalibrated (recency, proximity, parser stage).
+
+**The 32-need evaluation is reported as provisional.** Only 57% of the pool is judged, and unjudged articles count as not relevant, so the ranker and stemming numbers are pulled down and blurred. They're kept in a separate provisional section; the 16-need section, judged in full at the time, stays as the complete one until the rest of the pool is judged.
+
+**Judgments count only for pooled articles.** Judgments for articles none of our systems retrieves (129 of Dhrithi's 249) don't affect any metric, since metrics only look at what systems return; they're kept in the file but don't reduce the work left.

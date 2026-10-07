@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 7 Oct, after the final evaluation
+Last updated: 8 Oct, after the evaluation on all 32 needs (provisional)
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -115,7 +115,9 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `0f9211c` one script for all my tests, evaluations and a demo | `scripts/rishit_results.py`, `app/cli.py` |
 | `380926e` rocchio pseudo-relevance feedback switch | `dhvani/rank/feedback.py`, `app/streamlit_app.py`, `app/cli.py` |
 | `9e54c6a` all my relevance judgments (297) | `judgments/qrels_rishit.txt` |
-| final evaluation results | `documentation/results/rishit-results.md` |
+| `247c889` final evaluation results | `documentation/results/rishit-results.md` |
+| `15f2652` judging pool extended with riya's needs and the new auto-stemming runs | `judgments/pool.tsv` |
+| evaluation on all 32 needs (provisional), dhrithi's needs and judgments added | `documentation/needs/dhriti-needs.md`, `judgments/`, `documentation/` |
 
 ## How to use it
 
@@ -340,11 +342,8 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## What I need from others
-- **Riya:** her 8 information needs (with need ids starting with Y so the judging page can find them).
-- **Dhrithi:** her 8 information needs (need ids starting with D). Also: auto stemming is 99% the same as no stemming on the frozen corpus, because its candidates came from the 300-article sample; rebuilding them on the 5,000 would make the third column count.
-- **Riya:** her pooling script now pools per need and matches `judge.py` exactly (641 articles from the current runs).
-- **Viraja:** her rare-spelling fix works for "bhukamp" (now भूकंप) and "modi" (मोदी), and lifted cross-form agreement by about 0.1. Still wrong: "delhi" → देल्ही instead of दिल्ली (977 articles) and "iyer" → एयर instead of अय्यर (74). She judged all 459 articles of the old pool; the current pool has about 210 new V articles for her to judge.
-- **Everyone:** judge your own 8 needs on the judging page ("Judging" in the top bar) and push your `judgments/qrels_<name>.txt`.
+- **Viraja, Riya, Dhrithi:** judge the rest of the pool on the Judging page (Viraja 214, Riya 269, Dhrithi 223 articles) and push your `judgments/qrels_<name>.txt`. Dhrithi: 129 of your 249 judgments are for articles none of our systems retrieves, so judge from the page (it shows exactly the pooled articles).
+- **Viraja:** "delhi" still goes to देल्ही instead of दिल्ली, and "iyer" to एयर instead of अय्यर.
 
 ## Next
-Finish judging my 8 needs (23 of 297 done); Viraja has about 210 new articles to judge after the pool grew. The evaluation already runs end to end on the judgments (checked with the first ones); once mine and Viraja's are in, rerun it and fill in the results file, then significance tests and learning-to-rank. Learning translations from Jagran's bilingual headlines can be done meanwhile. The full list is in `documentation/to-dos/rishit-todo.md`.
+My code is done. Once the pool is fully judged: `scripts/rishit_results.py --dense`, then replace the provisional 32-need section of the results file with the final numbers. After that, my report section and the video.

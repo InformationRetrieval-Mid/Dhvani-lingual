@@ -5,9 +5,9 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Section | Status |
 |---|---|
 | Speed-ups vs exact lnc.ltc | Frozen corpus (5,000 articles) |
-| Stemming: none vs light vs aggressive vs auto | Final (judged) |
-| Translation off vs on | Final (judged) |
-| lnc.ltc vs BM25 vs net score vs fusion | Final (judged) |
+| Stemming: none vs light vs aggressive vs auto | 16 needs complete; 32 needs provisional |
+| Translation off vs on | 16 needs complete; 32 needs provisional |
+| lnc.ltc vs BM25 vs net score vs fusion | 16 needs complete; 32 needs provisional |
 | Stop words, idf and Zipf | Frozen corpus (5,000 articles) |
 | Dense re-ranking vs sparse only | Waiting for judgments |
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
@@ -16,8 +16,8 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Learned translations | Frozen corpus (5,000 articles) |
 | Page-type quality | Frozen corpus (5,000 articles) |
 | Pseudo-relevance feedback (Rocchio) | Frozen corpus, partial judgments |
-| Learning-to-rank | Final (judged) |
-| Wins and losses | Final (judged) |
+| Learning-to-rank | 16 needs complete; 32 needs provisional |
+| Wins and losses | 16 needs complete; 32 needs provisional |
 
 ## Speed-ups vs exact lnc.ltc
 
@@ -235,9 +235,9 @@ Examples of the terms it adds: "earthquake tremors delhi" → तीव्रत
 - **It drifts when they're mixed.** "farmers worried about snow" moves to crop damage in general, and messy queries, whose first results are the weakest, lose the most.
 - **On average it doesn't pay off on our needs,** so it's off by default. The judgments will say whether that holds.
 
-## Final evaluation (judged)
+## Evaluation on the first 16 needs (fully judged at the time)
 
-> **Final.** Frozen corpus (5,000 articles), all 16 needs judged (Rishit 297, Viraja 459 pairs, pooled from the top 10 of every run, listing pages pushed down as in the app), 64 queries (four forms each), k = 10. Grades 1 and 2 count as relevant.
+> **Complete for these 16 needs.** Frozen corpus (5,000 articles), the 16 needs written first (R and V), every pooled article judged at the time (Rishit 297, Viraja 459 pairs, pooled from the top 10 of every run, listing pages pushed down as in the app), 64 queries (four forms each), k = 10. Grades 1 and 2 count as relevant.
 
 - **How to rerun:** `python -m dhvani.eval.experiments --out data/eval/full` and `python -m dhvani.eval.ltr --dense` (or `scripts/rishit_results.py --dense` for everything)
 - MAP and R@10 are low next to P@10 because recall is measured against everything judged relevant in the pool, which is often far more than 10 articles per need.
@@ -289,3 +289,54 @@ Learned vs net score: p = 0.07 (randomization), 0.08 (t-test). Average learned w
 - **Light stemming helps, significantly** (22 queries better, 9 worse), and aggressive stemming almost as much. Auto barely stems on the frozen corpus, so it equals no stemming.
 - **Dictionary translation is the clearest Track 5 result:** English queries gain 0.16 P@10 and 0.06 MAP.
 - **Fusion matches BM25** without needing to pick one ranker, and has the best nDCG.
+
+## Evaluation on all 32 needs (provisional)
+
+> **Provisional: only 57% of the pool is judged.** All four needs files are in (R, V, Y, D: 32 needs, 128 queries), and the pool grew to 1,659 articles once every system ran every query (including Dhrithi's fixed auto stemming). Judged so far: Rishit 297 of 297, Viraja 296 of 510, Riya 240 of 509, Dhrithi 120 of 343 (she judged 249, but 129 of them are articles none of our systems retrieves, so they don't count). Unjudged articles count as not relevant, which lowers every score and blurs the differences between systems. These numbers will change once the rest of the pool is judged; the 16-need section above is the complete one for now.
+
+- **How to rerun:** `python -m dhvani.eval.experiments --out data/eval/full`, `python -m dhvani.eval.ltr --dense`
+
+### Rankers (no stemming)
+
+| Ranker | P@10 | R@10 | MAP | nDCG@10 |
+|---|---|---|---|---|
+| lnc.ltc | 0.673 | 0.304 | 0.274 | 0.676 |
+| **BM25** | **0.677** | **0.305** | **0.275** | **0.682** |
+| Fusion (RRF) | 0.666 | 0.297 | 0.267 | 0.677 |
+| Net score | 0.555 | 0.241 | 0.212 | 0.574 |
+
+Against lnc.ltc on per-query AP: net score worse, p < 0.001; BM25 no significant difference (p = 0.52); fusion no significant difference (p = 0.13).
+
+### Stemming (net score)
+
+| Stemming | P@10 | MAP | p vs none (rand) |
+|---|---|---|---|
+| None | 0.555 | 0.212 | |
+| Light | 0.560 | 0.212 | 0.72 |
+| Aggressive | 0.557 | 0.212 | 0.99 (26 better, 26 worse, 76 same) |
+| Auto (Dhrithi's fixed version) | 0.555 | 0.213 | 0.50 (2 better, 0 worse, 126 same) |
+
+With BM25, light stemming is the best mode (P@10 0.681, MAP 0.277), but no stemming difference is significant on these partial judgments.
+
+### Translation (English queries, net score)
+
+| | P@10 | MAP | nDCG@10 |
+|---|---|---|---|
+| Translation off | 0.488 | 0.183 | 0.493 |
+| **Dictionary translation** | **0.578** | **0.224** | **0.577** |
+
+### Learning to rank (leave-one-need-out, net score's top 30 re-ranked, with the dense feature)
+
+| | MAP | P@10 |
+|---|---|---|
+| Net score | 0.690 | 0.566 |
+| **Learned** | **0.807** | **0.637** |
+
+Learned vs net score: **p < 0.001** (randomization and t-test), on 128 queries from 32 needs. Average learned weights: BM25 +0.98, zone +0.46, dense +0.43, cosine +0.23, PageRank +0.05, first to publish +0.03, real article +0.02, proximity -0.06, recency -0.08, parser stage -0.23.
+
+### What it shows so far
+- **Learning to rank is the clearest win:** +0.12 MAP and +0.07 P@10 over the hand-tuned net score, significant at p < 0.001 across 32 needs. Learning to rank trains only on judged pairs, so it's the result least affected by the missing judgments.
+- **BM25, headline match and dense e5 carry the relevance signal;** the hand-picked recency, proximity and parser-stage boosts don't, which is why the net score trails plain lnc.ltc.
+- **Translation still clearly helps English queries** (+0.09 P@10, +0.04 MAP).
+- **Stemming effects shrink to nothing** on the larger, partly judged set; whether light stemming's gain on the first 16 needs holds can only be told once the pool is fully judged.
+- **Auto stemming now changes the index** (82,751 terms against 83,560 with no stemming) but still changes the top 10 for only 2 of 128 queries.

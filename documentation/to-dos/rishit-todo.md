@@ -2,7 +2,7 @@
 
 The code side of my part only: ranking, the cross-lingual layer, evaluation code and the app. Done items are crossed out. How each piece works is in `documentation/handoffs/rishit.md`, why it was built that way is in `documentation/decisions.md`, and the numbers are in `documentation/results/rishit-results.md`.
 
-Last updated: 7 Oct, around 23:55
+Last updated: 8 Oct, around 00:40
 
 ## My novelty
 
@@ -26,7 +26,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 | Learned translations | English to Hindi pairs learned from Jagran's bilingual headlines with Dice alignment, no outside data | ~~Done~~ |
 | Page-type quality | Listing pages and horoscopes (20% of the corpus) recognised from URL and headline and pushed below real articles | ~~Done~~ |
 | Rocchio feedback switch | Viraja's Rocchio wired into search with idf-weighted article vectors from real articles only | ~~Done~~; off by default (it drifts as often as it helps) |
-| Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | ~~Done~~: MAP 0.835 vs 0.792 for the net score |
+| Learning-to-rank | Learn the weights of the score's parts from our judgments (logistic regression, leave-one-need-out) | ~~Done~~: MAP 0.807 vs 0.690 for the net score over 32 needs, p < 0.001 (provisional judgments) |
 
 ## Done
 
@@ -90,7 +90,7 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Corpus frozen: Riya's full crawl minus its one repeated article, `data/news.jsonl`, 5,000 articles (not in git)~~
 - [x] ~~Four indexes built from it, dense vectors embedded~~
 - [x] ~~Speed-ups table, stop words, idf and Zipf on it~~
-- [ ] Run all 120 queries through every system and write the TREC run files for pooling (done for the 64 queries in the needs files; the rest come when Riya's and Dhrithi's needs are in)
+- [x] ~~Run all queries (128 from all four needs files) through every system and write the run files for pooling~~
 
 ### Judging
 - [x] ~~Sanity check without judgments: cross-form agreement and system agreement on the frozen corpus~~
@@ -99,7 +99,9 @@ What my part adds beyond the lecture basics, and where each one stands.
 - [x] ~~Evaluation runs end to end on the judgments (checked with the first ones)~~
 - [x] ~~Judgment-free results rerun after Viraja's rare-spelling fix (cross-form agreement up about 0.1, 6 queries flagged instead of 11)~~
 - [x] ~~Judge my 8 needs (all 297 done)~~
-- [ ] Rebuild the pool once Riya's and Dhrithi's needs are in and run
+- [x] ~~Pool extended with Riya's and Dhrithi's needs and the fixed auto stemming (1,659 articles)~~
+- [x] ~~Evaluation and learning-to-rank rerun on all 32 needs (provisional, 57% of the pool judged)~~
+- [ ] Final rerun once the pool is fully judged, then replace the provisional section in the results file
 
 ### Once there are judgments
 - [x] ~~Stemming: none vs light vs auto (P@10, MAP, nDCG, PR curves)~~
@@ -113,13 +115,11 @@ What my part adds beyond the lecture basics, and where each one stands.
 ## What my code is waiting on
 | From | What | Why it matters for my part |
 |---|---|---|
-| Riya, Dhrithi | Their 8 information needs each (ids starting with Y and D) | Needed for the full runs and the pool |
-| Dhrithi | Auto candidates rebuilt on the frozen corpus | Auto is 99% the same as no stemming on 5,000 articles |
 | Viraja | "delhi" still goes to देल्ही instead of दिल्ली, "iyer" to एयर instead of अय्यर (her fix sorted "bhukamp" and "modi") | Hinglish queries with these words miss their articles; English ones still work through translation |
-| Viraja | Judging the about 210 new V articles (her 459 old-pool judgments are in) | Half of the judged needs; all quality numbers and learning-to-rank |
-| Riya, Dhrithi | Judging their needs once they're written | The rest of the judged needs |
+| Viraja, Riya, Dhrithi | Judging the rest of the pool: Viraja 214, Riya 269, Dhrithi 223 articles (Dhrithi judged 249, but 129 aren't in the pool) | Every evaluation number is provisional until then |
 
 ## Known issues in my part
+- The evaluation on all 32 needs is provisional: 57% of the pool is judged, and unjudged articles count as not relevant.
 - The frozen corpus wasn't cleaned beyond the one repeated article: 249 bodies have HTML tags, and 900 pages (18%) are section and listing pages and 104 (2%) are horoscopes. Ranking now pushes the listing pages and horoscopes below real articles; the HTML leftovers remain a limitation.
 - Two test files share a name with Dhrithi's (`test_build.py`, `test_scoring.py`), so `tests/` and `partwise-tests/` have to be run as separate pytest commands.
 - The dense mix (0.5 first stage, 0.5 e5) and the net score weights are hand-picked for now; learning-to-rank should set them.
