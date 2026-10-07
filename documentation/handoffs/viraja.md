@@ -164,6 +164,15 @@ Our Dhvani-code tops the table. Learned edit distance's cheapest edits come out 
     always adds same-Dhvani-code terms to the pool, so phonetically-close but
     spelling-distant pairs are never missed.
 
+13. **The exact self-match no longer starves the phonetic variants.** When the
+    query word is itself in the index (e.g. "iyer" is an English word in some
+    articles), `weighted_variants` used to leave it in the softmax, crushing the
+    real Devanagari matches to ~0.0008 so they did nothing. It now excludes the
+    self-match (it's already the `"exact"` expansion) and gives same-Dhvani-code
+    homophones a bonus, so अय्यर/एयर/ईयर all carry real weight and अय्यर ranks
+    above spelling near-misses. (The exact word still keeps its own `"exact"`
+    weight; this only changes how the *phonetic* weight is shared.)
+
 ## Dependency note for packaging
 Runtime + tests need `regex` and `pytest`. Re-training the edit costs needs
 `huggingface_hub` (to pull `hin.zip`); the shipped `edit_costs.json` means

@@ -48,6 +48,22 @@ def test_iyer_reaches_ayyar_even_when_kgram_pool_misses_it():
         assert top[0][0] == "अय्यर", f"{matcher} ranked {top[0][0]} first"
 
 
+def test_self_match_in_vocab_does_not_starve_phonetic_variants():
+    # "iyer" is also an English word in the index. The exact self-match must not
+    # eat all the weight: the Devanagari homophones should still carry real
+    # weight, and the name अय्यर should rank above spelling near-misses.
+    vocab = ["iyer", "अय्यर", "एयर", "ईयर", "बायर", "मेयर"]
+    idx = KGramIndex(vocab, k=2)
+    costs = learn_costs([("iyer", "ayyar")] * 3 + [("x", "x")] * 3, iterations=2)
+    variants = M.weighted_variants("iyer", idx, costs, k=5)
+    assert "iyer" not in [t for t, _w, _s in variants]      # self excluded
+    top_term, top_weight, _ = variants[0]
+    assert top_term == "अय्यर"                               # name ranks first
+    assert top_weight > 0.2                                  # and carries real weight
+    byr = dict((t, w) for t, w, _s in variants)
+    assert byr.get("बायर", 0) < 0.05                         # near-miss stays tiny
+
+
 def test_unknown_matcher_raises():
     idx = KGramIndex(VOCAB, k=2)
     try:

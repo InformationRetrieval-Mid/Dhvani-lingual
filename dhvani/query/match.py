@@ -84,16 +84,34 @@ def _softmax_weights(distances, temperature=1.0):
     return [e / total for e in exp]
 
 
-def weighted_variants(word, index, costs, k=5, pool=50, temperature=1.0):
+def weighted_variants(word, index, costs, k=5, pool=50, temperature=1.0, code_bonus=4.0):
     """Production path: top-``k`` variants as query expansions.
 
-    Returns ``[(term, weight, "phonetic"), ...]`` with weights (softmax of
-    −learned-distance) summing to 1.0, ready to extend a query token's
-    ``expansions`` list in Phase 3.
+    Returns ``[(term, weight, "phonetic"), ...]`` with weights summing to 1.0,
+    ready to extend a query token's ``expansions`` list.
+
+    Two things keep the weights meaningful when the query word is itself in the
+    index (e.g. "iyer" is an English word in some articles):
+
+    - the **exact self-match is excluded** — it's already the ``"exact"``
+      expansion, and leaving it in the softmax would crush every real variant to
+      a near-zero weight.
+    - candidates that share the query's **Dhvani-code** (true homophones like
+      अय्यर / एयर for "iyer") get a distance bonus, so they rank above mere
+      spelling near-misses and actually carry weight.
     """
-    top = rank(word, index, matcher="learned", costs=costs, k=k, pool=pool)
+    qr = _canonical(word)
+    qcode = dhvani_code(qr)
+    variants = []
+    for term, dist in _ranked(word, index, "learned", costs=costs, pool=pool):
+        if _canonical(term) == qr:
+            continue  # the exact self-match is the "exact" expansion already
+        same_code = bool(qcode) and dhvani_code(_canonical(term)) == qcode
+        variants.append((term, dist - (code_bonus if same_code else 0.0)))
+
+    variants.sort(key=lambda item: (item[1], item[0]))
+    top = variants[:k]
     if not top:
         return []
-    terms = [t for t, _ in top]
     weights = _softmax_weights([d for _, d in top], temperature=temperature)
-    return [(term, weight, "phonetic") for term, weight in zip(terms, weights)]
+    return [(term, round(w, 4), "phonetic") for (term, _d), w in zip(top, weights)]
