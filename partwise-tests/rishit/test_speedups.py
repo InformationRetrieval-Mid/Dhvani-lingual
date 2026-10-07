@@ -213,3 +213,43 @@ def test_cluster_search_scores_at_most_the_full_candidates():
     assert stats["method"] == "cluster pruning"
     assert 0 < stats["scored"] <= stats["full_candidates"]
     assert 1 <= stats["leaders_used"] <= stats["leaders"]
+
+
+# --- impact-ordered postings -------------------------------------------------
+
+from dhvani.rank.speedups import ImpactOrdered, search_impact  # noqa: E402
+
+
+def test_impact_lists_are_sorted_by_weight():
+    idx = SampleIndex.load()
+    imp = ImpactOrdered(idx)
+    for term in ("बारिश", "दिल्ली"):
+        weights = [w for _d, w in imp.postings(term)]
+        assert weights == sorted(weights, reverse=True)
+        assert {d for d, _w in imp.postings(term)} == {d for z in ("headline", "body") for d, _tf, _p in idx.postings(term, z)}
+
+
+def test_reading_everything_gives_the_exact_ranking():
+    idx = SampleIndex.load()
+    q = exact_query("दिल्ली बारिश")
+    fast, stats = search_impact(q, idx, ImpactOrdered(idx), k=5, max_docs=None, min_share=0.0)
+    exact = search(q, idx, k=5)
+    assert [d for d, _, _ in fast] == [d for d, _, _ in exact]
+    assert stats["postings_read"] == stats["postings_total"]
+
+
+def test_max_docs_stops_each_list_early():
+    idx = SampleIndex.load()
+    q = exact_query("दिल्ली बारिश")
+    _results, stats = search_impact(q, idx, ImpactOrdered(idx), k=5, max_docs=1)
+    assert stats["postings_read"] <= len(query_vector(q, idx))
+    assert stats["postings_read"] < stats["postings_total"]
+
+
+def test_weight_floor_stops_reading_low_weight_articles():
+    idx = SampleIndex.load()
+    imp = ImpactOrdered(idx)
+    q = exact_query("बारिश")
+    _results, stats = search_impact(q, idx, imp, k=5, max_docs=None, min_share=0.99)
+    best = imp.postings("बारिश")[0][1]
+    assert stats["postings_read"] == sum(1 for _d, w in imp.postings("बारिश") if w >= 0.99 * best)

@@ -34,9 +34,14 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Recent-news tiers | 1.00 | 1.00 |
 | Cluster pruning, b = 1 | 0.15 | 0.28 |
 | Cluster pruning, b = 3 | 0.26 | 0.39 |
+| Impact-ordered, first 20 per word | 0.51 | 0.94 |
+| Impact-ordered, first 50 per word | 0.70 | 0.99 |
+| Impact-ordered, weight at least 0.5 x best | 0.87 | 0.87 |
 
 **What it shows so far**
 - **Champion lists give the best trade-off.** With r = 5 they score about a quarter of the candidates and keep 93% of the exact top 10. r = 10 is almost exact at 37%.
 - **Cluster pruning is the fastest but loses the most.** One cluster scores only 15% and keeps 28% of the top 10. Articles about one news story end up spread over several clusters, so the closest leader only covers part of them.
 - **Index elimination sits in between.** Dropping low-idf words like के and में and asking for most of the query words keeps 72% while scoring 21%.
+- **Impact-ordered postings are close behind champion lists.** Reading only the first 20 articles of each word's list (44% of the postings) keeps 94% of the top 10. Unlike champion lists nothing is fixed in advance, so the cut-off can change per query.
+- **Stopping by weight barely helps on news.** Inside one word's list the weights are close together, so a floor of half the best weight still reads 78% of the postings and loses more of the top 10 than stopping after 20 articles.
 - **Recent-news tiers do nothing here.** All 300 articles are from the last two days, so everything is in tier 0. On the full crawl, with older articles, this should change.

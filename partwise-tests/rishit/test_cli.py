@@ -74,6 +74,6 @@ def test_no_authority_uses_plain_recency():
 
 
 def test_speedups_report_how_many_were_scored():
-    for name in ("elim", "champions", "tiers", "clusters"):
+    for name in ("elim", "champions", "tiers", "clusters", "impact"):
         text = cli.run(["दिल्ली बारिश", "--k", "3", "--speedup", name])
         assert "Scored" in text and "articles that share a query word" in text

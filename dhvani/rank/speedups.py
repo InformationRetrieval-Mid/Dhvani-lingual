@@ -314,3 +314,68 @@ def search_clusters(query, index, clusters, k=10, b=1, doc_filter=None):
         "full_candidates": len(all_candidates),
     }
     return results, stats
+
+
+# --- Impact-ordered postings ------------------------------------------------
+#
+# Lecture 7: sort each term's postings by how much the term weighs in the
+# article (its lnc weight), highest first, instead of by doc_id. A query then
+# walks each list from the top and stops early: after a fixed number of
+# articles, or once the weight has dropped below a share of the list's best
+# weight. Query terms are processed in decreasing idf, so the words that
+# matter most are read first. Articles past the stopping point only lose that
+# term's (small) contribution, so the top k stays close to exact.
+
+class ImpactOrdered:
+    def __init__(self, index):
+        self.lists = {}
+        for term in index.vocab:
+            weights = [(d, log_tf(tf) / index.doc_norm[d]) for d, tf in _doc_tf(index, term).items()]
+            weights.sort(key=lambda item: (-item[1], item[0]))
+            self.lists[term] = weights
+
+    def postings(self, term):
+        return self.lists.get(term, [])
+
+
+def search_impact(query, index, impact, k=10, max_docs=20, min_share=0.0, doc_filter=None):
+    """lnc.ltc reading each impact-ordered list only until it's no longer worth it.
+
+    A list stops after max_docs articles (None means no limit) or once an
+    article's weight falls below min_share x the best weight in that list. On
+    news the weights inside one list are close together, so max_docs is the
+    setting that actually saves work; min_share is there to compare.
+    """
+    qvec = query_vector(query, index)
+    idf = {t: math.log10(index.N / index.df(t)) for t in qvec}
+    all_candidates = set()
+    for term in qvec:
+        all_candidates.update(_doc_tf(index, term))
+
+    scores = defaultdict(float)
+    contributions = defaultdict(dict)
+    read, total = 0, 0
+    for term in sorted(qvec, key=lambda t: (-idf[t], t)):
+        plist = impact.postings(term)
+        total += len(plist)
+        if not plist:
+            continue
+        floor = min_share * plist[0][1]
+        for i, (doc_id, weight) in enumerate(plist):
+            if (max_docs is not None and i >= max_docs) or weight < floor:
+                break
+            read += 1
+            if doc_filter and not doc_filter(doc_id):
+                continue
+            part = qvec[term] * weight
+            scores[doc_id] += part
+            contributions[doc_id][term] = part
+
+    stats = {
+        "method": "impact-ordered postings",
+        "postings_read": read,
+        "postings_total": total,
+        "scored": len(scores),
+        "full_candidates": len(all_candidates),
+    }
+    return _top(scores, contributions, k), stats

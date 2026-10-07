@@ -157,3 +157,9 @@ A running list of the choices we made and why. Newest at the bottom.
 **On the sample, champion lists beat cluster pruning.** Cluster pruning scores the fewest articles but keeps only 28% of the exact top 10 with one cluster, while champion lists with r=5 keep 93% for about the same work. News clusters by story are small and specific, so a query's articles are often spread over several clusters. We'll recheck on the full crawl.
 
 **All my results in one file.** `documentation/results/rishit-results.md` has a section per experiment, each saying which corpus, queries, k and date it used. Numbers from the 300-article sample are marked as early, so they don't get mixed up with the final numbers on the frozen corpus.
+
+**Impact-ordered postings stop after a fixed number of articles.** Lecture 7 gives two ways to stop early: after a set number of articles, or when the weight drops below a threshold. On news the weights inside one word's list are close together, so the threshold hardly cuts anything. Stopping after 20 articles per word (or N / 15 on a bigger corpus) is the default; the threshold stays in the speed-ups table for comparison.
+
+**Query words are read in decreasing idf.** The rarest words decide the ranking most, so their lists are read first, as the lecture suggests.
+
+**High/low lists weren't built separately.** Champion lists already fall back to the full postings when they give fewer than k results, which is the high list / low list idea.

@@ -31,9 +31,11 @@ from dhvani.rank.kal import apply_kal  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
     ClusterPruning,
+    ImpactOrdered,
     RecencyTiers,
     search_champions,
     search_clusters,
+    search_impact,
     search_index_elimination,
     search_tiered,
 )
@@ -310,7 +312,12 @@ def load_clusters(mode):
     return ClusterPruning(load_index(mode))
 
 
-SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers", "Cluster pruning"]
+@st.cache_resource
+def load_impact(mode):
+    return ImpactOrdered(load_index(mode))
+
+
+SPEEDUPS = ["Off", "Index elimination", "Champion lists", "Recent tiers", "Cluster pruning", "Impact-ordered postings"]
 
 
 def run_speedup(name, query, mode, k, doc_filter):
@@ -322,7 +329,9 @@ def run_speedup(name, query, mode, k, doc_filter):
         return search_champions(query, index, load_champions(mode), k=k, doc_filter=doc_filter)
     if name == "Recent tiers":
         return search_tiered(query, index, load_tiers(mode), k=k, doc_filter=doc_filter)
-    return search_clusters(query, index, load_clusters(mode), k=k, doc_filter=doc_filter)
+    if name == "Cluster pruning":
+        return search_clusters(query, index, load_clusters(mode), k=k, doc_filter=doc_filter)
+    return search_impact(query, index, load_impact(mode), k=k, max_docs=max(20, index.N // 15), doc_filter=doc_filter)
 
 
 def run_ranker(ranker, query, index, k, doc_filter, use_parser=True, static=None):

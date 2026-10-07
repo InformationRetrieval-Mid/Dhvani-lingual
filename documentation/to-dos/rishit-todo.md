@@ -2,7 +2,7 @@
 
 The whole plan in one place, split into what's done, what's happening now, and what's next. Done items are crossed out. Full details are in `documentation/dhvani-plan.md`.
 
-Last updated: 7 Oct, around 16:10 (teammates' status read from their branches on GitHub)
+Last updated: 7 Oct, around 16:35 (teammates' status read from their branches on GitHub)
 
 ## Done
 
@@ -72,7 +72,7 @@ Last updated: 7 Oct, around 16:10 (teammates' status read from their branches on
 - [ ] Query difficulty prediction with a "low confidence" hint
 - [ ] Evaluation dashboard tab in the app: P@10, MAP, nDCG and PR curves per ranker and stemming mode
 - [x] ~~Cluster pruning (leaders and followers), compared with champion lists for speed vs quality~~
-- [ ] High/low lists and impact-ordered postings with early stopping
+- [x] ~~Impact-ordered postings with early stopping (high/low lists are already the champion-list fallback)~~
 - [ ] Result diversification (MMR) so the top 10 isn't one story repeated
 - [ ] Autocomplete with prefix search over the term dictionary
 

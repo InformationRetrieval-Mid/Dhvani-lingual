@@ -25,9 +25,11 @@ from dhvani.rank.kal import apply_kal, kal_intent  # noqa: E402
 from dhvani.rank.speedups import (  # noqa: E402
     ChampionLists,
     ClusterPruning,
+    ImpactOrdered,
     RecencyTiers,
     search_champions,
     search_clusters,
+    search_impact,
     search_index_elimination,
     search_tiered,
 )
@@ -185,8 +187,8 @@ def run(argv=None):
     parser.add_argument("--k", type=int, default=5, help="how many results to show")
     parser.add_argument("--stem", default="none", help="which index to use: none, light or auto")
     parser.add_argument("--explain", action="store_true", help="print every stage of the pipeline")
-    parser.add_argument("--speedup", choices=("elim", "champions", "tiers", "clusters"),
-                        help="score fewer articles: index elimination, champion lists, recent tiers or cluster pruning (lnc.ltc)")
+    parser.add_argument("--speedup", choices=("elim", "champions", "tiers", "clusters", "impact"),
+                        help="score fewer articles: index elimination, champion lists, recent tiers, cluster pruning or impact-ordered postings (lnc.ltc)")
     parser.add_argument("--no-authority", action="store_true",
                         help="net score uses plain recency instead of recency + PageRank + first to publish")
     parser.add_argument("--no-collapse", action="store_true",
@@ -223,6 +225,8 @@ def run(argv=None):
         results, speed_stats = search_tiered(query, index, RecencyTiers(index), k=pool)
     elif args.speedup == "clusters":
         results, speed_stats = search_clusters(query, index, ClusterPruning(index), k=pool)
+    elif args.speedup == "impact":
+        results, speed_stats = search_impact(query, index, ImpactOrdered(index), k=pool, max_docs=max(20, index.N // 15))
     elif not args.no_parser:
         results = parse_and_rank(query, index, k=pool, ranker=args.ranker, static=static)
     elif args.ranker == "net":
