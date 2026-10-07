@@ -2,7 +2,7 @@
 
 What I've built, where it lives, and how the rest of the team can use it. The module notes below only cover work that's committed on the `rishit` branch; work in progress and teammates' status are tracked in `documentation/to-dos/rishit-todo.md`, and the reasons behind choices are in `documentation/decisions.md`.
 
-Last updated: 8 Oct, after the evaluation on all 32 needs (provisional)
+Last updated: 8 Oct, after the final evaluation on all 32 needs
 
 ## Start here (for anyone, or any AI tool, picking this up)
 
@@ -117,7 +117,8 @@ Ranking, the cross-lingual layer, evaluation, and the app. Code lives in `dhvani
 | `9e54c6a` all my relevance judgments (297) | `judgments/qrels_rishit.txt` |
 | `247c889` final evaluation results | `documentation/results/rishit-results.md` |
 | `15f2652` judging pool extended with riya's needs and the new auto-stemming runs | `judgments/pool.tsv` |
-| evaluation on all 32 needs (provisional), dhrithi's needs and judgments added | `documentation/needs/dhriti-needs.md`, `judgments/`, `documentation/` |
+| `c5bd88d` evaluation on all 32 needs (provisional), dhrithi's needs and judgments added | `documentation/needs/dhriti-needs.md`, `judgments/`, `documentation/` |
+| final results on all 32 needs, stop word experiment and difficulty check | `documentation/` |
 
 ## How to use it
 
@@ -342,8 +343,7 @@ Evaluation that needs no judgments, from the run files. Cross-form agreement: fo
 ```
 
 ## What I need from others
-- **Viraja, Riya, Dhrithi:** judge the rest of the pool on the Judging page (Viraja 214, Riya 269, Dhrithi 223 articles) and push your `judgments/qrels_<name>.txt`. Dhrithi: 129 of your 249 judgments are for articles none of our systems retrieves, so judge from the page (it shows exactly the pooled articles).
-- **Viraja:** "delhi" still goes to देल्ही instead of दिल्ली, and "iyer" to एयर instead of अय्यर.
+Nothing for my code. The team stopped judging at 57% of the pool, and the results are reported with that limitation.
 
 ## Next
-My code is done. Once the pool is fully judged: `scripts/rishit_results.py --dense`, then replace the provisional 32-need section of the results file with the final numbers. After that, my report section and the video.
+My code and results are done. Left: my report section, my video segment (`scripts/rishit_results.py --quick` runs the demo queries), and putting the final report and video together.
