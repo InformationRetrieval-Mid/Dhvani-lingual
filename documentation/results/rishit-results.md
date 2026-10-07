@@ -5,9 +5,9 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Section | Status |
 |---|---|
 | Speed-ups vs exact lnc.ltc | Frozen corpus (5,000 articles) |
-| Stemming: none vs light vs auto | Waiting for judgments |
-| Translation off vs on | Waiting for judgments |
-| lnc.ltc vs BM25 vs net score | Waiting for judgments |
+| Stemming: none vs light vs aggressive vs auto | Final (judged) |
+| Translation off vs on | Final (judged) |
+| lnc.ltc vs BM25 vs net score vs fusion | Final (judged) |
 | Stop words, idf and Zipf | Frozen corpus (5,000 articles) |
 | Dense re-ranking vs sparse only | Waiting for judgments |
 | Rank fusion (RRF) vs single rankers | Waiting for judgments |
@@ -16,8 +16,8 @@ Results for ranking, the cross-lingual layer and evaluation. Each section says w
 | Learned translations | Frozen corpus (5,000 articles) |
 | Page-type quality | Frozen corpus (5,000 articles) |
 | Pseudo-relevance feedback (Rocchio) | Frozen corpus, partial judgments |
-| Learning-to-rank | Early run on partial judgments |
-| Wins and losses | Waiting for judgments |
+| Learning-to-rank | Final (judged) |
+| Wins and losses | Final (judged) |
 
 ## Speed-ups vs exact lnc.ltc
 
@@ -213,27 +213,6 @@ Agreement with the Hindi form of the same need (overlap@10), before → after pu
 - **A query-independent quality score fixes most of it.** English queries agree with their Hindi form half again as often with the net score (0.24 → 0.36). This is the largest single improvement measured so far.
 - **It works without cleaning the corpus,** so every number stays on the same frozen set of articles.
 
-## Learning to rank (early)
-
-> **Partial judgments, not final.** Viraja's 459 judgments (from the first pool) and Rishit's first 23: 40 queries from 10 needs. Unjudged articles count as not relevant. To be rerun once judging is finished.
-
-- **How to rerun:** `python -m dhvani.eval.ltr` (add `--dense` for the e5 feature)
-- **Setup:** logistic regression on 10 features, leave-one-need-out, re-ranking the net score's top 30
-
-| Ranker | MAP | P@10 |
-|---|---|---|
-| Net score (hand-picked weights) | 0.687 | 0.588 |
-| Learned | **0.736** | **0.615** |
-
-Learned vs net score on per-query AP: p = 0.24 (randomization), 0.24 (t-test), so not significant yet.
-
-Average learned weights (features standardised): zone +0.98, BM25 +0.83, PageRank +0.25, cosine +0.05, proximity -0.11, real article -0.24, recency -0.35, first to publish -0.40, parser stage -0.50.
-
-**What it shows so far**
-- **Headline match and BM25 carry most of the signal**, more than the cosine the net score is built on.
-- **The hand-picked authority parts may hurt.** Recency and first to publish get negative weight, so they push relevant articles down on these needs. Worth checking again on the full judgments before changing the net score.
-- **The parser stage gets negative weight** once the other features are known, which suggests stricter stages already show up through zone and BM25.
-
 ## Pseudo-relevance feedback (Rocchio)
 
 > **Frozen corpus; the metric rows use partial judgments** (Viraja's 459 and Rishit's first 23, 40 queries), so they're early.
@@ -255,3 +234,58 @@ Examples of the terms it adds: "earthquake tremors delhi" → तीव्रत
 - **It helps when the first results are right.** "iyer century" picks up the first name श्रेयस and all of the top 3 become Shreyas Iyer stories.
 - **It drifts when they're mixed.** "farmers worried about snow" moves to crop damage in general, and messy queries, whose first results are the weakest, lose the most.
 - **On average it doesn't pay off on our needs,** so it's off by default. The judgments will say whether that holds.
+
+## Final evaluation (judged)
+
+> **Final.** Frozen corpus (5,000 articles), all 16 needs judged (Rishit 297, Viraja 459 pairs, pooled from the top 10 of every run, listing pages pushed down as in the app), 64 queries (four forms each), k = 10. Grades 1 and 2 count as relevant.
+
+- **How to rerun:** `python -m dhvani.eval.experiments --out data/eval/full` and `python -m dhvani.eval.ltr --dense` (or `scripts/rishit_results.py --dense` for everything)
+- MAP and R@10 are low next to P@10 because recall is measured against everything judged relevant in the pool, which is often far more than 10 articles per need.
+
+### Rankers (no stemming)
+
+| Ranker | P@10 | R@10 | MAP | nDCG@10 |
+|---|---|---|---|---|
+| lnc.ltc | 0.803 | 0.291 | 0.272 | 0.778 |
+| **BM25** | **0.830** | **0.300** | **0.281** | 0.799 |
+| Fusion (RRF) | 0.811 | 0.295 | 0.277 | **0.800** |
+| Net score | 0.722 | 0.265 | 0.243 | 0.729 |
+
+Significance on per-query AP against lnc.ltc (randomization / t-test): BM25 better, p = 0.002 / 0.003; net score worse, p = 0.002 / 0.003; fusion no significant difference, p = 0.31.
+
+### Stemming (net score)
+
+| Stemming | P@10 | MAP | nDCG@10 | vs none (better / worse / same) | p (rand) |
+|---|---|---|---|---|---|
+| None | 0.722 | 0.243 | 0.729 | | |
+| Light | **0.739** | **0.251** | **0.742** | 22 / 9 / 33 | **0.008** |
+| Aggressive | 0.734 | 0.250 | 0.741 | 21 / 8 / 35 | **0.017** |
+| Auto | 0.723 | 0.244 | 0.732 | 5 / 2 / 57 | 0.12 |
+
+With BM25 and fusion the stemming modes are all within 0.02 of each other.
+
+### Translation (English queries, net score)
+
+| | P@10 | R@10 | MAP | nDCG@10 |
+|---|---|---|---|---|
+| Translation off | 0.556 | 0.198 | 0.168 | 0.545 |
+| **Dictionary translation** | **0.719** | **0.263** | **0.229** | **0.695** |
+
+### Learning to rank (leave-one-need-out, net score's top 30 re-ranked, with the dense feature)
+
+| | MAP | P@10 |
+|---|---|---|
+| Net score (hand-picked weights) | 0.792 | 0.744 |
+| **Learned** | **0.835** | **0.788** |
+
+Learned vs net score: p = 0.07 (randomization), 0.08 (t-test). Average learned weights (standardised features): BM25 +1.06, zone +0.70, dense +0.45, cosine +0.19, PageRank +0.07, first to publish +0.02, real article -0.24, recency -0.33, proximity -0.34, parser stage -0.55.
+
+(These MAP values are higher than in the tables above because they're computed over the 30 re-ranked candidates of each query rather than over the whole judged pool.)
+
+### What it shows
+- **BM25 is the best single ranker,** significantly better than lnc.ltc. Its term saturation and length normalisation suit news articles of very different lengths.
+- **The hand-tuned net score is significantly worse than plain lnc.ltc.** Its fixed boosts for recency, proximity and the parser stage push relevant articles down. Learning to rank confirms it: those features get negative weight, and BM25, the headline match and dense get the most.
+- **Learning the weights recovers the loss:** the learned ranker beats the net score by 0.04 MAP and 0.04 P@10 (p = 0.07, just short of significance with 16 needs).
+- **Light stemming helps, significantly** (22 queries better, 9 worse), and aggressive stemming almost as much. Auto barely stems on the frozen corpus, so it equals no stemming.
+- **Dictionary translation is the clearest Track 5 result:** English queries gain 0.16 P@10 and 0.06 MAP.
+- **Fusion matches BM25** without needing to pick one ranker, and has the best nDCG.
